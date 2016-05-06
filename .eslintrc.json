@@ -19,8 +19,7 @@
     "globals": {
         "document": false,
         "navigator": false,
-        "window": false,
-        "google": false
+        "window": false
     },
     "extends": "xo",
     // "extends": "eslint:recommended",
