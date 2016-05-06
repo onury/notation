@@ -2,13 +2,22 @@
   "name": "notation",
   "version": "1.0.0",
   "description": "Utility for modifying / processing the contents of Javascript objects by parsing object notation strings or globs.",
-  "main": "dist/notation.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+  "license": "MIT",
+  "author": {
+    "name": "Onur Yıldırım",
+    "email": "onur@cutepilot.com"
   },
+  "main": "dist/notation.js",
+  "homepage": "https://github.com/onury/notation#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/onury/notation.git"
+  },
+  "bugs": {
+    "url": "https://github.com/onury/notation/issues"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [
     "object",
@@ -18,12 +27,6 @@
     "enumerable",
     "parse"
   ],
-  "author": "Onur Yıldırım",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/onury/notation/issues"
-  },
-  "homepage": "https://github.com/onury/notation#readme",
   "devDependencies": {
     "babel": "^6.5.2",
     "babel-core": "^6.8.0",
