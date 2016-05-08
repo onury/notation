@@ -1,6 +1,6 @@
 {
   "name": "notation",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "Utility for modifying / processing the contents of Javascript objects by parsing object notation strings or globs.",
   "license": "MIT",
   "author": {
