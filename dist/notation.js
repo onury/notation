@@ -144,7 +144,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        if (!_utils2.default.isObject(object)) {
 	            throw new _notation4.default(ERR.SOURCE);
 	        }
-	        this.source_ = object;
+	        this._source = object;
 	    }
 	
 	    // --------------------------------
@@ -199,21 +199,24 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  // "car.year"  1970
 	         */
 	        value: function eachKey(callback) {
-	            var o = this.source_,
+	            var _this = this;
+	
+	            var o = this._source,
 	                keys = Object.keys(o);
 	            _utils2.default.each(keys, function (key, index, list) {
+	                // this is preserved in arrow functions
 	                var prop = o[key],
-	                    N;
+	                    N = void 0;
 	                if (_utils2.default.isObject(prop)) {
 	                    N = new Notation(prop);
 	                    N.eachKey(function (notation, nKey, value, prop) {
 	                        var subKey = key + '.' + notation;
-	                        callback.call(this, subKey, nKey, value, o);
+	                        callback.call(N, subKey, nKey, value, o);
 	                    });
 	                } else {
-	                    callback.call(this, key, key, prop, o);
+	                    callback.call(_this, key, key, prop, o);
 	                }
-	            }, this);
+	            });
 	        }
 	
 	        /**
@@ -242,7 +245,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (!Notation.isValid(notation)) {
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
-	            var level = this.source_;
+	            var level = this._source;
 	            Notation.eachNote(notation, function (levelNotation, note, index, list) {
 	                level = _utils2.default.hasOwn(level, note) ? level[note] : undefined;
 	                if (callback(level, levelNotation, note, index, list) === false) return false;
@@ -333,7 +336,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (!Notation.isValid(notation)) {
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
-	            var level = this.source_,
+	            var level = this._source,
 	                result = { has: false, value: undefined };
 	            Notation.eachNote(notation, function (levelNotation, note, index, list) {
 	                if (_utils2.default.hasOwn(level, note)) {
@@ -382,16 +385,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	            if (!Notation.isValid(notation)) {
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
-	            var o, lastNote;
+	            var o = void 0,
+	                lastNote = void 0;
 	            if (notation.indexOf('.') < 0) {
 	                lastNote = notation;
-	                o = this.source_;
+	                o = this._source;
 	            } else {
 	                var upToLast = Notation.parent(notation);
 	                lastNote = Notation.last(notation);
 	                o = this.inspect(upToLast).value;
 	            }
-	            var result;
+	            var result = void 0;
 	            if (_utils2.default.hasOwn(o, lastNote)) {
 	                result = { has: true, value: o[lastNote] };
 	                delete o[lastNote];
@@ -501,8 +505,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
 	            overwrite = typeof overwrite === 'boolean' ? overwrite : true;
-	            var level = this.source_,
-	                last;
+	            var level = this._source,
+	                last = void 0;
 	            Notation.eachNote(notation, function (levelNotation, note, index, list) {
 	                last = index === list.length - 1;
 	                // check if the property is at this level
@@ -560,14 +564,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: 'merge',
 	        value: function merge(notationsObject, overwrite) {
+	            var _this2 = this;
+	
 	            if (!_utils2.default.isObject(notationsObject)) {
 	                throw new _notation4.default(ERR.NOTA_OBJ + '`' + notationsObject + '`');
 	            }
-	            var value;
+	            var value = void 0;
 	            _utils2.default.each(Object.keys(notationsObject), function (notation, index, obj) {
+	                // this is preserved in arrow functions
 	                value = notationsObject[notation];
-	                this.set(notation, value, overwrite);
-	            }, this);
+	                _this2.set(notation, value, overwrite);
+	            });
 	            return this;
 	        }
 	
@@ -592,15 +599,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: 'separate',
 	        value: function separate(notationsArray) {
+	            var _this3 = this;
+	
 	            if (!_utils2.default.isArray(notationsArray)) {
 	                throw new _notation4.default(ERR.NOTA_OBJ + '`' + notationsArray + '`');
 	            }
 	            var o = new Notation({});
 	            _utils2.default.each(notationsArray, function (notation, index, obj) {
-	                var result = this.inspectRemove(notation);
+	                // this is preserved in arrow functions
+	                var result = _this3.inspectRemove(notation);
 	                o.set(notation, result.value);
-	            }, this);
-	            return o.source_;
+	            });
+	            return o._source;
 	        }
 	
 	        // iterate globs
@@ -640,24 +650,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: 'filter',
 	        value: function filter(globNotations) {
+	            var _this4 = this;
+	
 	            var original = this.value,
 	                copy = _utils2.default.deepCopy(original);
 	            // if globNotations is "*" or ["*"] set the "copy" as source and
 	            // return.
 	            if (_utils2.default.stringOrArrayOf(globNotations, '*')) {
-	                this.source_ = copy;
+	                this._source = copy;
 	                return this;
 	            }
 	            // if globNotations is "" or [""] set source to `{}` and return.
 	            if (arguments.length === 0 || _utils2.default.stringOrArrayOf(globNotations, '')) {
-	                this.source_ = {};
+	                this._source = {};
 	                return this;
 	            }
 	            var globs = _utils2.default.isArray(globNotations)
 	            // sort the globs in logical order. we also concat the array first
 	            // bec. we'll change it's content via `.shift()`
 	            ? _notation2.default.sort(globNotations.concat()) : [globNotations];
-	            var filtered;
+	            var filtered = void 0;
 	            // if the first item of sorted globs is "*" we set the source to the
 	            // (full) "copy" and remove the "*" from globs (not to re-process).
 	            if (globs[0] === '*') {
@@ -668,7 +680,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	                // add notations/properties to it.
 	                filtered = new Notation({});
 	            }
-	            var g, endStar, normalized;
+	            var g = void 0,
+	                endStar = void 0,
+	                normalized = void 0;
 	            // iterate through globs
 	            _utils2.default.each(globs, function (globNotation, index, array) {
 	                g = new _notation2.default(globNotation);
@@ -701,7 +715,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                // TODO: Optimize the loop below. Instead of checking each key's
 	                // notation, get the non-star left part of the glob and iterate
 	                // that property of the source object.
-	                this.eachKey(function (originalNotation, key, value, obj) {
+	                _this4.eachKey(function (originalNotation, key, value, obj) {
 	                    // console.log(originalNotation, key);
 	                    if (g.test(originalNotation)) {
 	                        if (g.isNegated) {
@@ -714,7 +728,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }, this);
 	            // finally set the filtered's value as the source of our instance and
 	            // return.
-	            this.source_ = filtered.value;
+	            this._source = filtered.value;
 	            return this;
 	        }
 	
@@ -932,7 +946,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        key: 'rename',
 	        value: function rename(notation, newNotation, overwrite) {
 	            if (!newNotation) return this;
-	            return this.moveTo(this.source_, notation, newNotation, overwrite);
+	            return this.moveTo(this._source, notation, newNotation, overwrite);
 	        }
 	        /**
 	         *  Alias for `#rename`
@@ -1045,7 +1059,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: 'value',
 	        get: function get() {
-	            return this.source_;
+	            return this._source;
 	        }
 	    }], [{
 	        key: 'create',
@@ -1164,7 +1178,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	            }
 	            var notes = notation.split('.'),
 	                levelNotes = [],
-	                levelNotation;
+	                levelNotation = void 0;
 	            _utils2.default.each(notes, function (note, index, list) {
 	                levelNotes.push(note);
 	                levelNotation = levelNotes.join('.');
@@ -1289,8 +1303,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	     *  @return {Notation.Glob}
 	     *
 	     *  @example
-	     *      var glob = new Notation.Glob("billing.account.*");
-	     *      glob.test("billing.account.id"); // true
+	     *  var glob = new Notation.Glob("billing.account.*");
+	     *  glob.test("billing.account.id"); // true
 	     */
 	
 	    function NotationGlob(glob) {
@@ -1507,7 +1521,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }, {
 	        key: 'union',
 	        value: function union(arrA, arrB, sort) {
-	            var nonegA, re, bIndex;
+	            var nonegA = void 0,
+	                re = void 0,
+	                bIndex = void 0;
 	            // iterate through first array
 	            _utils2.default.eachRight(arrA, function (a, ia) {
 	                // check if the exact item exists in the second array and remove
@@ -1575,6 +1591,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 	
+	// TODO: instanceof return false.
+	
 	/**
 	 *  Error class specific to `Notation`.
 	 */
@@ -1600,7 +1618,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        Object.defineProperty(_this, 'name', {
 	            enumerable: false,
-	            writable: true,
+	            writable: false,
 	            value: 'NotationError'
 	        });
 	
@@ -1616,7 +1634,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	        } else {
 	            Object.defineProperty(_this, 'stack', {
 	                enumerable: false,
-	                writable: true,
+	                writable: false,
 	                value: new Error(message).stack
 	            });
 	        }

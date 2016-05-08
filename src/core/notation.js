@@ -7,6 +7,8 @@ import NotationError from './notation.error';
 // Error if source object has flattened (dotted) keys.
 // expand if dotted keyed object is passed to constructor?
 
+// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Property_accessors
+
 const ERR = {
     SOURCE: 'Invalid source object.',
     DEST: 'Invalid destination object.',
@@ -17,13 +19,19 @@ const ERR = {
 /**
  *  Notation.js for Node and Browser.
  *
- *  Provides various methods for modifying / processing the contents
- *  of the given object; by parsing object notation strings or globs.
+ *  Like in most programming languages, JavaScript makes use of dot-notation to
+ *  access the value a member of an object (or class). While accessing the
+ *  value of the object property; notation also indicates the path of the target
+ *  property.
+ *
+ *  `Notation` class provides various methods for modifying / processing the
+ *  contents of the given object; by parsing object notation strings or globs.
+ *
  *  Note that this class will only deal with enumerable properties of the
  *  source object; so it should be used to manipulate data objects. It will
  *  not deal with preserving the prototype-chain of the given object.
  *
- *  @version  0.7.0 (2015-05-05)
+ *  @version  1.0.5 (2015-05-05)
  *  @author   Onur Yıldırım (onur@cutepilot.com)
  *  @license  MIT
  */
@@ -32,23 +40,21 @@ class Notation {
     /**
      *  Initializes a new instance of `Notation`.
      *
-     *  @param {Object} object - The source object to be notated.
+     *  @param {Object} [object={}] - The source object to be notated.
      *
-     *  @return {Notation}
+     *  @returns {Notation}
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      *  var notaAssets = new Notation(assets);
      *  notaAssets.get('car.model'); // "Charger"
      */
-    constructor(object) {
-        // if not defined, default to `{}`
-        object = object === undefined ? {} : object;
+    constructor(object = {}) {
         // if defined, it should be an object.
         if (!utils.isObject(object)) {
             throw new NotationError(ERR.SOURCE);
         }
-        this.source_ = object;
+        this._source = object;
     }
 
     // --------------------------------
@@ -57,8 +63,7 @@ class Notation {
 
     /**
      *  Gets the value of the source object.
-     *
-     *  @return {Object} - The source object.
+     *  @type {Object}
      *
      *  @example
      *  var o = { name: "Onur" };
@@ -73,7 +78,7 @@ class Notation {
      *  // true
      */
     get value() {
-        return this.source_;
+        return this._source;
     }
 
     // --------------------------------
@@ -85,11 +90,11 @@ class Notation {
      *  the given callback function with parameters, on each non-object value.
      *
      *  @param {Function} callback - The callback function to be invoked on
-     *      each on each non-object value. To break out of the loop, return
-     *      `false` from within the callback.
-     *      Callback signature: `callback(notation, key, value, object) { ... }`
+     *  each on each non-object value. To break out of the loop, return `false`
+     *  from within the callback.
+     *  Callback signature: `callback(notation, key, value, object) { ... }`
      *
-     *  @return {void}
+     *  @returns {void}
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -101,21 +106,22 @@ class Notation {
      *  // "car.year"  1970
      */
     eachKey(callback) {
-        var o = this.source_,
+        let o = this._source,
             keys = Object.keys(o);
-        utils.each(keys, function (key, index, list) {
-            var prop = o[key],
+        utils.each(keys, (key, index, list) => {
+            // this is preserved in arrow functions
+            let prop = o[key],
                 N;
             if (utils.isObject(prop)) {
                 N = new Notation(prop);
-                N.eachKey(function (notation, nKey, value, prop) {
-                    var subKey = key + '.' + notation;
-                    callback.call(this, subKey, nKey, value, o);
+                N.eachKey((notation, nKey, value, prop) => {
+                    let subKey = key + '.' + notation;
+                    callback.call(N, subKey, nKey, value, o);
                 });
             } else {
                 callback.call(this, key, key, prop, o);
             }
-        }, this);
+        });
     }
 
     /**
@@ -124,11 +130,11 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be iterated through.
      *  @param {Function} callback - The callback function to be invoked on
-     *      each iteration. To break out of the loop, return `false` from
-     *      within the callback.
-     *      Callback signature: `callback(levelValue, note, index, list) { ... }`
+     *  each iteration. To break out of the loop, return `false` from within
+     *  the callback.
+     *  Callback signature: `callback(levelValue, note, index, list) { ... }`
      *
-     *  @return {void}
+     *  @returns {void}
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -141,8 +147,8 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        var level = this.source_;
-        Notation.eachNote(notation, function (levelNotation, note, index, list) {
+        var level = this._source;
+        Notation.eachNote(notation, (levelNotation, note, index, list) => {
             level = utils.hasOwn(level, note) ? level[note] : undefined;
             if (callback(level, levelNotation, note, index, list) === false) return false;
 
@@ -152,7 +158,7 @@ class Notation {
     /**
      *  Gets the list of notations from the source object (keys).
      *
-     *  @return {Array} - An array of notation strings.
+     *  @returns {Array} - An array of notation strings.
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -160,8 +166,8 @@ class Notation {
      *  // [ "car.brand", "car.model", "car.year" ]
      */
     getNotations() {
-        var list = [];
-        this.eachKey(function (notation, key, value, obj) {
+        let list = [];
+        this.eachKey((notation, key, value, obj) => {
             list.push(notation);
         });
         return list;
@@ -171,7 +177,7 @@ class Notation {
      *  Gets a flat (single-level) object with notated keys, from the source object.
      *  @alias Notation#getMap
      *
-     *  @return {Object} - A new object with flat, notated keys.
+     *  @returns {Object} - A new object with flat, notated keys.
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -179,8 +185,8 @@ class Notation {
      *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
      */
     getFlat() {
-        var o = {};
-        this.eachKey(function (notation, key, value, obj) {
+        let o = {};
+        this.eachKey((notation, key, value, obj) => {
             o[notation] = value;
         });
         return o;
@@ -200,14 +206,14 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be inspected.
      *
-     *  @return {Object} - The result object has the following properties:
-     *      `result.has` {Boolean}  Indicates whether the source object
-     *          has the given notation as a (leveled) enumerable property.
-     *          If the property exists but has a value of `undefined`,
-     *          this will still return `true`.
-     *      `result.value` {*}  The value of the notated property.
-     *          if the source object does not have the notation,
-     *          the value will be `undefined`.
+     *  @returns {Object} - The result object has the following properties:
+     *      `result.has` {Boolean} - Indicates whether the source object
+     *      has the given notation as a (leveled) enumerable property.
+     *      If the property exists but has a value of `undefined`,
+     *      this will still return `true`.
+     *      `result.value` {*} - The value of the notated property.
+     *      if the source object does not have the notation,
+     *      the value will be `undefined`.
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).inspect("car.year");
@@ -221,9 +227,9 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        var level = this.source_,
+        let level = this._source,
             result = { has: false, value: undefined };
-        Notation.eachNote(notation, function (levelNotation, note, index, list) {
+        Notation.eachNote(notation, (levelNotation, note, index, list) => {
             if (utils.hasOwn(level, note)) {
                 level = level[note];
                 result = { has: true, value: level };
@@ -243,14 +249,14 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be inspected.
      *
-     *  @return {Object} - The result object has the following properties:
-     *      `result.has` {Boolean}  Indicates whether the source object
-     *          has the given notation as a (leveled) enumerable property.
-     *          If the property exists but has a value of `undefined`,
-     *          this will still return `true`.
-     *      `result.value` {*}  The value of the removed property.
-     *          if the source object does not have the notation,
-     *          the value will be `undefined`.
+     *  @returns {Object} - The result object has the following properties:
+     *      `result.has` {Boolean} - Indicates whether the source object
+     *      has the given notation as a (leveled) enumerable property.
+     *      If the property exists but has a value of `undefined`,
+     *      this will still return `true`.
+     *      `result.value` {*} - The value of the removed property.
+     *      if the source object does not have the notation,
+     *      the value will be `undefined`.
      *
      *  @example
      *  var obj = { name: "John", car: { year: 1970 } };
@@ -267,16 +273,16 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        var o, lastNote;
+        let o, lastNote;
         if (notation.indexOf('.') < 0) {
             lastNote = notation;
-            o = this.source_;
+            o = this._source;
         } else {
-            var upToLast = Notation.parent(notation);
+            let upToLast = Notation.parent(notation);
             lastNote = Notation.last(notation);
             o = this.inspect(upToLast).value;
         }
-        var result;
+        let result;
         if (utils.hasOwn(o, lastNote)) {
             result = { has: true, value: o[lastNote] };
             delete o[lastNote];
@@ -294,7 +300,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be checked.
      *
-     *  @return {Boolean}
+     *  @returns {Boolean}
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).has("car.year"); // true
@@ -312,7 +318,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be checked.
      *
-     *  @return {Boolean}
+     *  @returns {Boolean}
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).hasDefined("car.year"); // true
@@ -328,11 +334,10 @@ class Notation {
      *  notation.
      *
      *  @param {String} notation - The notation string to be processed.
-     *  @param {String} defaultValue - Optional. Default: `undefined`
-     *      The default value to be returned if the property is not
-     *      found or enumerable.
+     *  @param {String} [defaultValue] - The default value to be returned if
+     *  the property is not found or enumerable.
      *
-     *  @return {*} - The value of the notated property.
+     *  @returns {*} - The value of the notated property.
      *
      *  @example
      *  Notation.create({ car: { brand: "Dodge" } }).get("car.brand"); // "Dodge"
@@ -341,7 +346,7 @@ class Notation {
      *  Notation.create({ car: { model: undefined } }).get("car.model", "Challenger"); // undefined
      */
     get(notation, defaultValue) {
-        var result = this.inspect(notation);
+        let result = this.inspect(notation);
         return !result.has ? defaultValue : result.value;
     }
 
@@ -350,13 +355,14 @@ class Notation {
      *  notation. If the property does not exist, it will be created
      *  and nested at the calculated level. If it exists; its value
      *  will be overwritten by default.
+     *  @chainable
      *
      *  @param {String} notation - The notation string to be processed.
      *  @param {*} value - The value to be set for the notated property.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property if exists.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
+     *  if exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", year: 1970 } };
@@ -369,14 +375,13 @@ class Notation {
      *  console.log(assets);
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
      */
-    set(notation, value, overwrite) {
+    set(notation, value, overwrite = true) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        overwrite = typeof overwrite === 'boolean' ? overwrite : true;
-        var level = this.source_,
+        let level = this._source,
             last;
-        Notation.eachNote(notation, function (levelNotation, note, index, list) {
+        Notation.eachNote(notation, (levelNotation, note, index, list) => {
             last = index === list.length - 1;
             // check if the property is at this level
             if (utils.hasOwn(level, note)) {
@@ -405,16 +410,16 @@ class Notation {
      *  notation. If a property does not exist, it will be created
      *  and nested at the calculated level. If it exists; its value
      *  will be overwritten by default.
+     *  @chainable
      *
      *  @param {Object} notationsObject - The notations object to be processed.
-     *      This can either be a regular object with non-dotted keys
-     *      (which will be merged to the first/root level of the source object);
-     *      or a flattened object with notated (dotted) keys.
+     *  This can either be a regular object with non-dotted keys
+     *  (which will be merged to the first/root level of the source object);
+     *  or a flattened object with notated (dotted) keys.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite a property if
+     *  exists.
      *
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite a property if exists.
-     *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", year: 1970 } };
@@ -429,15 +434,16 @@ class Notation {
      *  console.log(assets);
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
      */
-    merge(notationsObject, overwrite) {
+    merge(notationsObject, overwrite = true) {
         if (!utils.isObject(notationsObject)) {
             throw new NotationError(ERR.NOTA_OBJ + '`' + notationsObject + '`');
         }
-        var value;
-        utils.each(Object.keys(notationsObject), function (notation, index, obj) {
+        let value;
+        utils.each(Object.keys(notationsObject), (notation, index, obj) => {
+            // this is preserved in arrow functions
             value = notationsObject[notation];
             this.set(notation, value, overwrite);
-        }, this);
+        });
         return this;
     }
 
@@ -448,7 +454,7 @@ class Notation {
      *
      *  @param {Array} notationsArray - The notations array to be processed.
      *
-     *  @return {Object} - An object with the removed properties.
+     *  @returns {Object} - An object with the removed properties.
      *
      *  @example
      *  var assets = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
@@ -462,12 +468,13 @@ class Notation {
         if (!utils.isArray(notationsArray)) {
             throw new NotationError(ERR.NOTA_OBJ + '`' + notationsArray + '`');
         }
-        var o = new Notation({});
-        utils.each(notationsArray, function (notation, index, obj) {
-            var result = this.inspectRemove(notation);
+        let o = new Notation({});
+        utils.each(notationsArray, (notation, index, obj) => {
+            // this is preserved in arrow functions
+            let result = this.inspectRemove(notation);
             o.set(notation, result.value);
-        }, this);
-        return o.source_;
+        });
+        return o._source;
     }
 
     // iterate globs
@@ -480,18 +487,19 @@ class Notation {
      *  and removes the rest.
      *
      *  @param {Array|String} globNotations - The glob notation(s) to
-     *      be processed. The difference between normal notations and
-     *      glob-notations is that you can use wildcard stars (*) and
-     *      negate the notation by prepending a bang (!). A negated
-     *      notation will be excluded. Order of the globs do not matter,
-     *      they will be logically sorted. Loose globs will be processed
-     *      first and verbose globs or normal notations will be processed
-     *      last. e.g. `[ "car.model", "*", "!car.*" ]` will be sorted as
-     *      `[ "*", "!car.*", "car.model" ]`.
-     *      Passing no parameters or passing an empty string (`""` or `[""]`)
-     *      will empty the source object.
+     *  be processed. The difference between normal notations and
+     *  glob-notations is that you can use wildcard stars (*) and
+     *  negate the notation by prepending a bang (!). A negated
+     *  notation will be excluded. Order of the globs do not matter,
+     *  they will be logically sorted. Loose globs will be processed
+     *  first and verbose globs or normal notations will be processed
+     *  last. e.g. `[ "car.model", "*", "!car.*" ]` will be sorted as
+     *  `[ "*", "!car.*", "car.model" ]`.
+     *  Passing no parameters or passing an empty string (`""` or `[""]`)
+     *  will empty the source object.
+     *  @chainable
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
@@ -504,24 +512,24 @@ class Notation {
      *  console.log(assets); // {}
      */
     filter(globNotations) {
-        var original = this.value,
+        let original = this.value,
             copy = utils.deepCopy(original);
         // if globNotations is "*" or ["*"] set the "copy" as source and
         // return.
         if (utils.stringOrArrayOf(globNotations, '*')) {
-            this.source_ = copy;
+            this._source = copy;
             return this;
         }
         // if globNotations is "" or [""] set source to `{}` and return.
         if (arguments.length === 0 || utils.stringOrArrayOf(globNotations, '')) {
-            this.source_ = {};
+            this._source = {};
             return this;
         }
-        var globs = utils.isArray(globNotations)
+        let globs = utils.isArray(globNotations)
             // sort the globs in logical order. we also concat the array first
             // bec. we'll change it's content via `.shift()`
             ? NotationGlob.sort(globNotations.concat()) : [globNotations];
-        var filtered;
+        let filtered;
         // if the first item of sorted globs is "*" we set the source to the
         // (full) "copy" and remove the "*" from globs (not to re-process).
         if (globs[0] === '*') {
@@ -532,9 +540,9 @@ class Notation {
             // add notations/properties to it.
             filtered = new Notation({});
         }
-        var g, endStar, normalized;
+        let g, endStar, normalized;
         // iterate through globs
-        utils.each(globs, function (globNotation, index, array) {
+        utils.each(globs, (globNotation, index, array) => {
             g = new NotationGlob(globNotation);
             // set flag that indicates whether the glob ends with `.*`
             endStar = g.normalized.slice(-2) === '.*';
@@ -565,7 +573,7 @@ class Notation {
             // TODO: Optimize the loop below. Instead of checking each key's
             // notation, get the non-star left part of the glob and iterate
             // that property of the source object.
-            this.eachKey(function (originalNotation, key, value, obj) {
+            this.eachKey((originalNotation, key, value, obj) => {
                 // console.log(originalNotation, key);
                 if (g.test(originalNotation)) {
                     if (g.isNegated) {
@@ -575,10 +583,10 @@ class Notation {
                     }
                 }
             });
-        }, this);
+        });
         // finally set the filtered's value as the source of our instance and
         // return.
-        this.source_ = filtered.value;
+        this._source = filtered.value;
         return this;
     }
 
@@ -590,10 +598,11 @@ class Notation {
 
     /**
      *  Removes the property at the given notation, from the source object.
+     *  @chainable
      *
      *  @param {String} notation - The notation to be inspected.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { notebook: "Mac", car: { model: "Mustang" } };
@@ -606,8 +615,13 @@ class Notation {
     }
     // Notation.prototype.delete = Notation.prototype.remove;
 
+    /**
+     *  Clones the `Notation` instance to a new one.
+     *
+     *  @returns {Notation} - A new copy of the instance.
+     */
     clone() {
-        var o = utils.deepCopy(this.value);
+        let o = utils.deepCopy(this.value);
         return new Notation(o);
     }
 
@@ -615,19 +629,20 @@ class Notation {
      *  Copies the notated property from the source object and adds it to the
      *  destination — only if the source object actually has that property.
      *  This is different than a property with a value of `undefined`.
+     *  @chainable
      *
      *  @param {Object} destination - The destination object that the notated
-     *      properties will be copied to.
+     *  properties will be copied to.
      *  @param {String} notation - The notation to get the corresponding property
-     *      from the source object.
-     *  @param {String} newNotation - Optional. The notation to set the source
-     *      property on the destination object. In other words, the copied property
-     *      will be renamed to this value before set on the destination object.
-     *      If not set, `notation` argument will be used.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property on the destination object if it exists.
+     *  from the source object.
+     *  @param {String} [newNotation=null] - The notation to set the source property
+     *  on the destination object. In other words, the copied property will be
+     *  renamed to this value before set on the destination object. If not set,
+     *  `notation` argument will be used.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+     *  the destination object if it exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -637,9 +652,9 @@ class Notation {
      *  // { dodge: "Charger", ford: "Mustang" }
      *  // assets object is not modified
      */
-    copyTo(destination, notation, newNotation, overwrite) {
+    copyTo(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        var result = this.inspect(notation);
+        let result = this.inspect(notation);
         if (result.has) {
             new Notation(destination).set(newNotation || notation, result.value, overwrite);
         }
@@ -650,19 +665,20 @@ class Notation {
      *  Copies the notated property from the destination object and adds it to the
      *  source object — only if the destination object actually has that property.
      *  This is different than a property with a value of `undefined`.
+     *  @chainable
      *
      *  @param {Object} destination - The destination object that the notated
-     *      properties will be copied from.
+     *  properties will be copied from.
      *  @param {String} notation - The notation to get the corresponding property
-     *      from the destination object.
-     *  @param {String} newNotation - Optional. The notation to set the destination
-     *      property on the source object. In other words, the copied property
-     *      will be renamed to this value before set on the source object.
-     *      If not set, `notation` argument will be used.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property on the source object if it exists.
+     *  from the destination object.
+     *  @param {String} [newNotation=null] - The notation to set the destination
+     *  property on the source object. In other words, the copied property
+     *  will be renamed to this value before set on the source object.
+     *  If not set, `notation` argument will be used.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
+     *  on the source object if it exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -672,9 +688,9 @@ class Notation {
      *  // { car: { brand: "Ford", model: "Charger" } }
      *  // models object is not modified
      */
-    copyFrom(destination, notation, newNotation, overwrite) {
+    copyFrom(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        var result = new Notation(destination).inspect(notation);
+        let result = new Notation(destination).inspect(notation);
         if (result.has) {
             this.set(newNotation || notation, result.value, overwrite);
         }
@@ -685,19 +701,20 @@ class Notation {
      *  Removes the notated property from the source object and adds it to the
      *  destination — only if the source object actually has that property.
      *  This is different than a property with a value of `undefined`.
+     *  @chainable
      *
      *  @param {Object} destination - The destination object that the notated
-     *      properties will be moved to.
-     *  @param {String} notation - The notation to get the corresponding property
-     *      from the source object.
-     *  @param {String} newNotation - Optional. The notation to set the source
-     *      property on the destination object. In other words, the moved property
-     *      will be renamed to this value before set on the destination object.
-     *      If not set, `notation` argument will be used.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property on the destination object if it exists.
+     *  properties will be moved to.
+     *  @param {String} notation - The notation to get the corresponding
+     *  property from the source object.
+     *  @param {String} [newNotation=null] - The notation to set the source property
+     *  on the destination object. In other words, the moved property will be
+     *  renamed to this value before set on the destination object. If not set,
+     *  `notation` argument will be used.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+     *  the destination object if it exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -708,9 +725,9 @@ class Notation {
      *  console.log(models);
      *  // { dodge: "Charger", ford: "Mustang" }
      */
-    moveTo(destination, notation, newNotation, overwrite) {
+    moveTo(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        var result = this.inspectRemove(notation);
+        let result = this.inspectRemove(notation);
         if (result.has) {
             new Notation(destination).set(newNotation || notation, result.value, overwrite);
         }
@@ -721,19 +738,20 @@ class Notation {
      *  Removes the notated property from the destination object and adds it to the
      *  source object — only if the destination object actually has that property.
      *  This is different than a property with a value of `undefined`.
+     *  @chainable
      *
      *  @param {Object} destination - The destination object that the notated
-     *      properties will be moved from.
+     *  properties will be moved from.
      *  @param {String} notation - The notation to get the corresponding property
-     *      from the destination object.
-     *  @param {String} newNotation - Optional. The notation to set the destination
-     *      property on the source object. In other words, the moved property
-     *      will be renamed to this value before set on the source object.
-     *      If not set, `notation` argument will be used.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property on the source object if it exists.
+     *  from the destination object.
+     *  @param {String} [newNotation=null] - The notation to set the destination
+     *  property on the source object. In other words, the moved property
+     *  will be renamed to this value before set on the source object.
+     *  If not set, `notation` argument will be used.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+     *  the source object if it exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -744,9 +762,9 @@ class Notation {
      *  console.log(models);
      *  // {}
      */
-    moveFrom(destination, notation, newNotation, overwrite) {
+    moveFrom(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        var result = new Notation(destination).inspectRemove(notation);
+        let result = new Notation(destination).inspectRemove(notation);
         if (result.has) {
             this.set(newNotation || notation, result.value, overwrite);
         }
@@ -756,15 +774,16 @@ class Notation {
     /**
      *  Renames the notated property of the source object by the new notation.
      *  @alias Notation#renote
+     *  @chainable
      *
-     *  @param {String} notation - The notation to get the corresponding property
-     *      (value) from the source object.
-     *  @param {String} newNotation - The new notation for the targeted property.
-     *      value. If not set, the source object will not be modified.
-     *  @param {Boolean} overwrite - Optional. Default: `true`
-     *      Whether to overwrite the property at the new notation, if it exists.
+     *  @param {String} notation - The notation to get the corresponding
+     *  property (value) from the source object.
+     *  @param {String} newNotation - The new notation for the targeted
+     *  property value. If not set, the source object will not be modified.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property at
+     *  the new notation, if it exists.
      *
-     *  @return {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -776,7 +795,7 @@ class Notation {
      */
     rename(notation, newNotation, overwrite) {
         if (!newNotation) return this;
-        return this.moveTo(this.source_, notation, newNotation, overwrite);
+        return this.moveTo(this._source, notation, newNotation, overwrite);
     }
     /**
      *  Alias for `#rename`
@@ -791,13 +810,13 @@ class Notation {
      *  it from the source object. This is equivalent to `.copyTo({}, notation, newNotation)`.
      *  @alias Notation#copyToNew
      *
-     *  @param {String} notation - The notation to get the corresponding property
-     *      (value) from the source object.
-     *  @param {String} newNotation - The new notation to be set on the new object
-     *      for the targeted property value. If not set, `notation` argument will
-     *      be used.
+     *  @param {String} notation - The notation to get the corresponding
+     *  property (value) from the source object.
+     *  @param {String} newNotation - The new notation to be set on the new
+     *  object for the targeted property value. If not set, `notation` argument
+     *  will be used.
      *
-     *  @return {Object} - Returns a new object with the notated property.
+     *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -807,7 +826,7 @@ class Notation {
      *  // assets object is not modified
      */
     extract(notation, newNotation) {
-        var o = {};
+        let o = {};
         this.copyTo(o, notation, newNotation);
         return o;
     }
@@ -824,13 +843,13 @@ class Notation {
      *  it from the source object. This is equivalent to `.moveTo({}, notation, newNotation)`.
      *  @alias Notation#moveToNew
      *
-     *  @param {String} notation - The notation to get the corresponding property
-     *      (value) from the source object.
-     *  @param {String} newNotation - The new notation to be set on the new object
-     *      for the targeted property value. If not set, `notation` argument will
-     *      be used.
+     *  @param {String} notation - The notation to get the corresponding
+     *  property (value) from the source object.
+     *  @param {String} newNotation - The new notation to be set on the new
+     *  object for the targeted property value. If not set, `notation` argument
+     *  will be used.
      *
-     *  @return {Object} - Returns a new object with the notated property.
+     *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
      *  var assets = { car: { brand: "Ford", model: "Mustang" } };
@@ -841,7 +860,7 @@ class Notation {
      *  // { carBrand: "Ford" }
      */
     extrude(notation, newNotation) {
-        var o = {};
+        let o = {};
         this.moveTo(o, notation, newNotation);
         return o;
     }
@@ -858,19 +877,19 @@ class Notation {
     // --------------------------------
 
     /**
-     *  Basically constructs a new `Notation` instance
-     *  with the given object.
+     *  Basically constructs a new `Notation` instance with the given object.
+     *  @chainable
      *
-     *  @param {Object} object - The object to be notated.
+     *  @param {Object} [object={}] - The object to be notated.
      *
-     *  @return {Notation}
+     *  @returns {Notation} - The created instance.
      *
      *  @example
      *  var notaObj = Notation.create(obj);
      *  // equivalent to:
      *  var notaObj = new Notation(obj);
      */
-    static create(object) {
+    static create(object = {}) {
         return new Notation(object);
     }
 
@@ -879,7 +898,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be checked.
      *
-     *  @return {Boolean}
+     *  @returns {Boolean}
      *
      *  @example
      *  Notation.isValid('prop1.prop2.prop3'); // true
@@ -896,7 +915,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be processed.
      *
-     *  @return {String}
+     *  @returns {String}
      *
      *  @example
      *  Notation.first('first.prop2.last'); // "first"
@@ -914,7 +933,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be processed.
      *
-     *  @return {String}
+     *  @returns {String}
      *
      *  @example
      *  Notation.last('first.prop2.last'); // "last"
@@ -933,7 +952,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be processed.
      *
-     *  @return {String}
+     *  @returns {String}
      *
      *  @example
      *  Notation.parent('first.prop2.last'); // "first.prop2"
@@ -953,11 +972,11 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be iterated through.
      *  @param {Function} callback - The callback function to be invoked on
-     *      each iteration. To break out of the loop, return `false` from
-     *      within the callback.
-     *      Callback signature: `callback(levelNotation, note, index, list) { ... }`
+     *  each iteration. To break out of the loop, return `false` from within the
+     *  callback.
+     *  Callback signature: `callback(levelNotation, note, index, list) { ... }`
      *
-     *  @return {void}
+     *  @returns {void}
      *
      *  @example
      *  Notation.eachNote("first.prop2.last", function (levelNotation, note, index, list) {
@@ -971,10 +990,10 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        var notes = notation.split('.'),
+        let notes = notation.split('.'),
             levelNotes = [],
             levelNotation;
-        utils.each(notes, function (note, index, list) {
+        utils.each(notes, (note, index, list) => {
             levelNotes.push(note);
             levelNotation = levelNotes.join('.');
             if (callback(levelNotation, note, index, notes) === false) return false;
@@ -983,7 +1002,19 @@ class Notation {
 
 }
 
+/**
+ *  Error class specific to `Notation`.
+ *  @type {NotationError}
+ *  @see `{@link NotationError}`
+ */
 Notation.Error = NotationError;
+
+/**
+ *  Utility for validating, comparing and sorting dot-notation globs.
+ *  This is internally used by `Notation` class.
+ *  @type {NotationGlob}
+ *  @see `{@link NotationGlob}`
+ */
 Notation.Glob = NotationGlob;
 
 export default Notation;

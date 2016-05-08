@@ -1,14 +1,28 @@
 import utils from '../lib/utils';
 import NotationError from './notation.error';
 
-// --------------------------------
-// CLASS: NotationGlob
-// --------------------------------
-
 // http://www.linfo.org/wildcard.html
 // http://en.wikipedia.org/wiki/Glob_%28programming%29
 // http://en.wikipedia.org/wiki/Wildcard_character#Computing
 
+/**
+ *  `NotationGlob` is a utility for validating, comparing and sorting
+ *  dot-notation globs.
+ *
+ *  You can use {@link http://www.linfo.org/wildcard.html|wildcard} stars `*`
+ *  and negate the notation by prepending a bang `!`. A star will include all
+ *  the properties at that level and a negated notation will be excluded.
+ *
+ *  @example
+ *  // for the following object;
+ *  { name: "John", billing: { account: { id: 1, active: true } } };
+ *
+ *  "billing.account.*"  // represents `{ id: 1, active: true }`
+ *  "billing.account.id" // represents `1`
+ *  "!billing.account.*" // represents `{ name: "John" }`
+ *  "name" // represents `"John"`
+ *  "*" // represents the whole object
+ */
 class NotationGlob {
 
     /**
@@ -17,18 +31,18 @@ class NotationGlob {
      *
      *  @param {String} glob - The glob string.
      *
-     *  @return {Notation.Glob}
+     *  @returns {NotationGlob}
      *
      *  @example
-     *      var glob = new Notation.Glob("billing.account.*");
-     *      glob.test("billing.account.id"); // true
+     *  var glob = new Notation.Glob("billing.account.*");
+     *  glob.test("billing.account.id"); // true
      */
     constructor(glob) {
         if (!NotationGlob.isValid(glob)) {
             throw new NotationError('Invalid notation glob: "' + glob + '"');
         }
         this.glob = glob;
-        var ng = NotationGlob.normalize(glob);
+        let ng = NotationGlob.normalize(glob);
         this.normalized = ng.glob;
         this.isNegated = ng.isNegated;
         this.regexp = NotationGlob.toRegExp(this.normalized);
@@ -44,7 +58,7 @@ class NotationGlob {
      *
      *  @param {String} notation - The notation string to be tested.
      *
-     *  @return {Boolean}
+     *  @returns {Boolean}
      *
      *  @example
      *  var glob = new Notation.Glob("!prop.*.name");
@@ -67,7 +81,7 @@ class NotationGlob {
      *
      *  @param {String} glob - The source notation glob.
      *
-     *  @return {NotationGlob}
+     *  @returns {NotationGlob}
      *
      *  @example
      *  var glob = Notation.Glob.create(strGlob);
@@ -78,7 +92,10 @@ class NotationGlob {
         return new NotationGlob(glob);
     }
 
-    // Modified from http://stackoverflow.com/a/13818704/112731
+    /**
+     *  Modified from http://stackoverflow.com/a/13818704/112731
+     *  @private
+     */
     static toRegExp(glob, opts) {
         glob = utils.pregQuote(glob).replace(/\\\*/g, '[^\\s\\.]*').replace(/\\\?/g, '.');
         return new RegExp('^' + glob, opts || '');
@@ -88,12 +105,15 @@ class NotationGlob {
         // but will not match `some.company.name`
     }
 
+    /**
+     *  @private
+     */
     static normalize(glob) {
         // replace multiple stars with single
         glob = glob.replace(/\*+/g, '*');
         // empty glob if invalid e.g. '!' | '.abc' | '!*'
         glob = !NotationGlob.isValid(glob) ? '' : glob;
-        var bang = glob.slice(0, 1) === '!';
+        let bang = glob.slice(0, 1) === '!';
         glob = bang ? glob.slice(1) : glob;
         return {
             glob: glob,
@@ -102,6 +122,11 @@ class NotationGlob {
     }
 
     // Created test at: https://regex101.com/r/tJ7yI9/
+    /**
+     *  Validates the given notation glob.
+     *  @param {String} glob - Notation glob to be validated.
+     *  @returns {Boolean}
+     */
     static isValid(glob) {
         return (typeof glob === 'string') &&
             (/^!?[^\s\.!]+(\.[^\s\.!]+)*$/).test(glob);
@@ -113,20 +138,20 @@ class NotationGlob {
     /**
      *  Compares two given notation globs and returns an integer value as a
      *  result. This is generally used to sort glob arrays. Loose globs (with
-     *  stars especially closer to beginning of the glob string); globs
+     *  stars especially closer to beginning of the glob string) and globs
      *  representing the parent/root of the compared property glob come first.
      *  Verbose/detailed/exact globs come last. (`* < *abc < abc`). For
      *  instance; `store.address` comes before `store.address.street`. So this
-     *  works both for `*, store.address.street, !store.address` and `*,
-     *  store.address, !store.address.street`. For cases such as `prop.id` vs
-     *  `!prop.id` which represent the same property; the negated glob wins
-     *  (comes last).
+     *  works both for `*, store.address.street, !store.address` and
+     *  `*, store.address, !store.address.street`. For cases such as
+     *  `prop.id` vs `!prop.id` which represent the same property;
+     *  the negated glob wins (comes last).
      *
      *  @param {String} a - First notation glob to be compared.
      *  @param {String} b - Second notation glob to be compared.
      *
-     *  @return {Number}  Returns `-1` if `a` comes first, `1` if `b` comes
-     *      first and `0` if equivalent priority.
+     *  @returns {Number} - Returns `-1` if `a` comes first, `1` if `b` comes
+     *  first and `0` if equivalent priority.
      *
      *  @example
      *  var result = Notation.Glob.compare("prop.*.name", "prop.*");
@@ -135,26 +160,26 @@ class NotationGlob {
     static compare(a, b) {
         // trivial case, both are exactly the same!
         if (a === b) return 0;
-        var levelsA = a.split('.'),
+        let levelsA = a.split('.'),
             levelsB = b.split('.');
         // Check depth (number of levels)
         if (levelsA.length === levelsB.length) {
             // count wildcards (assuming more wildcards comes first)
-            var wild = /(?:^|\.)\*(?:$|\.)/g,
+            let wild = /(?:^|\.)\*(?:$|\.)/g,
                 mA = a.match(wild),
                 mB = b.match(wild),
                 wildA = mA ? mA.length : 0,
                 wildB = mB ? mB.length : 0;
             if (wildA === wildB) {
                 // check for negation
-                var negA = a.indexOf('!') === 0,
+                let negA = a.indexOf('!') === 0,
                     negB = b.indexOf('!') === 0;
                 if (negA === negB) {
                     // both are negated or neither are, just return alphabetical
                     return a < b ? -1 : 1;
                 }
                 // compare without the negatation
-                var nonNegA = negA ? a.slice(1) : a,
+                let nonNegA = negA ? a.slice(1) : a,
                     nonNegB = negB ? b.slice(1) : b;
                 if (nonNegA === nonNegB) {
                     return negA ? 1 : -1;
@@ -176,16 +201,15 @@ class NotationGlob {
      *  such as `prop.id` vs `!prop.id` which represent the same property; the
      *  negated glob wins (comes last).
      *
-     *  @param {Array} globsArray - The notation globs array to be sorted. The passed
-     *      array reference is modified.
+     *  @param {Array} globsArray - The notation globs array to be sorted.
+     *  The passed array reference is modified.
      *
-     *  @return {Array}
+     *  @returns {Array}
      *
      *  @example
-     *  var globs = [ "!prop.*.name", "prop.*", "prop.id" ];
+     *  var globs = ["!prop.*.name", "prop.*", "prop.id"];
      *  Notation.Glob.sort(globs);
-     *  console.log(globs);
-     *  // [ "prop.*", "prop.id", "!prop.*.name" ];
+     *  // ["prop.*", "prop.id", "!prop.*.name"];
      */
     static sort(globsArray) {
         return globsArray.sort(NotationGlob.compare);
@@ -202,10 +226,10 @@ class NotationGlob {
      *
      *  @param {Array} arrA - First array of glob strings.
      *  @param {Array} arrB - Second array of glob strings.
-     *  @param {Boolean} sort - Whether to sort the globs in the final array.
-     *      Default: `true`
+     *  @param {Boolean} [sort=true] - Whether to sort the globs in the final
+     *  array.
      *
-     *  @return {Array}
+     *  @returns {Array}
      *
      *  @example
      *  var a = [ 'foo.bar', 'bar.baz', '!*.qux' ],
@@ -214,9 +238,9 @@ class NotationGlob {
      *  // [ '!*.qux', 'foo.bar', 'bar.baz', 'bar.qux' ]
      */
     static union(arrA, arrB, sort) {
-        var nonegA, re, bIndex;
+        let nonegA, re, bIndex;
         // iterate through first array
-        utils.eachRight(arrA, function (a, ia) {
+        utils.eachRight(arrA, (a, ia) => {
             // check if the exact item exists in the second array and remove
             // if exists (to prevent duplicates).
             bIndex = arrB.indexOf(a);
@@ -238,7 +262,7 @@ class NotationGlob {
                 // [ '!foo.bar' ] + [ 'foo.*' ]  => [ 'foo.*' ]              // wild covers !v, remove !v
                 // [ 'foo.bar' ]  + [ '!foo.*' ] => [ '!foo.*', 'foo.bar' ]  // !wild covers v, both kept
                 // [ 'baz.que' ]  + [ '!foo.*' ] => [ '!foo.*', 'baz.que' ]  // !wild doesn't cover, both kept
-                utils.eachRight(arrB, function (b, ib) {
+                utils.eachRight(arrB, (b, ib) => {
                     if (b.indexOf('!') < 0) {
                         re = NotationGlob.toRegExp(b);
                         if (re.test(nonegA)) arrA.splice(ia, 1);
@@ -256,7 +280,7 @@ class NotationGlob {
 
         // concat both arrays and sort (if enabled) so we get a nice union
         // array.
-        var result = arrA.concat(arrB);
+        let result = arrA.concat(arrB);
         return (sort === undefined || sort === true)
             ? NotationGlob.sort(result)
             : result;
