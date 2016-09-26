@@ -20,18 +20,14 @@ const ERR = {
  *  Notation.js for Node and Browser.
  *
  *  Like in most programming languages, JavaScript makes use of dot-notation to
- *  access the value a member of an object (or class). While accessing the
- *  value of the object property; notation also indicates the path of the target
- *  property.
- *
- *  `Notation` class provides various methods for modifying / processing the
- *  contents of the given object; by parsing object notation strings or globs.
+ *  access the value a member of an object (or class). `Notation` class provides
+ *  various methods for modifying / processing the contents of the given object;
+ *  by parsing object notation strings or globs.
  *
  *  Note that this class will only deal with enumerable properties of the
  *  source object; so it should be used to manipulate data objects. It will
  *  not deal with preserving the prototype-chain of the given object.
  *
- *  @version  1.0.5 (2015-05-05)
  *  @author   Onur Yıldırım (onur@cutepilot.com)
  *  @license  MIT
  */
@@ -42,12 +38,10 @@ class Notation {
      *
      *  @param {Object} [object={}] - The source object to be notated.
      *
-     *  @returns {Notation}
-     *
      *  @example
-     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var notaAssets = new Notation(assets);
-     *  notaAssets.get('car.model'); // "Charger"
+     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  var notation = new Notation(obj);
+     *  notation.get('car.model'); // "Charger"
      */
     constructor(object = {}) {
         // if defined, it should be an object.
@@ -66,16 +60,14 @@ class Notation {
      *  @type {Object}
      *
      *  @example
-     *  var o = { name: "Onur" };
-     *  var me = Notation.create(o)
+     *  var person = { name: "Onur" };
+     *  var me = Notation.create(person)
      *      .set("age", 36)
      *      .set("car.brand", "Ford")
      *      .set("car.model", "Mustang")
      *      .value;
-     *  console.log(me);
-     *  // { name: "Onur", age: 36, car: { brand: "Ford", model: "Mustang" } }
-     *  console.log(o === me);
-     *  // true
+     *  console.log(me); // { name: "Onur", age: 36, car: { brand: "Ford", model: "Mustang" } }
+     *  console.log(person === me); // true
      */
     get value() {
         return this._source;
@@ -88,6 +80,7 @@ class Notation {
     /**
      *  Recursively iterates through each key of the source object and invokes
      *  the given callback function with parameters, on each non-object value.
+     *  @alias Notation#eachKey
      *
      *  @param {Function} callback - The callback function to be invoked on
      *  each on each non-object value. To break out of the loop, return `false`
@@ -97,15 +90,15 @@ class Notation {
      *  @returns {void}
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  Notation.create(assets).eachKey(function (notation, key, value, object) {
+     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  Notation.create(obj).each(function (notation, key, value, object) {
      *      console.log(notation, value);
      *  });
      *  // "car.brand"  "Dodge"
      *  // "car.model"  "Charger"
      *  // "car.year"  1970
      */
-    eachKey(callback) {
+    each(callback) {
         let o = this._source,
             keys = Object.keys(o);
         utils.each(keys, (key, index, list) => {
@@ -114,7 +107,7 @@ class Notation {
                 N;
             if (utils.isObject(prop)) {
                 N = new Notation(prop);
-                N.eachKey((notation, nKey, value, prop) => {
+                N.each((notation, nKey, value, prop) => {
                     let subKey = key + '.' + notation;
                     callback.call(N, subKey, nKey, value, o);
                 });
@@ -122,6 +115,13 @@ class Notation {
                 callback.call(this, key, key, prop, o);
             }
         });
+    }
+    /**
+     *  Alias for `#each`
+     *  @private
+     */
+    eachKey(callback) {
+        return this.each(callback);
     }
 
     /**
@@ -137,13 +137,13 @@ class Notation {
      *  @returns {void}
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  Notation.create(assets)
-     *      .eachNoteValue("car.brand", function (levelValue, note, index, list) {
+     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  Notation.create(obj)
+     *      .eachValue("car.brand", function (levelValue, note, index, list) {
      *          console.log(note, levelValue); // "car.brand" "Dodge"
      *      });
      */
-    eachNoteValue(notation, callback) {
+    eachValue(notation, callback) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -161,42 +161,63 @@ class Notation {
      *  @returns {Array} - An array of notation strings.
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var notationsList = Notation.create(assets).getNotations();
-     *  // [ "car.brand", "car.model", "car.year" ]
+     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  var notations = Notation.create(obj).getNotations();
+     *  console.log(notations); // [ "car.brand", "car.model", "car.year" ]
      */
     getNotations() {
         let list = [];
-        this.eachKey((notation, key, value, obj) => {
+        this.each((notation, key, value, obj) => {
             list.push(notation);
         });
         return list;
     }
 
     /**
-     *  Gets a flat (single-level) object with notated keys, from the source object.
-     *  @alias Notation#getMap
+     *  Flattens the source object to a single-level object with notated keys.
      *
-     *  @returns {Object} - A new object with flat, notated keys.
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var flat = Notation.create(assets).getFlat();
-     *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  var flat = Notation.create(obj).flatten().value;
+     *  console.log(flat); // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
      */
-    getFlat() {
+    flatten() {
         let o = {};
-        this.eachKey((notation, key, value, obj) => {
+        this.each((notation, key, value, obj) => {
             o[notation] = value;
         });
-        return o;
+        // return o;
+        this._source = o;
+        return this;
+    }
+
+    /**
+     *  Aggregates notated keys of a (single-level) object, and nests them under
+     *  their corresponding properties. This is the opposite of `Notation#flatten`
+     *  method. This might be useful when expanding a flat object fetched from
+     *  a database.
+     *  @alias Notation#aggregate
+     *  @chainable
+     *
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @example
+     *  var obj = { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+     *  var expanded = Notation.create(obj).expand().value;
+     *  console.log(expanded); // { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     */
+    expand() {
+        this._source = Notation.create({}).merge(this._source).value;
+        return this;
     }
     /**
-     *  Alias for `#getFlat`
+     *  Alias for `#expand`
      *  @private
      */
-    getMap() {
-        return this.getFlat();
+    aggregate() {
+        return this.expand();
     }
 
     /**
@@ -206,14 +227,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be inspected.
      *
-     *  @returns {Object} - The result object has the following properties:
-     *      `result.has` {Boolean} - Indicates whether the source object
-     *      has the given notation as a (leveled) enumerable property.
-     *      If the property exists but has a value of `undefined`,
-     *      this will still return `true`.
-     *      `result.value` {*} - The value of the notated property.
-     *      if the source object does not have the notation,
-     *      the value will be `undefined`.
+     *  @returns {InspectResult} - The result object.
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).inspect("car.year");
@@ -241,6 +255,16 @@ class Notation {
         });
         return result;
     }
+    /**
+     *  Notation inspection result object.
+     *  @typedef Notation~InspectResult
+     *  @type Object
+     *  @property {Boolean} has - Indicates whether the source object has the given
+     *  notation as a (leveled) enumerable property. If the property exists but has
+     *  a value of `undefined`, this will still return `true`.
+     *  @property {*} value - The value of the notated property. If the source object
+     *  does not have the notation, the value will be `undefined`.
+     */
 
     /**
      *  Inspects and removes the given notation from the source object
@@ -249,14 +273,7 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be inspected.
      *
-     *  @returns {Object} - The result object has the following properties:
-     *      `result.has` {Boolean} - Indicates whether the source object
-     *      has the given notation as a (leveled) enumerable property.
-     *      If the property exists but has a value of `undefined`,
-     *      this will still return `true`.
-     *      `result.value` {*} - The value of the removed property.
-     *      if the source object does not have the notation,
-     *      the value will be `undefined`.
+     *  @returns {InspectResult} - The result object.
      *
      *  @example
      *  var obj = { name: "John", car: { year: 1970 } };
@@ -365,15 +382,15 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", year: 1970 } };
-     *  Notation.create(assets)
+     *  var obj = { car: { brand: "Dodge", year: 1970 } };
+     *  Notation.create(obj)
      *      .set("car.brand", "Ford")
      *      .set("car.model", "Mustang")
      *      .set("car.year", 1965, false)
      *      .set("car.color", "red")
      *      .set("boat", "none");
-     *  console.log(assets);
-     *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+     *  console.log(obj);
+     *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
     set(notation, value, overwrite = true) {
         if (!Notation.isValid(notation)) {
@@ -422,17 +439,17 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", year: 1970 } };
-     *  Notation.create(assets)
+     *  var obj = { car: { brand: "Dodge", year: 1970 } };
+     *  Notation.create(obj)
      *      .merge({
      *          "car.brand": "Ford",
      *          "car.model": "Mustang",
-     *          "car.year": 1965, false,
+     *          "car.year": 1965,
      *          "car.color": "red",
      *          "boat": "none"
      *      });
-     *  console.log(assets);
-     *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+     *  console.log(obj);
+     *  // { car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
     merge(notationsObject, overwrite = true) {
         if (!utils.isObject(notationsObject)) {
@@ -452,29 +469,29 @@ class Notation {
      *  object and returns a new object with the removed properties.
      *  Opposite of `merge()` method.
      *
-     *  @param {Array} notationsArray - The notations array to be processed.
+     *  @param {Array} notations - The notations array to be processed.
      *
      *  @returns {Object} - An object with the removed properties.
      *
      *  @example
-     *  var assets = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
-     *  var separated = Notation.create(assets).separate(["car.brand", "boat" ]);
+     *  var obj = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
+     *  var separated = Notation.create(obj).separate(["car.brand", "boat" ]);
      *  console.log(separated);
      *  // { notebook: "Mac", car: { brand: "Ford" } };
-     *  console.log(assets);
+     *  console.log(obj);
      *  // { car: { year: 1970 } };
      */
-    separate(notationsArray) {
-        if (!utils.isArray(notationsArray)) {
-            throw new NotationError(ERR.NOTA_OBJ + '`' + notationsArray + '`');
+    separate(notations) {
+        if (!utils.isArray(notations)) {
+            throw new NotationError(ERR.NOTA_OBJ + '`' + notations + '`');
         }
         let o = new Notation({});
-        utils.each(notationsArray, (notation, index, obj) => {
-            // this is preserved in arrow functions
+        utils.each(notations, (notation, index, obj) => {
             let result = this.inspectRemove(notation);
             o.set(notation, result.value);
         });
-        return o._source;
+        this._source = o._source;
+        return this;
     }
 
     // iterate globs
@@ -502,14 +519,14 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
-     *  var nota = Notation.create(assets);
-     *  nota.filter([ "*", "!car.*", "car.model" ]);
-     *  console.log(assets); // { notebook: "Mac", car: { model: "Mustang" } }
-     *  nota.filter("*");
-     *  console.log(assets); // { notebook: "Mac", car: { model: "Mustang" } }
-     *  nota.filter(); // or nota.filter("");
-     *  console.log(assets); // {}
+     *  var obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+     *  var notation = Notation.create(obj);
+     *  notation.filter([ "*", "!car.*", "car.model" ]);
+     *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
+     *  notation.filter("*");
+     *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
+     *  notation.filter(); // or notation.filter("");
+     *  console.log(obj); // {}
      */
     filter(globNotations) {
         let original = this.value,
@@ -573,7 +590,7 @@ class Notation {
             // TODO: Optimize the loop below. Instead of checking each key's
             // notation, get the non-star left part of the glob and iterate
             // that property of the source object.
-            this.eachKey((originalNotation, key, value, obj) => {
+            this.each((originalNotation, key, value, obj) => {
                 // console.log(originalNotation, key);
                 if (g.test(originalNotation)) {
                     if (g.isNegated) {
@@ -605,15 +622,15 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { notebook: "Mac", car: { model: "Mustang" } };
-     *  Notation.create(assets).remove("car.model");
-     *  console.log(assets); // { notebook: "Mac", car: { } }
+     *  var obj = { notebook: "Mac", car: { model: "Mustang" } };
+     *  Notation.create(obj).remove("car.model");
+     *  console.log(obj); // { notebook: "Mac", car: { } }
      */
     remove(notation) {
         this.inspectRemove(notation);
         return this;
     }
-    // Notation.prototype.delete = Notation.prototype.remove;
+    // TODO: alias delete
 
     /**
      *  Clones the `Notation` instance to a new one.
@@ -645,12 +662,12 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
      *  var models = { dodge: "Charger" };
-     *  Notation.create(assets).copyTo(models, "car.model", "ford");
+     *  Notation.create(obj).copyTo(models, "car.model", "ford");
      *  console.log(models);
      *  // { dodge: "Charger", ford: "Mustang" }
-     *  // assets object is not modified
+     *  // obj object is not modified
      */
     copyTo(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
@@ -681,10 +698,10 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
      *  var models = { dodge: "Charger" };
-     *  Notation.create(assets).copyFrom(models, "dodge", "car.model", true);
-     *  console.log(assets);
+     *  Notation.create(obj).copyFrom(models, "dodge", "car.model", true);
+     *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Charger" } }
      *  // models object is not modified
      */
@@ -717,10 +734,10 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
      *  var models = { dodge: "Charger" };
-     *  Notation.create(assets).moveTo(models, "car.model", "ford");
-     *  console.log(assets);
+     *  Notation.create(obj).moveTo(models, "car.model", "ford");
+     *  console.log(obj);
      *  // { car: { brand: "Ford" } }
      *  console.log(models);
      *  // { dodge: "Charger", ford: "Mustang" }
@@ -754,10 +771,10 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
      *  var models = { dodge: "Charger" };
-     *  Notation.create(assets).moveFrom(models, "dodge", "car.model", true);
-     *  console.log(assets);
+     *  Notation.create(obj).moveFrom(models, "dodge", "car.model", true);
+     *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Charger" } }
      *  console.log(models);
      *  // {}
@@ -786,11 +803,11 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-     *  Notation.create(assets)
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  Notation.create(obj)
      *      .rename("car.brand", "carBrand")
      *      .rename("car.model", "carModel");
-     *  console.log(assets);
+     *  console.log(obj);
      *  // { carBrand: "Ford", carModel: "Mustang" }
      */
     rename(notation, newNotation, overwrite) {
@@ -819,11 +836,11 @@ class Notation {
      *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-     *  var extracted = Notation.create(assets).extract("car.brand", "carBrand");
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  var extracted = Notation.create(obj).extract("car.brand", "carBrand");
      *  console.log(extracted);
      *  // { carBrand: "Ford" }
-     *  // assets object is not modified
+     *  // obj is not modified
      */
     extract(notation, newNotation) {
         let o = {};
@@ -852,9 +869,9 @@ class Notation {
      *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
-     *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-     *  var extruded = Notation.create(assets).extrude("car.brand", "carBrand");
-     *  console.log(assets);
+     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  var extruded = Notation.create(obj).extrude("car.brand", "carBrand");
+     *  console.log(obj);
      *  // { car: { model: "Mustang" } }
      *  console.log(extruded);
      *  // { carBrand: "Ford" }
@@ -885,9 +902,9 @@ class Notation {
      *  @returns {Notation} - The created instance.
      *
      *  @example
-     *  var notaObj = Notation.create(obj);
+     *  var notation = Notation.create(obj);
      *  // equivalent to:
-     *  var notaObj = new Notation(obj);
+     *  var notation = new Notation(obj);
      */
     static create(object = {}) {
         return new Notation(object);
@@ -1004,17 +1021,25 @@ class Notation {
 
 /**
  *  Error class specific to `Notation`.
- *  @type {NotationError}
- *  @see `{@link NotationError}`
+ *  @private
+ *
+ *  @class
+ *  @see `{@link #Notation.Error}`
  */
 Notation.Error = NotationError;
 
 /**
  *  Utility for validating, comparing and sorting dot-notation globs.
  *  This is internally used by `Notation` class.
- *  @type {NotationGlob}
- *  @see `{@link NotationGlob}`
+ *  @private
+ *
+ *  @class
+ *  @see `{@link #Notation.Glob}`
  */
 Notation.Glob = NotationGlob;
+
+// --------------------------------
+// EXPORT
+// --------------------------------
 
 export default Notation;
