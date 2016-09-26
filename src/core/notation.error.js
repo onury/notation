@@ -3,13 +3,16 @@
 
 /**
  *  Error class specific to `Notation`.
+ *  @name Notation.Error
+ *  @memberof! Notation
+ *  @class
+ *
  */
 class NotationError extends Error {
 
     /**
-     *  Initializes a new `NotationError` instance.
-     *  @constructor
-     *
+     *  Initializes a new `Notation.Error` instance.
+     *  @constructs Notation.Error
      *  @param {String} message - The error message.
      */
     constructor(message = '') {
