@@ -177,10 +177,10 @@ describe('Test Suite: Notation.Glob', function () {
 
     it('should `filter` notation-glob', function () {
         // var glob = Notation.Glob.create;
-        var NOTA = new Notation(_.cloneDeep(o));
-        // console.log('value ---:', NOTA.value);
+        var nota = new Notation(_.cloneDeep(o));
+        // console.log('value ---:', nota.value);
         var globs = ['!company.limited', 'billing.account.credit', 'company.*', 'account.id'],
-            filtered = NOTA.filter(globs).value;
+            filtered = nota.filter(globs).value;
         // console.log('filtered ---:', filtered);
 
         expect(filtered.company.name).toBeDefined();
@@ -207,7 +207,7 @@ describe('Test Suite: Notation.Glob', function () {
         expect(Object.keys(m3).length).toEqual(0);
 
         // globs.push('*');
-        // NOTA.filter(globs);
+        // nota.filter(globs);
     });
 
     it('should `filter` notation-glob', function () {
@@ -314,9 +314,9 @@ describe('Test Suite: Notation', function () {
         expect(Notation.isValid(true)).toEqual(false);
     });
 
-    it('should get flat object', function () {
-        var NOTA = new Notation(_.cloneDeep(o));
-        var flat = NOTA.getFlat();
+    it('should flatten / expand object', function () {
+        var nota = new Notation(_.cloneDeep(o));
+        var flat = nota.flatten().value;
 
         // console.log(flat);
         expect(flat.name).toEqual(o.name);
@@ -324,13 +324,20 @@ describe('Test Suite: Notation', function () {
         expect(flat['account.likes'].length).toEqual(o.account.likes.length);
         expect(flat['company.name']).toEqual(o.company.name);
         expect(flat['company.address.location.lat']).toEqual(o.company.address.location.lat);
+
+        var expanded = Notation.create(flat).expand().value;
+        expect(expanded.name).toEqual(o.name);
+        expect(expanded.account.id).toEqual(o.account.id);
+        expect(expanded.account.likes.length).toEqual(o.account.likes.length);
+        expect(expanded.company.name).toEqual(o.company.name);
+        expect(expanded.company.address.location.lat).toEqual(o.company.address.location.lat);
     });
 
-    it('should iterate `eachKey` and `eachNoteValue`', function () {
+    it('should iterate `each` and `eachValue`', function () {
         var assets = { boat: "none", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } },
             nota = Notation.create(assets),
             result = [];
-        nota.eachKey(function (notation, key, value, object) {
+        nota.each(function (notation, key, value, object) {
             result.push(notation);
         });
         expect(result.length).toEqual(5);
@@ -340,28 +347,28 @@ describe('Test Suite: Notation', function () {
         expect(result).toContain('car.year');
         expect(result).toContain('car.color');
 
-        nota.eachNoteValue('car.brand', function (levelValue, levelNotation, note, index, list) {
+        nota.eachValue('car.brand', function (levelValue, levelNotation, note, index, list) {
             if (index === 0) expect(levelValue.model).toEqual('Mustang');
             if (index === 1) expect(levelValue).toEqual('Ford');
         });
     });
 
-    it('should merge and separate notations object', function () {
-        var NOTA = new Notation(_.cloneDeep(o));
-        NOTA.merge({
+    it('should merge / separate notations object', function () {
+        var nota = new Notation(_.cloneDeep(o));
+        nota.merge({
             'key': null,
             'newkey.p1': 13,
             'newkey.p2': false,
             'newkey.p3.val': []
         });
-        var merged = NOTA.value;
+        var merged = nota.value;
         // console.log(o);
         expect(merged.key).toEqual(null);
         expect(merged.newkey.p1).toEqual(13);
         expect(merged.newkey.p2).toEqual(false);
         expect(merged.newkey.p3.val).toEqual(jasmine.any(Array));
 
-        var separated = NOTA.separate(['newkey.p1', 'newkey.p2', 'newkey.p3.val']);
+        var separated = nota.separate(['newkey.p1', 'newkey.p2', 'newkey.p3.val']).value;
         expect(separated.key).toBeUndefined();
         expect(separated.newkey.p1).toEqual(13);
         expect(separated.newkey.p2).toEqual(false);
@@ -374,76 +381,76 @@ describe('Test Suite: Notation', function () {
     });
 
     it('should check if object has / hasDefined notation', function () {
-        var NOTA = new Notation(_.cloneDeep(o));
-        expect(NOTA.has('name')).toEqual(true);
-        expect(NOTA.has('company.address.location.lat')).toEqual(true);
-        expect(NOTA.has('company.notDefined')).toEqual(true);
-        expect(NOTA.has('notProp1')).toEqual(false);
-        expect(NOTA.has('company.notProp2')).toEqual(false);
+        var nota = new Notation(_.cloneDeep(o));
+        expect(nota.has('name')).toEqual(true);
+        expect(nota.has('company.address.location.lat')).toEqual(true);
+        expect(nota.has('company.notDefined')).toEqual(true);
+        expect(nota.has('notProp1')).toEqual(false);
+        expect(nota.has('company.notProp2')).toEqual(false);
 
-        expect(NOTA.hasDefined('name')).toEqual(true);
-        expect(NOTA.hasDefined('account.id')).toEqual(true);
-        expect(NOTA.hasDefined('company.address.location.lat')).toEqual(true);
-        expect(NOTA.hasDefined('company.notDefined')).toEqual(false);
-        expect(NOTA.hasDefined('company.none')).toEqual(false);
-        expect(NOTA.hasDefined('company.nuller')).toEqual(true);
-        expect(NOTA.hasDefined('company.zero')).toEqual(true);
-        expect(NOTA.hasDefined('notProp1')).toEqual(false);
-        expect(NOTA.hasDefined('company.notProp2')).toEqual(false);
+        expect(nota.hasDefined('name')).toEqual(true);
+        expect(nota.hasDefined('account.id')).toEqual(true);
+        expect(nota.hasDefined('company.address.location.lat')).toEqual(true);
+        expect(nota.hasDefined('company.notDefined')).toEqual(false);
+        expect(nota.hasDefined('company.none')).toEqual(false);
+        expect(nota.hasDefined('company.nuller')).toEqual(true);
+        expect(nota.hasDefined('company.zero')).toEqual(true);
+        expect(nota.hasDefined('notProp1')).toEqual(false);
+        expect(nota.hasDefined('company.notProp2')).toEqual(false);
     });
 
     it('should `get` value', function () {
-        var NOTA = new Notation(_.cloneDeep(o));
-        expect(NOTA.get('name')).toEqual(o.name);
-        expect(NOTA.get('account.id')).toEqual(o.account.id);
-        expect(NOTA.get('company.address.location.lat')).toEqual(o.company.address.location.lat);
-        expect(NOTA.get('account.noProp')).toBeUndefined();
+        var nota = new Notation(_.cloneDeep(o));
+        expect(nota.get('name')).toEqual(o.name);
+        expect(nota.get('account.id')).toEqual(o.account.id);
+        expect(nota.get('company.address.location.lat')).toEqual(o.company.address.location.lat);
+        expect(nota.get('account.noProp')).toBeUndefined();
     });
 
     it('should `set` value', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value;
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value;
         expect(obj.name).toEqual('onur');
-        NOTA.set('name', 'cute');
+        nota.set('name', 'cute');
         expect(obj.name).toEqual('cute');
 
         // should not overwrite
-        NOTA.set('account.id', 120, false);
+        nota.set('account.id', 120, false);
         expect(obj.account.id).toEqual(15);
 
         // should overwrite
-        NOTA.set('account.id', 120, true);
+        nota.set('account.id', 120, true);
         expect(obj.account.id).toEqual(120);
 
         // should overwrite
-        NOTA.set('company.address.location.lat', 40.111111);
+        nota.set('company.address.location.lat', 40.111111);
         expect(obj.company.address.location.lat).toEqual(40.111111);
         expect(obj.company.address.location.lon).toEqual(30.123123);
 
-        NOTA.set('newProp.val', true);
+        nota.set('newProp.val', true);
         expect(obj.newProp.val).toEqual(true);
 
-        NOTA.set('account.newProp.val', 'YES');
+        nota.set('account.newProp.val', 'YES');
         expect(obj.account.newProp.val).toEqual('YES');
     });
 
     it('should `remove` property', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value;
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value;
         // console.log('before', o);
         expect(obj.age).toBeDefined();
-        NOTA.remove('age');
+        nota.remove('age');
         expect(obj.age).toBeUndefined();
 
         expect(obj.company.address.city).toEqual('istanbul');
-        NOTA.remove('company.address.city');
+        nota.remove('company.address.city');
         expect(obj.company.address.city).toBeUndefined();
         // console.log('after', o);
 
         // deleting non-existing property..
         // this should have no effect.
         var k = Object.keys(obj.company).length;
-        NOTA.remove('company.noProp');
+        nota.remove('company.noProp');
         expect(Object.keys(obj.company).length).toEqual(k);
 
         var assets = { boat: 'none', car: { model: 'Mustang' } };
@@ -453,89 +460,89 @@ describe('Test Suite: Notation', function () {
     });
 
     it('should `rename` notation', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value;
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value;
         expect(obj.company.address.location).toBeDefined();
-        NOTA.rename('company.address.location', 'company.loc.geo');
+        nota.rename('company.address.location', 'company.loc.geo');
         expect(obj.company.address.location).toBeUndefined();
         expect(obj.company.loc.geo.lat).toEqual(jasmine.any(Number));
 
         expect(obj.name).toBeDefined();
-        NOTA.rename('name', 'person');
+        nota.rename('name', 'person');
         expect(obj.name).toBeUndefined();
         expect(obj.person).toBeDefined();
-        NOTA.rename('person', 'me.name');
+        nota.rename('person', 'me.name');
         expect(obj.person).toBeUndefined();
         expect(obj.me.name).toBeDefined();
     });
 
     it('should `copyTo` or `extract` notation', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value;
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value;
         // `extract(notation)` is same as `copyTo({}, notation)`
         var ex;
-        ex = NOTA.extract('company');
+        ex = nota.extract('company');
         expect(obj.company.name).toEqual('pilot co');
         expect(ex.company.name).toEqual('pilot co');
-        ex = NOTA.extract('company.address.country');
+        ex = nota.extract('company.address.country');
         expect(obj.company.address.country).toEqual('TR');
         expect(ex.company.address.country).toEqual('TR');
     });
 
     it('should `moveTo` or `extrude` notation', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value;
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value;
         // `extrude(notation)` is same as `moveTo({}, notation)`
         var ex;
-        ex = NOTA.extrude('company.address.country');
+        ex = nota.extrude('company.address.country');
         expect(obj.company.address.country).toBeUndefined();
         expect(ex.company.address.country).toEqual('TR');
-        ex = NOTA.extrude('company', 'comp.my');
+        ex = nota.extrude('company', 'comp.my');
         expect(obj.company).toBeUndefined();
         expect(ex.company).toBeUndefined();
         expect(ex.comp.my.name).toEqual('pilot co');
     });
 
     it('should return `undefined` for invalid notations', function () {
-        var NOTA = new Notation(_.cloneDeep(o));
+        var nota = new Notation(_.cloneDeep(o));
         var level1 = 'noProp',
             level2 = 'noProp.level2';
-        expect(NOTA.get(level1)).toBeUndefined();
-        expect(NOTA.hasDefined(level1)).toEqual(false);
-        expect(NOTA.get(level2)).toBeUndefined();
-        expect(NOTA.hasDefined(level2)).toEqual(false);
+        expect(nota.get(level1)).toBeUndefined();
+        expect(nota.hasDefined(level1)).toEqual(false);
+        expect(nota.get(level2)).toBeUndefined();
+        expect(nota.hasDefined(level2)).toEqual(false);
     });
 
     it('should ignore invalid notations', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
-            obj = NOTA.value,
+        var nota = new Notation(_.cloneDeep(o)),
+            obj = nota.value,
             ex,
             level1 = 'noProp',
             level2 = 'noProp.level2';
 
-        ex = NOTA.extract(level1);
-        expect(NOTA.get(level1)).toBeUndefined();
+        ex = nota.extract(level1);
+        expect(nota.get(level1)).toBeUndefined();
         expect(Object.keys(ex).length).toEqual(0);
 
-        ex = NOTA.extract(level2);
-        expect(NOTA.get(level2)).toBeUndefined();
+        ex = nota.extract(level2);
+        expect(nota.get(level2)).toBeUndefined();
         expect(Object.keys(ex).length).toEqual(0);
 
-        ex = NOTA.extrude(level1);
-        expect(NOTA.get(level1)).toBeUndefined();
+        ex = nota.extrude(level1);
+        expect(nota.get(level1)).toBeUndefined();
         expect(Object.keys(ex).length).toEqual(0);
 
-        ex = NOTA.extrude(level2);
-        expect(NOTA.get(level2)).toBeUndefined();
+        ex = nota.extrude(level2);
+        expect(nota.get(level2)).toBeUndefined();
         expect(Object.keys(ex).length).toEqual(0);
 
         expect(obj.account.noProp).toBeUndefined();
-        NOTA.rename('account.noProp', 'renamedProp');
+        nota.rename('account.noProp', 'renamedProp');
         expect(obj.renamedProp).toBeUndefined();
     });
 
     it('should throw if invalid object or notation', function () {
-        var NOTA = new Notation(_.cloneDeep(o)),
+        var nota = new Notation(_.cloneDeep(o)),
             b = null; // undefined will NOT throw
 
         function invalidSrc() {
@@ -544,27 +551,27 @@ describe('Test Suite: Notation', function () {
         expect(invalidSrc).toThrow();
 
         function copy_invalidDest() {
-            return NOTA.copyTo(b, 'account');
+            return nota.copyTo(b, 'account');
         }
         expect(copy_invalidDest).toThrow();
 
         function has_invalidNota() {
-            return NOTA.has({}, 4);
+            return nota.has({}, 4);
         }
         expect(has_invalidNota).toThrow();
 
         function delete_invalidNota() {
-            return NOTA.remove({});
+            return nota.remove({});
         }
         expect(delete_invalidNota).toThrow();
 
         function rename_invalidNota() {
-            return NOTA.rename('account', {});
+            return nota.rename('account', {});
         }
         expect(rename_invalidNota).toThrow();
 
         function validNonExistingNota() {
-            return NOTA.get('prop2');
+            return nota.get('prop2');
         }
         expect(validNonExistingNota).not.toThrow();
 
