@@ -78,6 +78,13 @@ module.exports = function (grunt) {
             }
         },
 
+        'docma': {
+            traceFatal: true,
+            options: {
+                config: './docma.config.json'
+            }
+        },
+
         'watch': {
             test: {
                 files: [
@@ -102,9 +109,9 @@ module.exports = function (grunt) {
     // grunt.registerTask('watch-wp', ['webpack:watch']);
     grunt.registerTask('min', ['webpack:min']);
     grunt.registerTask('build', ['webpack:full', 'webpack:min']);
-    // grunt.registerTask('test', ['webpack:full', 'jasmine_nodejs']);
-    grunt.registerTask('test-node', ['jasmine_nodejs']);
+    grunt.registerTask('test', ['build', 'jasmine_nodejs']);
     grunt.registerTask('watch-test', ['watch:test']);
+    grunt.registerTask('release', ['build', 'docma']);
 
     // Open either one:
     // http://localhost:9991/webpack-dev-server
