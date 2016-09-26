@@ -6,12 +6,15 @@ import NotationError from './notation.error';
 // http://en.wikipedia.org/wiki/Wildcard_character#Computing
 
 /**
- *  `NotationGlob` is a utility for validating, comparing and sorting
+ *  `Notation.Glob` is a utility for validating, comparing and sorting
  *  dot-notation globs.
  *
  *  You can use {@link http://www.linfo.org/wildcard.html|wildcard} stars `*`
  *  and negate the notation by prepending a bang `!`. A star will include all
  *  the properties at that level and a negated notation will be excluded.
+ *  @name Notation.Glob
+ *  @memberof! Notation
+ *  @class
  *
  *  @example
  *  // for the following object;
@@ -22,20 +25,18 @@ import NotationError from './notation.error';
  *  "!billing.account.*" // represents `{ name: "John" }`
  *  "name" // represents `"John"`
  *  "*" // represents the whole object
+ *
+ *  @example
+ *  var glob = new Notation.Glob("billing.account.*");
+ *  glob.test("billing.account.id"); // true
  */
 class NotationGlob {
 
     /**
      *  Constructs a `Notation.Glob` object with the given glob string.
-     *  @constructor
+     *  @constructs Notation.Glob
      *
      *  @param {String} glob - The glob string.
-     *
-     *  @returns {NotationGlob}
-     *
-     *  @example
-     *  var glob = new Notation.Glob("billing.account.*");
-     *  glob.test("billing.account.id"); // true
      */
     constructor(glob) {
         if (!NotationGlob.isValid(glob)) {
@@ -55,6 +56,8 @@ class NotationGlob {
 
     /**
      *  Checks whether the given notation value matches the source notation glob.
+     *  @name Notation.Glob#test
+     *  @function
      *
      *  @param {String} notation - The notation string to be tested.
      *
@@ -78,6 +81,8 @@ class NotationGlob {
     /**
      *  Basically constructs a new `NotationGlob` instance
      *  with the given glob string.
+     *  @name Notation.Glob.create
+     *  @function
      *
      *  @param {String} glob - The source notation glob.
      *
@@ -124,6 +129,9 @@ class NotationGlob {
     // Created test at: https://regex101.com/r/tJ7yI9/
     /**
      *  Validates the given notation glob.
+     *  @name Notation.Glob.isValid
+     *  @function
+     *
      *  @param {String} glob - Notation glob to be validated.
      *  @returns {Boolean}
      */
@@ -146,6 +154,8 @@ class NotationGlob {
      *  `*, store.address, !store.address.street`. For cases such as
      *  `prop.id` vs `!prop.id` which represent the same property;
      *  the negated glob wins (comes last).
+     *  @name Notation.Glob.compare
+     *  @function
      *
      *  @param {String} a - First notation glob to be compared.
      *  @param {String} b - Second notation glob to be compared.
@@ -200,6 +210,8 @@ class NotationGlob {
      *  instance; `store.address` comes before `store.address.street`. For cases
      *  such as `prop.id` vs `!prop.id` which represent the same property; the
      *  negated glob wins (comes last).
+     *  @name Notation.Glob.sort
+     *  @function
      *
      *  @param {Array} globsArray - The notation globs array to be sorted.
      *  The passed array reference is modified.
@@ -223,6 +235,8 @@ class NotationGlob {
      *  arrays contains a negated equivalent of an item in the other array,
      *  the negated item is removed. If any item covers/matches a negated
      *  item in the other array, the negated item is removed.
+     *  @name Notation.Glob.union
+     *  @function
      *
      *  @param {Array} arrA - First array of glob strings.
      *  @param {Array} arrB - Second array of glob strings.
