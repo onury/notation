@@ -99,6 +99,8 @@ return /******/ (function(modules) { // webpackBootstrap
 	// Error if source object has flattened (dotted) keys.
 	// expand if dotted keyed object is passed to constructor?
 	
+	// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Property_accessors
+	
 	var ERR = {
 	    SOURCE: 'Invalid source object.',
 	    DEST: 'Invalid destination object.',
@@ -109,13 +111,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	/**
 	 *  Notation.js for Node and Browser.
 	 *
-	 *  Provides various methods for modifying / processing the contents
-	 *  of the given object; by parsing object notation strings or globs.
+	 *  Like in most programming languages, JavaScript makes use of dot-notation to
+	 *  access the value a member of an object (or class). `Notation` class provides
+	 *  various methods for modifying / processing the contents of the given object;
+	 *  by parsing object notation strings or globs.
+	 *
 	 *  Note that this class will only deal with enumerable properties of the
 	 *  source object; so it should be used to manipulate data objects. It will
 	 *  not deal with preserving the prototype-chain of the given object.
 	 *
-	 *  @version  0.7.0 (2015-05-05)
 	 *  @author   Onur Yıldırım (onur@cutepilot.com)
 	 *  @license  MIT
 	 */
@@ -125,21 +129,19 @@ return /******/ (function(modules) { // webpackBootstrap
 	    /**
 	     *  Initializes a new instance of `Notation`.
 	     *
-	     *  @param {Object} object - The source object to be notated.
-	     *
-	     *  @return {Notation}
+	     *  @param {Object} [object={}] - The source object to be notated.
 	     *
 	     *  @example
-	     *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-	     *  var notaAssets = new Notation(assets);
-	     *  notaAssets.get('car.model'); // "Charger"
+	     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	     *  var notation = new Notation(obj);
+	     *  notation.get('car.model'); // "Charger"
 	     */
 	
-	    function Notation(object) {
+	    function Notation() {
+	        var object = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	
 	        _classCallCheck(this, Notation);
 	
-	        // if not defined, default to `{}`
-	        object = object === undefined ? {} : object;
 	        // if defined, it should be an object.
 	        if (!_utils2.default.isObject(object)) {
 	            throw new _notation4.default(ERR.SOURCE);
@@ -153,25 +155,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    /**
 	     *  Gets the value of the source object.
-	     *
-	     *  @return {Object} - The source object.
+	     *  @type {Object}
 	     *
 	     *  @example
-	     *  var o = { name: "Onur" };
-	     *  var me = Notation.create(o)
+	     *  var person = { name: "Onur" };
+	     *  var me = Notation.create(person)
 	     *      .set("age", 36)
 	     *      .set("car.brand", "Ford")
 	     *      .set("car.model", "Mustang")
 	     *      .value;
-	     *  console.log(me);
-	     *  // { name: "Onur", age: 36, car: { brand: "Ford", model: "Mustang" } }
-	     *  console.log(o === me);
-	     *  // true
+	     *  console.log(me); // { name: "Onur", age: 36, car: { brand: "Ford", model: "Mustang" } }
+	     *  console.log(person === me); // true
 	     */
 	
 	
 	    _createClass(Notation, [{
-	        key: 'eachKey',
+	        key: 'each',
 	
 	
 	        // --------------------------------
@@ -181,24 +180,25 @@ return /******/ (function(modules) { // webpackBootstrap
 	        /**
 	         *  Recursively iterates through each key of the source object and invokes
 	         *  the given callback function with parameters, on each non-object value.
+	         *  @alias Notation#eachKey
 	         *
 	         *  @param {Function} callback - The callback function to be invoked on
-	         *      each on each non-object value. To break out of the loop, return
-	         *      `false` from within the callback.
-	         *      Callback signature: `callback(notation, key, value, object) { ... }`
+	         *  each on each non-object value. To break out of the loop, return `false`
+	         *  from within the callback.
+	         *  Callback signature: `callback(notation, key, value, object) { ... }`
 	         *
-	         *  @return {void}
+	         *  @returns {void}
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-	         *  Notation.create(assets).eachKey(function (notation, key, value, object) {
+	         *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	         *  Notation.create(obj).each(function (notation, key, value, object) {
 	         *      console.log(notation, value);
 	         *  });
 	         *  // "car.brand"  "Dodge"
 	         *  // "car.model"  "Charger"
 	         *  // "car.year"  1970
 	         */
-	        value: function eachKey(callback) {
+	        value: function each(callback) {
 	            var _this = this;
 	
 	            var o = this._source,
@@ -209,7 +209,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                    N = void 0;
 	                if (_utils2.default.isObject(prop)) {
 	                    N = new Notation(prop);
-	                    N.eachKey(function (notation, nKey, value, prop) {
+	                    N.each(function (notation, nKey, value, prop) {
 	                        var subKey = key + '.' + notation;
 	                        callback.call(N, subKey, nKey, value, o);
 	                    });
@@ -218,6 +218,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	                }
 	            });
 	        }
+	        /**
+	         *  Alias for `#each`
+	         *  @private
+	         */
+	
+	    }, {
+	        key: 'eachKey',
+	        value: function eachKey(callback) {
+	            return this.each(callback);
+	        }
 	
 	        /**
 	         *  Iterates through each note of the given notation string by evaluating
@@ -225,23 +235,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be iterated through.
 	         *  @param {Function} callback - The callback function to be invoked on
-	         *      each iteration. To break out of the loop, return `false` from
-	         *      within the callback.
-	         *      Callback signature: `callback(levelValue, note, index, list) { ... }`
+	         *  each iteration. To break out of the loop, return `false` from within
+	         *  the callback.
+	         *  Callback signature: `callback(levelValue, note, index, list) { ... }`
 	         *
-	         *  @return {void}
+	         *  @returns {void}
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-	         *  Notation.create(assets)
-	         *      .eachNoteValue("car.brand", function (levelValue, note, index, list) {
+	         *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	         *  Notation.create(obj)
+	         *      .eachValue("car.brand", function (levelValue, note, index, list) {
 	         *          console.log(note, levelValue); // "car.brand" "Dodge"
 	         *      });
 	         */
 	
 	    }, {
-	        key: 'eachNoteValue',
-	        value: function eachNoteValue(notation, callback) {
+	        key: 'eachValue',
+	        value: function eachValue(notation, callback) {
 	            if (!Notation.isValid(notation)) {
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
@@ -255,54 +265,78 @@ return /******/ (function(modules) { // webpackBootstrap
 	        /**
 	         *  Gets the list of notations from the source object (keys).
 	         *
-	         *  @return {Array} - An array of notation strings.
+	         *  @returns {Array} - An array of notation strings.
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-	         *  var notationsList = Notation.create(assets).getNotations();
-	         *  // [ "car.brand", "car.model", "car.year" ]
+	         *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	         *  var notations = Notation.create(obj).getNotations();
+	         *  console.log(notations); // [ "car.brand", "car.model", "car.year" ]
 	         */
 	
 	    }, {
 	        key: 'getNotations',
 	        value: function getNotations() {
 	            var list = [];
-	            this.eachKey(function (notation, key, value, obj) {
+	            this.each(function (notation, key, value, obj) {
 	                list.push(notation);
 	            });
 	            return list;
 	        }
 	
 	        /**
-	         *  Gets a flat (single-level) object with notated keys, from the source object.
-	         *  @alias Notation#getMap
+	         *  Flattens the source object to a single-level object with notated keys.
 	         *
-	         *  @return {Object} - A new object with flat, notated keys.
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-	         *  var flat = Notation.create(assets).getFlat();
-	         *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+	         *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	         *  var flat = Notation.create(obj).flatten().value;
+	         *  console.log(flat); // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
 	         */
 	
 	    }, {
-	        key: 'getFlat',
-	        value: function getFlat() {
+	        key: 'flatten',
+	        value: function flatten() {
 	            var o = {};
-	            this.eachKey(function (notation, key, value, obj) {
+	            this.each(function (notation, key, value, obj) {
 	                o[notation] = value;
 	            });
-	            return o;
+	            // return o;
+	            this._source = o;
+	            return this;
+	        }
+	
+	        /**
+	         *  Aggregates notated keys of a (single-level) object, and nests them under
+	         *  their corresponding properties. This is the opposite of `Notation#flatten`
+	         *  method. This might be useful when expanding a flat object fetched from
+	         *  a database.
+	         *  @alias Notation#aggregate
+	         *  @chainable
+	         *
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
+	         *
+	         *  @example
+	         *  var obj = { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+	         *  var expanded = Notation.create(obj).expand().value;
+	         *  console.log(expanded); // { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+	         */
+	
+	    }, {
+	        key: 'expand',
+	        value: function expand() {
+	            this._source = Notation.create({}).merge(this._source).value;
+	            return this;
 	        }
 	        /**
-	         *  Alias for `#getFlat`
+	         *  Alias for `#expand`
 	         *  @private
 	         */
 	
 	    }, {
-	        key: 'getMap',
-	        value: function getMap() {
-	            return this.getFlat();
+	        key: 'aggregate',
+	        value: function aggregate() {
+	            return this.expand();
 	        }
 	
 	        /**
@@ -312,14 +346,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be inspected.
 	         *
-	         *  @return {Object} - The result object has the following properties:
-	         *      `result.has` {Boolean}  Indicates whether the source object
-	         *          has the given notation as a (leveled) enumerable property.
-	         *          If the property exists but has a value of `undefined`,
-	         *          this will still return `true`.
-	         *      `result.value` {*}  The value of the notated property.
-	         *          if the source object does not have the notation,
-	         *          the value will be `undefined`.
+	         *  @returns {InspectResult} - The result object.
 	         *
 	         *  @example
 	         *  Notation.create({ car: { year: 1970 } }).inspect("car.year");
@@ -350,6 +377,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	            });
 	            return result;
 	        }
+	        /**
+	         *  Notation inspection result object.
+	         *  @typedef Notation~InspectResult
+	         *  @type Object
+	         *  @property {Boolean} has - Indicates whether the source object has the given
+	         *  notation as a (leveled) enumerable property. If the property exists but has
+	         *  a value of `undefined`, this will still return `true`.
+	         *  @property {*} value - The value of the notated property. If the source object
+	         *  does not have the notation, the value will be `undefined`.
+	         */
 	
 	        /**
 	         *  Inspects and removes the given notation from the source object
@@ -358,14 +395,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be inspected.
 	         *
-	         *  @return {Object} - The result object has the following properties:
-	         *      `result.has` {Boolean}  Indicates whether the source object
-	         *          has the given notation as a (leveled) enumerable property.
-	         *          If the property exists but has a value of `undefined`,
-	         *          this will still return `true`.
-	         *      `result.value` {*}  The value of the removed property.
-	         *          if the source object does not have the notation,
-	         *          the value will be `undefined`.
+	         *  @returns {InspectResult} - The result object.
 	         *
 	         *  @example
 	         *  var obj = { name: "John", car: { year: 1970 } };
@@ -413,7 +443,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be checked.
 	         *
-	         *  @return {Boolean}
+	         *  @returns {Boolean}
 	         *
 	         *  @example
 	         *  Notation.create({ car: { year: 1970 } }).has("car.year"); // true
@@ -434,7 +464,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be checked.
 	         *
-	         *  @return {Boolean}
+	         *  @returns {Boolean}
 	         *
 	         *  @example
 	         *  Notation.create({ car: { year: 1970 } }).hasDefined("car.year"); // true
@@ -453,11 +483,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  notation.
 	         *
 	         *  @param {String} notation - The notation string to be processed.
-	         *  @param {String} defaultValue - Optional. Default: `undefined`
-	         *      The default value to be returned if the property is not
-	         *      found or enumerable.
+	         *  @param {String} [defaultValue] - The default value to be returned if
+	         *  the property is not found or enumerable.
 	         *
-	         *  @return {*} - The value of the notated property.
+	         *  @returns {*} - The value of the notated property.
 	         *
 	         *  @example
 	         *  Notation.create({ car: { brand: "Dodge" } }).get("car.brand"); // "Dodge"
@@ -478,33 +507,35 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  notation. If the property does not exist, it will be created
 	         *  and nested at the calculated level. If it exists; its value
 	         *  will be overwritten by default.
+	         *  @chainable
 	         *
 	         *  @param {String} notation - The notation string to be processed.
 	         *  @param {*} value - The value to be set for the notated property.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property if exists.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
+	         *  if exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", year: 1970 } };
-	         *  Notation.create(assets)
+	         *  var obj = { car: { brand: "Dodge", year: 1970 } };
+	         *  Notation.create(obj)
 	         *      .set("car.brand", "Ford")
 	         *      .set("car.model", "Mustang")
 	         *      .set("car.year", 1965, false)
 	         *      .set("car.color", "red")
 	         *      .set("boat", "none");
-	         *  console.log(assets);
-	         *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+	         *  console.log(obj);
+	         *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
 	         */
 	
 	    }, {
 	        key: 'set',
-	        value: function set(notation, value, overwrite) {
+	        value: function set(notation, value) {
+	            var overwrite = arguments.length <= 2 || arguments[2] === undefined ? true : arguments[2];
+	
 	            if (!Notation.isValid(notation)) {
 	                throw new _notation4.default(ERR.NOTATION + '`' + notation + '`');
 	            }
-	            overwrite = typeof overwrite === 'boolean' ? overwrite : true;
 	            var level = this._source,
 	                last = void 0;
 	            Notation.eachNote(notation, function (levelNotation, note, index, list) {
@@ -536,35 +567,37 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  notation. If a property does not exist, it will be created
 	         *  and nested at the calculated level. If it exists; its value
 	         *  will be overwritten by default.
+	         *  @chainable
 	         *
 	         *  @param {Object} notationsObject - The notations object to be processed.
-	         *      This can either be a regular object with non-dotted keys
-	         *      (which will be merged to the first/root level of the source object);
-	         *      or a flattened object with notated (dotted) keys.
+	         *  This can either be a regular object with non-dotted keys
+	         *  (which will be merged to the first/root level of the source object);
+	         *  or a flattened object with notated (dotted) keys.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite a property if
+	         *  exists.
 	         *
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite a property if exists.
-	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", year: 1970 } };
-	         *  Notation.create(assets)
+	         *  var obj = { car: { brand: "Dodge", year: 1970 } };
+	         *  Notation.create(obj)
 	         *      .merge({
 	         *          "car.brand": "Ford",
 	         *          "car.model": "Mustang",
-	         *          "car.year": 1965, false,
+	         *          "car.year": 1965,
 	         *          "car.color": "red",
 	         *          "boat": "none"
 	         *      });
-	         *  console.log(assets);
-	         *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+	         *  console.log(obj);
+	         *  // { car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
 	         */
 	
 	    }, {
 	        key: 'merge',
-	        value: function merge(notationsObject, overwrite) {
+	        value: function merge(notationsObject) {
 	            var _this2 = this;
+	
+	            var overwrite = arguments.length <= 1 || arguments[1] === undefined ? true : arguments[1];
 	
 	            if (!_utils2.default.isObject(notationsObject)) {
 	                throw new _notation4.default(ERR.NOTA_OBJ + '`' + notationsObject + '`');
@@ -583,34 +616,34 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  object and returns a new object with the removed properties.
 	         *  Opposite of `merge()` method.
 	         *
-	         *  @param {Array} notationsArray - The notations array to be processed.
+	         *  @param {Array} notations - The notations array to be processed.
 	         *
-	         *  @return {Object} - An object with the removed properties.
+	         *  @returns {Object} - An object with the removed properties.
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
-	         *  var separated = Notation.create(assets).separate(["car.brand", "boat" ]);
+	         *  var obj = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
+	         *  var separated = Notation.create(obj).separate(["car.brand", "boat" ]);
 	         *  console.log(separated);
 	         *  // { notebook: "Mac", car: { brand: "Ford" } };
-	         *  console.log(assets);
+	         *  console.log(obj);
 	         *  // { car: { year: 1970 } };
 	         */
 	
 	    }, {
 	        key: 'separate',
-	        value: function separate(notationsArray) {
+	        value: function separate(notations) {
 	            var _this3 = this;
 	
-	            if (!_utils2.default.isArray(notationsArray)) {
-	                throw new _notation4.default(ERR.NOTA_OBJ + '`' + notationsArray + '`');
+	            if (!_utils2.default.isArray(notations)) {
+	                throw new _notation4.default(ERR.NOTA_OBJ + '`' + notations + '`');
 	            }
 	            var o = new Notation({});
-	            _utils2.default.each(notationsArray, function (notation, index, obj) {
-	                // this is preserved in arrow functions
+	            _utils2.default.each(notations, function (notation, index, obj) {
 	                var result = _this3.inspectRemove(notation);
 	                o.set(notation, result.value);
 	            });
-	            return o._source;
+	            this._source = o._source;
+	            return this;
 	        }
 	
 	        // iterate globs
@@ -623,28 +656,29 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  and removes the rest.
 	         *
 	         *  @param {Array|String} globNotations - The glob notation(s) to
-	         *      be processed. The difference between normal notations and
-	         *      glob-notations is that you can use wildcard stars (*) and
-	         *      negate the notation by prepending a bang (!). A negated
-	         *      notation will be excluded. Order of the globs do not matter,
-	         *      they will be logically sorted. Loose globs will be processed
-	         *      first and verbose globs or normal notations will be processed
-	         *      last. e.g. `[ "car.model", "*", "!car.*" ]` will be sorted as
-	         *      `[ "*", "!car.*", "car.model" ]`.
-	         *      Passing no parameters or passing an empty string (`""` or `[""]`)
-	         *      will empty the source object.
+	         *  be processed. The difference between normal notations and
+	         *  glob-notations is that you can use wildcard stars (*) and
+	         *  negate the notation by prepending a bang (!). A negated
+	         *  notation will be excluded. Order of the globs do not matter,
+	         *  they will be logically sorted. Loose globs will be processed
+	         *  first and verbose globs or normal notations will be processed
+	         *  last. e.g. `[ "car.model", "*", "!car.*" ]` will be sorted as
+	         *  `[ "*", "!car.*", "car.model" ]`.
+	         *  Passing no parameters or passing an empty string (`""` or `[""]`)
+	         *  will empty the source object.
+	         *  @chainable
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
-	         *  var nota = Notation.create(assets);
-	         *  nota.filter([ "*", "!car.*", "car.model" ]);
-	         *  console.log(assets); // { notebook: "Mac", car: { model: "Mustang" } }
-	         *  nota.filter("*");
-	         *  console.log(assets); // { notebook: "Mac", car: { model: "Mustang" } }
-	         *  nota.filter(); // or nota.filter("");
-	         *  console.log(assets); // {}
+	         *  var obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+	         *  var notation = Notation.create(obj);
+	         *  notation.filter([ "*", "!car.*", "car.model" ]);
+	         *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
+	         *  notation.filter("*");
+	         *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
+	         *  notation.filter(); // or notation.filter("");
+	         *  console.log(obj); // {}
 	         */
 	
 	    }, {
@@ -715,7 +749,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                // TODO: Optimize the loop below. Instead of checking each key's
 	                // notation, get the non-star left part of the glob and iterate
 	                // that property of the source object.
-	                _this4.eachKey(function (originalNotation, key, value, obj) {
+	                _this4.each(function (originalNotation, key, value, obj) {
 	                    // console.log(originalNotation, key);
 	                    if (g.test(originalNotation)) {
 	                        if (g.isNegated) {
@@ -725,7 +759,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	                        }
 	                    }
 	                });
-	            }, this);
+	            });
 	            // finally set the filtered's value as the source of our instance and
 	            // return.
 	            this._source = filtered.value;
@@ -740,15 +774,16 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	        /**
 	         *  Removes the property at the given notation, from the source object.
+	         *  @chainable
 	         *
 	         *  @param {String} notation - The notation to be inspected.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { notebook: "Mac", car: { model: "Mustang" } };
-	         *  Notation.create(assets).remove("car.model");
-	         *  console.log(assets); // { notebook: "Mac", car: { } }
+	         *  var obj = { notebook: "Mac", car: { model: "Mustang" } };
+	         *  Notation.create(obj).remove("car.model");
+	         *  console.log(obj); // { notebook: "Mac", car: { } }
 	         */
 	
 	    }, {
@@ -757,7 +792,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	            this.inspectRemove(notation);
 	            return this;
 	        }
-	        // Notation.prototype.delete = Notation.prototype.remove;
+	        // TODO: alias delete
+	
+	        /**
+	         *  Clones the `Notation` instance to a new one.
+	         *
+	         *  @returns {Notation} - A new copy of the instance.
+	         */
 	
 	    }, {
 	        key: 'clone',
@@ -770,32 +811,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  Copies the notated property from the source object and adds it to the
 	         *  destination — only if the source object actually has that property.
 	         *  This is different than a property with a value of `undefined`.
+	         *  @chainable
 	         *
 	         *  @param {Object} destination - The destination object that the notated
-	         *      properties will be copied to.
+	         *  properties will be copied to.
 	         *  @param {String} notation - The notation to get the corresponding property
-	         *      from the source object.
-	         *  @param {String} newNotation - Optional. The notation to set the source
-	         *      property on the destination object. In other words, the copied property
-	         *      will be renamed to this value before set on the destination object.
-	         *      If not set, `notation` argument will be used.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property on the destination object if it exists.
+	         *  from the source object.
+	         *  @param {String} [newNotation=null] - The notation to set the source property
+	         *  on the destination object. In other words, the copied property will be
+	         *  renamed to this value before set on the destination object. If not set,
+	         *  `notation` argument will be used.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+	         *  the destination object if it exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
 	         *  var models = { dodge: "Charger" };
-	         *  Notation.create(assets).copyTo(models, "car.model", "ford");
+	         *  Notation.create(obj).copyTo(models, "car.model", "ford");
 	         *  console.log(models);
 	         *  // { dodge: "Charger", ford: "Mustang" }
-	         *  // assets object is not modified
+	         *  // obj object is not modified
 	         */
 	
 	    }, {
 	        key: 'copyTo',
-	        value: function copyTo(destination, notation, newNotation, overwrite) {
+	        value: function copyTo(destination, notation) {
+	            var newNotation = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+	            var overwrite = arguments.length <= 3 || arguments[3] === undefined ? true : arguments[3];
+	
 	            if (!_utils2.default.isObject(destination)) throw new _notation4.default(ERR.DEST);
 	            var result = this.inspect(notation);
 	            if (result.has) {
@@ -808,32 +853,36 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  Copies the notated property from the destination object and adds it to the
 	         *  source object — only if the destination object actually has that property.
 	         *  This is different than a property with a value of `undefined`.
+	         *  @chainable
 	         *
 	         *  @param {Object} destination - The destination object that the notated
-	         *      properties will be copied from.
+	         *  properties will be copied from.
 	         *  @param {String} notation - The notation to get the corresponding property
-	         *      from the destination object.
-	         *  @param {String} newNotation - Optional. The notation to set the destination
-	         *      property on the source object. In other words, the copied property
-	         *      will be renamed to this value before set on the source object.
-	         *      If not set, `notation` argument will be used.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property on the source object if it exists.
+	         *  from the destination object.
+	         *  @param {String} [newNotation=null] - The notation to set the destination
+	         *  property on the source object. In other words, the copied property
+	         *  will be renamed to this value before set on the source object.
+	         *  If not set, `notation` argument will be used.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
+	         *  on the source object if it exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
 	         *  var models = { dodge: "Charger" };
-	         *  Notation.create(assets).copyFrom(models, "dodge", "car.model", true);
-	         *  console.log(assets);
+	         *  Notation.create(obj).copyFrom(models, "dodge", "car.model", true);
+	         *  console.log(obj);
 	         *  // { car: { brand: "Ford", model: "Charger" } }
 	         *  // models object is not modified
 	         */
 	
 	    }, {
 	        key: 'copyFrom',
-	        value: function copyFrom(destination, notation, newNotation, overwrite) {
+	        value: function copyFrom(destination, notation) {
+	            var newNotation = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+	            var overwrite = arguments.length <= 3 || arguments[3] === undefined ? true : arguments[3];
+	
 	            if (!_utils2.default.isObject(destination)) throw new _notation4.default(ERR.DEST);
 	            var result = new Notation(destination).inspect(notation);
 	            if (result.has) {
@@ -846,25 +895,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  Removes the notated property from the source object and adds it to the
 	         *  destination — only if the source object actually has that property.
 	         *  This is different than a property with a value of `undefined`.
+	         *  @chainable
 	         *
 	         *  @param {Object} destination - The destination object that the notated
-	         *      properties will be moved to.
-	         *  @param {String} notation - The notation to get the corresponding property
-	         *      from the source object.
-	         *  @param {String} newNotation - Optional. The notation to set the source
-	         *      property on the destination object. In other words, the moved property
-	         *      will be renamed to this value before set on the destination object.
-	         *      If not set, `notation` argument will be used.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property on the destination object if it exists.
+	         *  properties will be moved to.
+	         *  @param {String} notation - The notation to get the corresponding
+	         *  property from the source object.
+	         *  @param {String} [newNotation=null] - The notation to set the source property
+	         *  on the destination object. In other words, the moved property will be
+	         *  renamed to this value before set on the destination object. If not set,
+	         *  `notation` argument will be used.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+	         *  the destination object if it exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
 	         *  var models = { dodge: "Charger" };
-	         *  Notation.create(assets).moveTo(models, "car.model", "ford");
-	         *  console.log(assets);
+	         *  Notation.create(obj).moveTo(models, "car.model", "ford");
+	         *  console.log(obj);
 	         *  // { car: { brand: "Ford" } }
 	         *  console.log(models);
 	         *  // { dodge: "Charger", ford: "Mustang" }
@@ -872,7 +922,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    }, {
 	        key: 'moveTo',
-	        value: function moveTo(destination, notation, newNotation, overwrite) {
+	        value: function moveTo(destination, notation) {
+	            var newNotation = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+	            var overwrite = arguments.length <= 3 || arguments[3] === undefined ? true : arguments[3];
+	
 	            if (!_utils2.default.isObject(destination)) throw new _notation4.default(ERR.DEST);
 	            var result = this.inspectRemove(notation);
 	            if (result.has) {
@@ -885,25 +938,26 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  Removes the notated property from the destination object and adds it to the
 	         *  source object — only if the destination object actually has that property.
 	         *  This is different than a property with a value of `undefined`.
+	         *  @chainable
 	         *
 	         *  @param {Object} destination - The destination object that the notated
-	         *      properties will be moved from.
+	         *  properties will be moved from.
 	         *  @param {String} notation - The notation to get the corresponding property
-	         *      from the destination object.
-	         *  @param {String} newNotation - Optional. The notation to set the destination
-	         *      property on the source object. In other words, the moved property
-	         *      will be renamed to this value before set on the source object.
-	         *      If not set, `notation` argument will be used.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property on the source object if it exists.
+	         *  from the destination object.
+	         *  @param {String} [newNotation=null] - The notation to set the destination
+	         *  property on the source object. In other words, the moved property
+	         *  will be renamed to this value before set on the source object.
+	         *  If not set, `notation` argument will be used.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+	         *  the source object if it exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
 	         *  var models = { dodge: "Charger" };
-	         *  Notation.create(assets).moveFrom(models, "dodge", "car.model", true);
-	         *  console.log(assets);
+	         *  Notation.create(obj).moveFrom(models, "dodge", "car.model", true);
+	         *  console.log(obj);
 	         *  // { car: { brand: "Ford", model: "Charger" } }
 	         *  console.log(models);
 	         *  // {}
@@ -911,7 +965,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    }, {
 	        key: 'moveFrom',
-	        value: function moveFrom(destination, notation, newNotation, overwrite) {
+	        value: function moveFrom(destination, notation) {
+	            var newNotation = arguments.length <= 2 || arguments[2] === undefined ? null : arguments[2];
+	            var overwrite = arguments.length <= 3 || arguments[3] === undefined ? true : arguments[3];
+	
 	            if (!_utils2.default.isObject(destination)) throw new _notation4.default(ERR.DEST);
 	            var result = new Notation(destination).inspectRemove(notation);
 	            if (result.has) {
@@ -923,22 +980,23 @@ return /******/ (function(modules) { // webpackBootstrap
 	        /**
 	         *  Renames the notated property of the source object by the new notation.
 	         *  @alias Notation#renote
+	         *  @chainable
 	         *
-	         *  @param {String} notation - The notation to get the corresponding property
-	         *      (value) from the source object.
-	         *  @param {String} newNotation - The new notation for the targeted property.
-	         *      value. If not set, the source object will not be modified.
-	         *  @param {Boolean} overwrite - Optional. Default: `true`
-	         *      Whether to overwrite the property at the new notation, if it exists.
+	         *  @param {String} notation - The notation to get the corresponding
+	         *  property (value) from the source object.
+	         *  @param {String} newNotation - The new notation for the targeted
+	         *  property value. If not set, the source object will not be modified.
+	         *  @param {Boolean} [overwrite=true] - Whether to overwrite the property at
+	         *  the new notation, if it exists.
 	         *
-	         *  @return {Notation} - Returns the current `Notation` instance (self).
+	         *  @returns {Notation} - Returns the current `Notation` instance (self).
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-	         *  Notation.create(assets)
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+	         *  Notation.create(obj)
 	         *      .rename("car.brand", "carBrand")
 	         *      .rename("car.model", "carModel");
-	         *  console.log(assets);
+	         *  console.log(obj);
 	         *  // { carBrand: "Ford", carModel: "Mustang" }
 	         */
 	
@@ -964,20 +1022,20 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  it from the source object. This is equivalent to `.copyTo({}, notation, newNotation)`.
 	         *  @alias Notation#copyToNew
 	         *
-	         *  @param {String} notation - The notation to get the corresponding property
-	         *      (value) from the source object.
-	         *  @param {String} newNotation - The new notation to be set on the new object
-	         *      for the targeted property value. If not set, `notation` argument will
-	         *      be used.
+	         *  @param {String} notation - The notation to get the corresponding
+	         *  property (value) from the source object.
+	         *  @param {String} newNotation - The new notation to be set on the new
+	         *  object for the targeted property value. If not set, `notation` argument
+	         *  will be used.
 	         *
-	         *  @return {Object} - Returns a new object with the notated property.
+	         *  @returns {Object} - Returns a new object with the notated property.
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-	         *  var extracted = Notation.create(assets).extract("car.brand", "carBrand");
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var extracted = Notation.create(obj).extract("car.brand", "carBrand");
 	         *  console.log(extracted);
 	         *  // { carBrand: "Ford" }
-	         *  // assets object is not modified
+	         *  // obj is not modified
 	         */
 	
 	    }, {
@@ -1003,18 +1061,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  it from the source object. This is equivalent to `.moveTo({}, notation, newNotation)`.
 	         *  @alias Notation#moveToNew
 	         *
-	         *  @param {String} notation - The notation to get the corresponding property
-	         *      (value) from the source object.
-	         *  @param {String} newNotation - The new notation to be set on the new object
-	         *      for the targeted property value. If not set, `notation` argument will
-	         *      be used.
+	         *  @param {String} notation - The notation to get the corresponding
+	         *  property (value) from the source object.
+	         *  @param {String} newNotation - The new notation to be set on the new
+	         *  object for the targeted property value. If not set, `notation` argument
+	         *  will be used.
 	         *
-	         *  @return {Object} - Returns a new object with the notated property.
+	         *  @returns {Object} - Returns a new object with the notated property.
 	         *
 	         *  @example
-	         *  var assets = { car: { brand: "Ford", model: "Mustang" } };
-	         *  var extruded = Notation.create(assets).extrude("car.brand", "carBrand");
-	         *  console.log(assets);
+	         *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+	         *  var extruded = Notation.create(obj).extrude("car.brand", "carBrand");
+	         *  console.log(obj);
 	         *  // { car: { model: "Mustang" } }
 	         *  console.log(extruded);
 	         *  // { carBrand: "Ford" }
@@ -1043,17 +1101,17 @@ return /******/ (function(modules) { // webpackBootstrap
 	        // --------------------------------
 	
 	        /**
-	         *  Basically constructs a new `Notation` instance
-	         *  with the given object.
+	         *  Basically constructs a new `Notation` instance with the given object.
+	         *  @chainable
 	         *
-	         *  @param {Object} object - The object to be notated.
+	         *  @param {Object} [object={}] - The object to be notated.
 	         *
-	         *  @return {Notation}
+	         *  @returns {Notation} - The created instance.
 	         *
 	         *  @example
-	         *  var notaObj = Notation.create(obj);
+	         *  var notation = Notation.create(obj);
 	         *  // equivalent to:
-	         *  var notaObj = new Notation(obj);
+	         *  var notation = new Notation(obj);
 	         */
 	
 	    }, {
@@ -1063,7 +1121,9 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	    }], [{
 	        key: 'create',
-	        value: function create(object) {
+	        value: function create() {
+	            var object = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+	
 	            return new Notation(object);
 	        }
 	
@@ -1072,7 +1132,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be checked.
 	         *
-	         *  @return {Boolean}
+	         *  @returns {Boolean}
 	         *
 	         *  @example
 	         *  Notation.isValid('prop1.prop2.prop3'); // true
@@ -1091,7 +1151,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be processed.
 	         *
-	         *  @return {String}
+	         *  @returns {String}
 	         *
 	         *  @example
 	         *  Notation.first('first.prop2.last'); // "first"
@@ -1112,7 +1172,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be processed.
 	         *
-	         *  @return {String}
+	         *  @returns {String}
 	         *
 	         *  @example
 	         *  Notation.last('first.prop2.last'); // "last"
@@ -1134,7 +1194,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be processed.
 	         *
-	         *  @return {String}
+	         *  @returns {String}
 	         *
 	         *  @example
 	         *  Notation.parent('first.prop2.last'); // "first.prop2"
@@ -1155,11 +1215,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *
 	         *  @param {String} notation - The notation string to be iterated through.
 	         *  @param {Function} callback - The callback function to be invoked on
-	         *      each iteration. To break out of the loop, return `false` from
-	         *      within the callback.
-	         *      Callback signature: `callback(levelNotation, note, index, list) { ... }`
+	         *  each iteration. To break out of the loop, return `false` from within the
+	         *  callback.
+	         *  Callback signature: `callback(levelNotation, note, index, list) { ... }`
 	         *
-	         *  @return {void}
+	         *  @returns {void}
 	         *
 	         *  @example
 	         *  Notation.eachNote("first.prop2.last", function (levelNotation, note, index, list) {
@@ -1190,8 +1250,30 @@ return /******/ (function(modules) { // webpackBootstrap
 	    return Notation;
 	}();
 	
+	/**
+	 *  Error class specific to `Notation`.
+	 *  @private
+	 *
+	 *  @class
+	 *  @see `{@link #Notation.Error}`
+	 */
+	
+	
 	Notation.Error = _notation4.default;
+	
+	/**
+	 *  Utility for validating, comparing and sorting dot-notation globs.
+	 *  This is internally used by `Notation` class.
+	 *  @private
+	 *
+	 *  @class
+	 *  @see `{@link #Notation.Glob}`
+	 */
 	Notation.Glob = _notation2.default;
+	
+	// --------------------------------
+	// EXPORT
+	// --------------------------------
 	
 	exports.default = Notation;
 
@@ -1284,27 +1366,43 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	// --------------------------------
-	// CLASS: NotationGlob
-	// --------------------------------
-	
 	// http://www.linfo.org/wildcard.html
 	// http://en.wikipedia.org/wiki/Glob_%28programming%29
 	// http://en.wikipedia.org/wiki/Wildcard_character#Computing
+	
+	/**
+	 *  `Notation.Glob` is a utility for validating, comparing and sorting
+	 *  dot-notation globs.
+	 *
+	 *  You can use {@link http://www.linfo.org/wildcard.html|wildcard} stars `*`
+	 *  and negate the notation by prepending a bang `!`. A star will include all
+	 *  the properties at that level and a negated notation will be excluded.
+	 *  @name Notation.Glob
+	 *  @memberof! Notation
+	 *  @class
+	 *
+	 *  @example
+	 *  // for the following object;
+	 *  { name: "John", billing: { account: { id: 1, active: true } } };
+	 *
+	 *  "billing.account.*"  // represents `{ id: 1, active: true }`
+	 *  "billing.account.id" // represents `1`
+	 *  "!billing.account.*" // represents `{ name: "John" }`
+	 *  "name" // represents `"John"`
+	 *  "*" // represents the whole object
+	 *
+	 *  @example
+	 *  var glob = new Notation.Glob("billing.account.*");
+	 *  glob.test("billing.account.id"); // true
+	 */
 	
 	var NotationGlob = function () {
 	
 	    /**
 	     *  Constructs a `Notation.Glob` object with the given glob string.
-	     *  @constructor
+	     *  @constructs Notation.Glob
 	     *
 	     *  @param {String} glob - The glob string.
-	     *
-	     *  @return {Notation.Glob}
-	     *
-	     *  @example
-	     *  var glob = new Notation.Glob("billing.account.*");
-	     *  glob.test("billing.account.id"); // true
 	     */
 	
 	    function NotationGlob(glob) {
@@ -1327,10 +1425,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	    /**
 	     *  Checks whether the given notation value matches the source notation glob.
+	     *  @name Notation.Glob#test
+	     *  @function
 	     *
 	     *  @param {String} notation - The notation string to be tested.
 	     *
-	     *  @return {Boolean}
+	     *  @returns {Boolean}
 	     *
 	     *  @example
 	     *  var glob = new Notation.Glob("!prop.*.name");
@@ -1353,10 +1453,12 @@ return /******/ (function(modules) { // webpackBootstrap
 	        /**
 	         *  Basically constructs a new `NotationGlob` instance
 	         *  with the given glob string.
+	         *  @name Notation.Glob.create
+	         *  @function
 	         *
 	         *  @param {String} glob - The source notation glob.
 	         *
-	         *  @return {NotationGlob}
+	         *  @returns {NotationGlob}
 	         *
 	         *  @example
 	         *  var glob = Notation.Glob.create(strGlob);
@@ -1370,7 +1472,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	            return new NotationGlob(glob);
 	        }
 	
-	        // Modified from http://stackoverflow.com/a/13818704/112731
+	        /**
+	         *  Modified from http://stackoverflow.com/a/13818704/112731
+	         *  @private
+	         */
 	
 	    }, {
 	        key: 'toRegExp',
@@ -1382,6 +1487,11 @@ return /******/ (function(modules) { // webpackBootstrap
 	            // which will match both `company.name` and `company.address.street`
 	            // but will not match `some.company.name`
 	        }
+	
+	        /**
+	         *  @private
+	         */
+	
 	    }, {
 	        key: 'normalize',
 	        value: function normalize(glob) {
@@ -1398,6 +1508,14 @@ return /******/ (function(modules) { // webpackBootstrap
 	        }
 	
 	        // Created test at: https://regex101.com/r/tJ7yI9/
+	        /**
+	         *  Validates the given notation glob.
+	         *  @name Notation.Glob.isValid
+	         *  @function
+	         *
+	         *  @param {String} glob - Notation glob to be validated.
+	         *  @returns {Boolean}
+	         */
 	
 	    }, {
 	        key: 'isValid',
@@ -1411,20 +1529,22 @@ return /******/ (function(modules) { // webpackBootstrap
 	        /**
 	         *  Compares two given notation globs and returns an integer value as a
 	         *  result. This is generally used to sort glob arrays. Loose globs (with
-	         *  stars especially closer to beginning of the glob string); globs
+	         *  stars especially closer to beginning of the glob string) and globs
 	         *  representing the parent/root of the compared property glob come first.
 	         *  Verbose/detailed/exact globs come last. (`* < *abc < abc`). For
 	         *  instance; `store.address` comes before `store.address.street`. So this
-	         *  works both for `*, store.address.street, !store.address` and `*,
-	         *  store.address, !store.address.street`. For cases such as `prop.id` vs
-	         *  `!prop.id` which represent the same property; the negated glob wins
-	         *  (comes last).
+	         *  works both for `*, store.address.street, !store.address` and
+	         *  `*, store.address, !store.address.street`. For cases such as
+	         *  `prop.id` vs `!prop.id` which represent the same property;
+	         *  the negated glob wins (comes last).
+	         *  @name Notation.Glob.compare
+	         *  @function
 	         *
 	         *  @param {String} a - First notation glob to be compared.
 	         *  @param {String} b - Second notation glob to be compared.
 	         *
-	         *  @return {Number}  Returns `-1` if `a` comes first, `1` if `b` comes
-	         *      first and `0` if equivalent priority.
+	         *  @returns {Number} - Returns `-1` if `a` comes first, `1` if `b` comes
+	         *  first and `0` if equivalent priority.
 	         *
 	         *  @example
 	         *  var result = Notation.Glob.compare("prop.*.name", "prop.*");
@@ -1476,17 +1596,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  instance; `store.address` comes before `store.address.street`. For cases
 	         *  such as `prop.id` vs `!prop.id` which represent the same property; the
 	         *  negated glob wins (comes last).
+	         *  @name Notation.Glob.sort
+	         *  @function
 	         *
-	         *  @param {Array} globsArray - The notation globs array to be sorted. The passed
-	         *      array reference is modified.
+	         *  @param {Array} globsArray - The notation globs array to be sorted.
+	         *  The passed array reference is modified.
 	         *
-	         *  @return {Array}
+	         *  @returns {Array}
 	         *
 	         *  @example
-	         *  var globs = [ "!prop.*.name", "prop.*", "prop.id" ];
+	         *  var globs = ["!prop.*.name", "prop.*", "prop.id"];
 	         *  Notation.Glob.sort(globs);
-	         *  console.log(globs);
-	         *  // [ "prop.*", "prop.id", "!prop.*.name" ];
+	         *  // ["prop.*", "prop.id", "!prop.*.name"];
 	         */
 	
 	    }, {
@@ -1503,13 +1624,15 @@ return /******/ (function(modules) { // webpackBootstrap
 	         *  arrays contains a negated equivalent of an item in the other array,
 	         *  the negated item is removed. If any item covers/matches a negated
 	         *  item in the other array, the negated item is removed.
+	         *  @name Notation.Glob.union
+	         *  @function
 	         *
 	         *  @param {Array} arrA - First array of glob strings.
 	         *  @param {Array} arrB - Second array of glob strings.
-	         *  @param {Boolean} sort - Whether to sort the globs in the final array.
-	         *      Default: `true`
+	         *  @param {Boolean} [sort=true] - Whether to sort the globs in the final
+	         *  array.
 	         *
-	         *  @return {Array}
+	         *  @returns {Array}
 	         *
 	         *  @example
 	         *  var a = [ 'foo.bar', 'bar.baz', '!*.qux' ],
@@ -1595,15 +1718,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	
 	/**
 	 *  Error class specific to `Notation`.
+	 *  @name Notation.Error
+	 *  @memberof! Notation
+	 *  @class
+	 *
 	 */
 	
 	var NotationError = function (_Error) {
 	    _inherits(NotationError, _Error);
 	
 	    /**
-	     *  Initializes a new `NotationError` instance.
-	     *  @constructor
-	     *
+	     *  Initializes a new `Notation.Error` instance.
+	     *  @constructs Notation.Error
 	     *  @param {String} message - The error message.
 	     */
 	
