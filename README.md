@@ -41,7 +41,7 @@ You can read the full [**API reference** here][docs].
 
 ## Change-Log
 
-**1.0.5** (2015-09-24)  
+**1.1.0** (2015-09-27)  
 - Added `Notation#expand()` method (alias `Notation#aggregate()`).
 - Refactored `Notation#getFlat()` to `Notation#flatten()`. Returns instance (chainable) instead of source.
 - `Notation#separate()` returns instance (chainable) instead of source.
