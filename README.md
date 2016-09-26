@@ -2,6 +2,10 @@
 
 for Node and Browser.
 
+[![version](http://img.shields.io/npm/v/notation.svg)](https://www.npmjs.com/package/notation)
+![dependencies](https://david-dm.org/onury/notation.svg)
+![license](http://img.shields.io/npm/l/notation.svg)  
+
 > © 2016, Onur Yıldırım (@onury). MIT License.  
 
 Utility for modifying / processing the contents of Javascript objects by parsing object notation strings or globs.
