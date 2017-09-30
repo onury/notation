@@ -60,6 +60,7 @@ You can read the full [**API reference** here][docs].
 - Added `Notation.Glob.toRegExp(glob)` static method.
 - Aded `Notation.countNotes(notation)` convenience method.
 - Improved glob validation.
+- Fix import typo that prevents Travis builds succeed.
 - Minor revisions, clean-up.
 - (dev) Removed dev-dependencies (Grunt and plugins) in favor of NPM scripts. Updated other dev-dependencies. Added more, comprehensive tests.
 
