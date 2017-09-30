@@ -1,15 +1,15 @@
 {
   "name": "notation",
-  "version": "1.1.0",
-  "description": "Utility for modifying / processing the contents of Javascript objects by parsing object notation strings or globs.",
+  "version": "1.2.0",
+  "description": "Utility for modifying / processing the contents of Javascript objects by object notation strings or globs.",
   "license": "MIT",
   "author": {
     "name": "Onur Yıldırım",
     "email": "onur@cutepilot.com"
   },
-  "main": "dist/notation.min.js",
+  "main": "lib/notation.min.js",
   "files": [
-    "dist",
+    "lib",
     "LICENSE"
   ],
   "homepage": "https://github.com/onury/notation#readme",
@@ -21,7 +21,14 @@
     "url": "https://github.com/onury/notation/issues"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build:min": "webpack --env.NODE_ENV=production --progress --colors",
+    "build:nomin": "webpack --env.NODE_ENV=development --progress --colors",
+    "build": "npm run build:min && npm run build:nomin",
+    "watch": "webpack --env.NODE_ENV=development --progress --colors --watch",
+    "test": "npm run build && node test",
+    "dev": "npm run build:nomin && npm run test",
+    "docs": "docma -c ./docma.config.json",
+    "release": "npm run build && node test && npm run docs"
   },
   "keywords": [
     "object",
@@ -41,19 +48,13 @@
   "devDependencies": {
     "babel": "^6.5.2",
     "babel-core": "^6.8.0",
-    "babel-loader": "^6.2.4",
+    "babel-loader": "^7.1.2",
     "babel-preset-es2015": "^6.6.0",
-    "eslint": "^2.9.0",
-    "eslint-config-xo": "^0.14.1",
-    "grunt": "^1.0.1",
-    "grunt-contrib-watch": "^1.0.0",
-    "grunt-docma": "^0.6.4",
-    "grunt-jasmine-nodejs": "^1.5.2",
-    "grunt-webpack": "^1.0.11",
-    "lodash": "^4.11.2",
-    "matchdep": "^1.0.1",
-    "webpack": "^1.13.0",
-    "webpack-dev-server": "^1.14.1"
+    "jasmine": "^2.8.0",
+    "jasmine-console-reporter": "^2.0.1",
+    "lodash": "^4.17.4",
+    "webpack": "^3.6.0",
+    "webpack-dev-server": "^2.8.2"
   },
   "dependencies": {}
 }
