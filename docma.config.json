@@ -40,6 +40,8 @@
             "sidebar": true,
             "collapsed": false,
             "badges": true,
+            "outline": "tree",
+            "symbolMeta": true,
             "search": true,
             "navbar": true,
             "navItems": [
