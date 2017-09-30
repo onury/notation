@@ -2,6 +2,7 @@
 
 for Node and Browser.
 
+[![build-status](https://img.shields.io/travis/onury/notation.svg?branch=master)](https://travis-ci.org/onury/notation)
 [![npm](http://img.shields.io/npm/v/notation.svg)](https://www.npmjs.com/package/notation)
 [![release](https://img.shields.io/github/release/onury/notation.svg)](https://github.com/onury/notation)
 [![dependencies](https://david-dm.org/onury/notation.svg)](https://david-dm.org/onury/notation)
@@ -19,7 +20,7 @@ Note that this library will only deal with enumerable properties of the source o
 
 Install via **NPM**:
 
-```shell
+```sh
 npm i notation --save
 ```
 
@@ -47,17 +48,34 @@ You can read the full [**API reference** here][docs].
 
 ## Change-Log
 
+**1.2.0** (2017-09-28)  
+
+- Completely re-wrote `Notation.Glob.union()` static method.
+    - Fixed the array mutation issue. Fixes [issue #2](https://github.com/onury/notation/issues/2).
+    - Fixed an issue where a glob with wildcard is not properly union'ed. Fixes [issue #3](https://github.com/onury/notation/issues/3). 
+    - `sort` (`boolean`) argument is removed (the output is now always sorted.)
+    - Union output is now properly normalized, duplicates and redundant globs are removed, etc...
+- Fixed an issue where negated wildcards would be filtered incorrectly in some edge cases (e.g. `!*.*.*`).
+- Added `Notation.Glob.normalize(array)` static method.
+- Added `Notation.Glob.toRegExp(glob)` static method.
+- Aded `Notation.countNotes(notation)` convenience method.
+- Improved glob validation.
+- Minor revisions, clean-up.
+- (dev) Removed dev-dependencies (Grunt and plugins) in favor of NPM scripts. Updated other dev-dependencies. Added more, comprehensive tests.
+
 **1.1.0** (2016-09-27)  
+
 - Added `Notation#expand()` method (alias `Notation#aggregate()`).
 - Refactored `Notation#getFlat()` to `Notation#flatten()`. Returns instance (chainable) instead of source.
 - `Notation#separate()` returns instance (chainable) instead of source.
 - Minor revisions.
 
 **v1.0.0** (2016-04-10)  
+
 - initial release.
 
 ## License
 
-MIT.
+[**MIT**](https://github.com/onury/notation/blob/master/LICENSE).
 
 [docs]:http://onury.github.io/notation/?api=notation
