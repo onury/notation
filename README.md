@@ -48,7 +48,7 @@ You can read the full [**API reference** here][docs].
 
 ## Change-Log
 
-**1.2.0** (2017-09-30)  
+**1.3.0** (2017-09-30)  
 
 - Completely re-wrote `Notation.Glob.union()` static method.
     - Fixed the array mutation issue. Fixes [issue #2](https://github.com/onury/notation/issues/2).
