@@ -12,7 +12,7 @@ let outputFile = libraryFileName;
 
 module.exports = env => {
 
-    if (env.NODE_ENV === 'production') {
+    if (env.WEBPACK_OUT === 'minified') {
         // https://github.com/webpack-contrib/uglifyjs-webpack-plugin
         plugins.push(new UglifyJsPlugin({
             test: /\.js$/,
