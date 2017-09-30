@@ -21,10 +21,10 @@
     "url": "https://github.com/onury/notation/issues"
   },
   "scripts": {
-    "build:min": "webpack --env.NODE_ENV=production --progress --colors",
-    "build:nomin": "webpack --env.NODE_ENV=development --progress --colors",
+    "build:min": "webpack --env.WEBPACK_OUT=minified --progress --colors",
+    "build:nomin": "webpack --env.WEBPACK_OUT=nomin --progress --colors",
     "build": "npm run build:min && npm run build:nomin",
-    "watch": "webpack --env.NODE_ENV=development --progress --colors --watch",
+    "watch": "webpack --env.WEBPACK_OUT=nomin --progress --colors --watch",
     "test": "npm run build && node test",
     "dev": "npm run build:nomin && npm run test",
     "docs": "docma -c ./docma.config.json",
