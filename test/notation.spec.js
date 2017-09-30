@@ -1,16 +1,11 @@
 /* eslint camelcase:0 */
 
-/**
- *  Test Suite: Notation
- *  @module   notation.spec
- *  @version  2016-05-05
- */
+'use strict';
 
-var _ = require('lodash');
+const Notation = require('../lib/notation');
+const _ = require('lodash');
 
-var Notation = require('../dist/notation');
-
-var o = {
+let o = {
     name: 'onur',
     age: 36,
     account: {
@@ -48,29 +43,44 @@ var o = {
 
 // shuffle array
 function shuffle(o) { // v1.0
-    for (var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+    for (let j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
     return o;
 }
 
-describe('Test Suite: Notation.Glob', function () {
+/**
+ *  Test Suite: Notation
+ *  @module   notation.spec
+ */
+describe('Test Suite: Notation.Glob', () => {
     'use strict';
 
-    it('should throw/catch NotationError', function () {
-        var errorMessage = 'TEST_ERROR';
-        try {
-            throw new Notation.Error(errorMessage);
-        } catch (error) {
-            // console.log(error);
-            // console.log(Object.prototype.toString.call(error));
-            // console.log(error.stack);
-            expect(error.name).toEqual('NotationError');
-            // expect(error instanceof Notation.Error).toEqual(true); // FAILS
-            expect(error.message).toEqual(errorMessage);
-        }
+    it('should validate notation glob', () => {
+        const valid = Notation.Glob.isValid;
+        expect(valid('prop.mid.last')).toEqual(true);
+        expect(valid('prop.*.')).toEqual(false);
+        expect(valid('prop.*')).toEqual(true);
+        expect(valid('prop.')).toEqual(false);
+        expect(valid('prop')).toEqual(true);
+        expect(valid('pro*')).toEqual(false);
+        expect(valid('.prop')).toEqual(false);
+        expect(valid('.')).toEqual(false);
+        expect(valid()).toEqual(false);
+        expect(valid(null)).toEqual(false);
+        expect(valid(true)).toEqual(false);
+        expect(valid('')).toEqual(false);
+        expect(valid('*.')).toEqual(false);
+        expect(valid('*')).toEqual(true);
+        expect(valid('.*')).toEqual(false);
+        expect(valid('***')).toEqual(false);
+        expect(valid('!*')).toEqual(true);
+        expect(valid('!**')).toEqual(false);
+        expect(valid('!*.*')).toEqual(true);
+        expect(valid('!*.**')).toEqual(false);
+        expect(valid('!*.*.xxx')).toEqual(true);
     });
 
-    it('should `sortGlobs`', function () {
-        var globs = [
+    it('should `sort` globs', () => {
+        const globs = [
             '!prop.name',
             'bill.account.credit',
             'bill.account.*',
@@ -94,7 +104,7 @@ describe('Test Suite: Notation.Glob', function () {
         //  '!foo.*.boo'    vs 'foo.qux.*'  => '!foo.*.boo', 'foo.qux.*'
         //  'foo.*.boo'     vs '!foo.qux.*' => 'foo.*.boo', '!foo.qux.*'
 
-        var i, shuffled;
+        let i, shuffled;
         function indexOf(v) {
             return shuffled.indexOf(v);
         }
@@ -124,8 +134,8 @@ describe('Test Suite: Notation.Glob', function () {
         // console.log(shuffled);
     });
 
-    it('should `sort` glob array (negated comes last)', function () {
-        var original = [
+    it('should `sort` glob array (negated comes last)', () => {
+        const original = [
             'foo.bar.baz',
             'bar.name',
             '!foo.*.baz',
@@ -136,7 +146,7 @@ describe('Test Suite: Notation.Glob', function () {
             '!bar.id'
         ];
 
-        var i, shuffled, sorted, indexN, indexNeg;
+        let i, shuffled, sorted, indexN, indexNeg;
         for (i = 0; i <= 10; i++) {
             shuffled = shuffle(original.concat());
             // console.log(shuffled);
@@ -149,7 +159,7 @@ describe('Test Suite: Notation.Glob', function () {
             expect(indexNeg).toBeGreaterThan(indexN);
         }
 
-        // var a = [
+        // let a = [
         //     'foo.bar.baz',
         //     '!bar.norf',
         //     'bar.x',
@@ -164,22 +174,22 @@ describe('Test Suite: Notation.Glob', function () {
         // console.log(Notation.Glob.sort(a));
     });
 
-    it('should `test` notation-glob', function () {
-        var glob = Notation.Glob.create;
-        var testCase = 'account.id';
-        expect(glob('account.id').test(testCase)).toEqual(true);
-        expect(glob('account.*').test(testCase)).toEqual(true);
-        expect(glob('*.*').test(testCase)).toEqual(true);
-        expect(glob('*').test(testCase)).toEqual(true);
-        expect(glob('billing.account.id').test(testCase)).toEqual(false);
-        expect(glob(testCase).test('billing.account.id')).toEqual(false);
+    it('should `test` notation-glob', () => {
+        const glob = Notation.Glob.create;
+        const strNota = 'account.id';
+        expect(glob('account.id').test(strNota)).toEqual(true);
+        expect(glob('account.*').test(strNota)).toEqual(true);
+        expect(glob('*.*').test(strNota)).toEqual(true);
+        expect(glob('*').test(strNota)).toEqual(true);
+        expect(glob('billing.account.id').test(strNota)).toEqual(false);
+        expect(glob(strNota).test('billing.account.id')).toEqual(false);
     });
 
-    it('should `filter` notation-glob', function () {
+    it('should `filter` notation-glob', () => {
         // var glob = Notation.Glob.create;
-        var nota = new Notation(_.cloneDeep(o));
+        const nota = new Notation(_.cloneDeep(o));
         // console.log('value ---:', nota.value);
-        var globs = ['!company.limited', 'billing.account.credit', 'company.*', 'account.id'],
+        const globs = ['!company.limited', 'billing.account.credit', 'company.*', 'account.id'],
             filtered = nota.filter(globs).value;
         // console.log('filtered ---:', filtered);
 
@@ -195,8 +205,8 @@ describe('Test Suite: Notation.Glob', function () {
         expect(o.company.limited).toBeDefined();
         expect(o.account.id).toBeDefined();
         // return;
-        var assets = { model: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } };
-        var N = Notation.create(assets),
+        const assets = { model: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } };
+        const N = Notation.create(assets),
             m1 = N.filter('*').value,
             m2 = N.filter('*.*').value,
             m3 = N.filter('*.*.*').value;
@@ -210,89 +220,270 @@ describe('Test Suite: Notation.Glob', function () {
         // nota.filter(globs);
     });
 
-    it('should `filter` notation-glob', function () {
-        var a = { model: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } };
-        var glob = 'phone.*';
-        var n = Notation.create(a);
-        n.filter(glob);
-        expect(n.value).toEqual({ phone: a.phone });
-        // console.log(n.value);
+    it('should `filter` notation-glob (2nd level wildcard)', () => {
+        const data = { model: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } };
+        const nota = Notation.create(data);
+        nota.filter('phone.*');
+        expect(nota.value).toEqual({ phone: data.phone });
+        // console.log(nota.value);
     });
 
-    it('should `filter` notation-glob (negated object)', function () {
+    it('should `filter` notation-glob (negated object)', () => {
         var data = { name: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } },
             globs = ['*', '!phone'],
             filtered = new Notation(data).filter(globs).value;
         expect(filtered.name).toEqual(data.name);
+        expect(filtered.phone).toBeUndefined();
         expect(filtered.car).toBeDefined();
         // console.log(filtered);
         // console.log(data);
     });
 
-    it('should `union` notation-glob', function () {
-        var globA = ['foo.bar.baz', '!bar.id', 'bar.name', '!foo.qux.boo'], // '!foo.*.boo'
-            globB = ['!foo.*.baz', 'bar.id', 'bar.name', '!bar.*', 'foo.qux.*'];
-        // expected union
-        // [
-        //     '!bar.*',
-        //     'bar.id',
-        //     'bar.name',
-        //     '!foo.*.baz',
-        //     'foo.qux.*',
-        //     'foo.bar.baz',
-        // ]
-
-        var union = Notation.Glob.union(globA, globB);
-        // console.log('union:\n', union);
-
-        function indexOf(v) {
-            return union.indexOf(v);
-        }
-
-        expect(union.length).toEqual(6);
-        expect(union).toContain('bar.id');
-        expect(union).not.toContain('!bar.id');
-        expect(union).toContain('bar.name'); // only once
-        expect(union).toContain('foo.qux.*');
-        expect(union).not.toContain('!foo.qux.boo');
-        expect(indexOf('!bar.*')).toBeLessThan(indexOf('bar.id'));
-
+    it('should `filter` normal and negated of the same (negated should win)', () => {
+        const data = { prop: { id: 1, x: true }, y: true };
+        // we have the same glob both as negated and normal. negated should win.
+        let globs = ['prop.id', '!prop.id'];
+        let filtered = new Notation(data).filter(globs).value;
+        expect(filtered.prop).toBeUndefined();
+        expect(filtered.y).toBeUndefined();
+        // add wildcard
+        globs = ['!prop.id', 'prop.id', '*'];
+        filtered = new Notation(data).filter(globs).value;
+        expect(filtered.prop).toEqual(jasmine.any(Object));
+        expect(filtered.prop.id).toBeUndefined();
+        expect(filtered.prop.x).toEqual(true);
+        expect(filtered.y).toEqual(data.y);
     });
 
-    it('should filter station globs', function () {
-        var globs = ['*', '!device', 'device.model.*', '!validation.*', '!store.p2mNo', '!store.contact.*', '!store.partners.*', '!store.powerOperator.*'];
-        var data = {
-            code: 'TR-IST-004',
-            device: {
-                model: { code: 'N22', description: 'Normal Charger 22 kVA' },
-                supplier: 'EFACEC',
-                router: { brandModel: 'TELTONIKA/RUT 104' },
-                connection: { operator: 'VODAFONE', method: '3G' }
+    it('should `filter` with/out wildcard', () => {
+        const data = { name: 'Onur', id: 1 };
+        // we have no wildcard '*' here.
+        let globs = ['!id'];
+        // should filter as `{}`
+        let filtered = Notation.create(data).filter(globs).value;
+        expect(filtered).toEqual(jasmine.any(Object));
+        expect(Object.keys(filtered).length).toEqual(0);
+        // add wildcard
+        globs = ['*', '!id'];
+        filtered = Notation.create(data).filter(globs).value;
+        expect(filtered.name).toEqual(data.name);
+        expect(filtered.id).toBeUndefined();
+        // no negated (id is duplicate in this case)
+        globs = ['*', 'id'];
+        filtered = Notation.create(data).filter(globs).value;
+        expect(filtered.name).toEqual(data.name);
+        expect(filtered.id).toEqual(data.id);
+    });
+
+    it('should `normalize` notation-globs array', () => {
+        const normalize = Notation.Glob.normalize;
+        expect(normalize(['*'])).toEqual(['*']);
+        expect(normalize(['!*'])).toEqual([]);
+        expect(normalize(['*', '!*'])).toEqual([]);
+        expect(normalize(['*', 'name', 'pwd', 'id'])).toEqual(['*']);
+        expect(normalize(['name', 'pwd', 'id'])).toEqual(['id', 'name', 'pwd']);
+        expect(normalize(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
+        expect(normalize(['user.*', '!user.pwd'])).toEqual(['user.*', '!user.pwd']);
+        expect(normalize(['*', '!*.id'])).toEqual(['*', '!*.id']);
+        expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', '!*.id', 'x.id']);
+        expect(normalize(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        expect(normalize(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        // console.log(normalize(['*', 'user.*', '!user.pwd']));
+        expect(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+    });
+
+    it('should `union` notation-globs arrays', () => {
+        const union = Notation.Glob.union;
+        let u;
+
+        const globA = ['foo.bar.baz', '!bar.id', 'bar.name', '!foo.qux.boo']; // '!foo.*.boo'
+        const globB = ['!foo.*.baz', 'bar.id', 'bar.name', '!bar.*', 'foo.qux.*'];
+
+        // for checking mutation
+        const cloneGlobA = globA.concat();
+        const cloneGlobB = globB.concat();
+
+        // expected union
+        // [ 'foo.bar.baz', '!foo.*.baz', 'bar.id', 'bar.name', 'foo.qux.*' ]
+
+        u = union(globA, globB);
+        // should not mutate given globs arrays
+        expect(globA).toEqual(cloneGlobA);
+        expect(globB).toEqual(cloneGlobB);
+
+        expect(u.length).toEqual(5);
+        expect(u).toContain('bar.id');
+        expect(u).not.toContain('!bar.id');
+        expect(u).toContain('bar.name'); // only once
+        expect(u).toContain('foo.qux.*');
+        expect(u).not.toContain('!foo.qux.boo');
+        expect(u.indexOf('!bar.*')).toBeLessThan(u.indexOf('bar.id'));
+
+        expect(union(['*'], ['!id'])).toEqual(['*']);
+        expect(union(['!id'], ['*'])).toEqual(['*']);
+        expect(union(['id'], ['*'])).toEqual(['*']);
+
+        const a = ['*', '!id'];
+        const b = ['*', '!pwd'];
+        const c = ['email'];
+        const d = ['*'];
+        const e = ['*', '!id', '!pwd'];
+
+        expect(union(b, c)).toEqual(['*', '!pwd']);
+        expect(union(c, d)).toEqual(['*']);
+        expect(union(a, d)).toEqual(['*']);
+        expect(union(c, d)).toEqual(['*']);
+
+        const x = ['*', 'email', '!id', '!x.*', 'o'];
+        const y = ['*', 'id', '!pwd', 'x.name', 'o'];
+        expect(union(x, y)).toEqual(['*']);
+
+        u = union(['*', 'a', 'b', '!id', '!x.*'], ['*', '!b', 'id', '!pwd', 'x.o']);
+        expect(u).toEqual(['*']);
+        u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*', 'x.o']);
+        expect(u).toEqual(['*', '!x.*', 'x.o']);
+
+        u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*.*', 'x.o']);
+        expect(u).toEqual(['*', '!x.*.*']);
+        // console.log(u);
+    });
+
+    it('should notate/filter wildcards', () => {
+        const data = {
+            x: {
+                y: { z: 1 },
+                a: { b: 2 }
             },
-            validation: {
-                method: 'OPERATOR',
+            c: 3,
+            d: {
+                e: { f: 4, g: { i: 5 } }
+            }
+        };
+
+        function filter(globs) {
+            return Notation.create(_.cloneDeep(data)).filter(globs);
+        }
+        let result;
+
+        function check1() {
+            expect(result.x.y.z).toEqual(1);
+            expect(result.x.a.b).toEqual(2);
+            expect(result.c).toBeUndefined();
+            expect(result.d).toBeUndefined();
+        }
+
+        // these should be treated the same:
+        // 'x.*.*' === 'x.*' === 'x'
+
+        result = filter(['x.*.*']).value;
+        check1();
+        result = filter(['x.*']).value;
+        check1();
+        result = filter(['x']).value;
+        check1();
+
+        // these should NOT be treated the same:
+        // '!x.*.*' !== '!x.*' !== '!x'
+
+        result = filter(['*', '!x.*.*']).value;
+        expect(result.x).toEqual(jasmine.any(Object));
+        expect(result.x.y).toEqual(jasmine.any(Object));
+        expect(result.x.a).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.x.y).length).toEqual(0);
+        expect(Object.keys(result.x.a).length).toEqual(0);
+        expect(result.c).toEqual(3);
+        expect(result.d).toEqual(jasmine.any(Object));
+
+        result = filter(['*', '!x.*']).value;
+        expect(result.x).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.x).length).toEqual(0);
+        expect(result.c).toEqual(3);
+        expect(result.d).toEqual(jasmine.any(Object));
+
+        result = filter(['*', '!x']).value;
+        // console.log('!x\t', result);
+        expect(result.x).toBeUndefined();
+        expect(result.c).toEqual(3);
+        expect(result.d).toEqual(jasmine.any(Object));
+
+        result = filter(['*']).value;
+        // expect(JSON.stringify(result)).toEqual(JSON.stringify(data));
+        expect(result).toEqual(data);
+        // console.log('*\t', result);
+
+        result = filter(['*', '!*']).value;
+        expect(result).toEqual({});
+
+        // console.log(JSON.stringify(data, null, '  '));
+
+        result = filter(['*', '!*.*.*']).value;
+        // console.log('!*.*.*\n', JSON.stringify(result, null, '  '));
+        expect(result.x).toEqual(jasmine.any(Object));
+        expect(result.x.y).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.x.y).length).toEqual(0);
+        expect(result.x.a).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.x.a).length).toEqual(0);
+        expect(result.d.e).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.d.e).length).toEqual(0);
+        expect(result.c).toEqual(3);
+
+        result = filter(['*', '!*.*']).value;
+        // console.log('!*.*\n', JSON.stringify(result, null, '  '));
+        expect(result.x).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.x).length).toEqual(0);
+        expect(result.d).toEqual(jasmine.any(Object));
+        expect(Object.keys(result.d).length).toEqual(0);
+        expect(result.c).toEqual(3);
+    });
+
+    it('special test', () => {
+        const globs = ['*', '!box', 'box.model.*', '!bValid.*', '!sto.p2m', '!sto.contact.*', '!sto.partners.*', '!sto.powOp.*'];
+        const data = {
+            id: 'TR001',
+            box: {
+                model: { code: 'N22', description: 'Normal 22 kVA' },
+                supplier: 'EFA',
+                router: { brandModel: 'TELT 104' },
+                connection: { operator: 'VODA', method: '3G' }
+            },
+            bValid: {
+                method: 'OP',
                 comment: '',
                 date: 'Mon Nov 18 2013 15:41:43 GMT+0200 (EET)'
             }
         };
 
-        var notation = Notation.create(data),
+        const notation = Notation.create(data),
             filtered = notation.filter(globs).value;
-        expect(filtered.device.model).toBeDefined();
-        expect(filtered.device.router).toBeUndefined(); // "!device"
-        expect(filtered.validation).toEqual({}); // "!validation.*"
+        expect(filtered.box.model).toBeDefined();
+        expect(filtered.box.router).toBeUndefined(); // "!box"
+        expect(filtered.bValid).toEqual({}); // "!validation.*"
         // console.log('filtered\n', filtered);
     });
 
 });
 
-describe('Test Suite: Notation', function () {
-    'use strict';
+describe('Test Suite: Notation', () => {
 
-    // beforeEach(function () { });
+    // beforeEach(() => { });
 
-    it('should get parts of notation', function () {
-        var notation = 'first.mid.last';
+    it('should throw/catch NotationError', () => {
+        const errorMessage = 'TEST_ERROR';
+        try {
+            throw new Notation.Error(errorMessage);
+        } catch (error) {
+            // console.log(error);
+            // console.log(Object.prototype.toString.call(error));
+            // console.log(error.stack);
+            expect(error.name).toEqual('NotationError');
+            // expect(error instanceof Notation.Error).toEqual(true); // FAILS
+            expect(error.message).toEqual(errorMessage);
+        }
+    });
+
+    it('should get parts of notation', () => {
+        let notation = 'first.mid.last';
         expect(Notation.first(notation)).toEqual('first');
         expect(Notation.last(notation)).toEqual('last');
         expect(Notation.parent(notation)).toEqual('first.mid');
@@ -303,7 +494,7 @@ describe('Test Suite: Notation', function () {
         expect(Notation.parent(notation)).toEqual(null);
     });
 
-    it('should validate notation', function () {
+    it('should validate notation', () => {
         expect(Notation.isValid('first.mid.last')).toEqual(true);
         expect(Notation.isValid('first.mid.')).toEqual(false);
         expect(Notation.isValid('first.')).toEqual(false);
@@ -312,11 +503,14 @@ describe('Test Suite: Notation', function () {
         expect(Notation.isValid('.')).toEqual(false);
         expect(Notation.isValid(null)).toEqual(false);
         expect(Notation.isValid(true)).toEqual(false);
+        // star is NOT treated as wildcard here. this is normal dot-notation,
+        // not a glob.
+        expect(Notation.isValid('prop.*')).toEqual(true);
     });
 
-    it('should flatten / expand object', function () {
-        var nota = new Notation(_.cloneDeep(o));
-        var flat = nota.flatten().value;
+    it('should flatten / expand object', () => {
+        const nota = new Notation(_.cloneDeep(o));
+        const flat = nota.flatten().value;
 
         // console.log(flat);
         expect(flat.name).toEqual(o.name);
@@ -325,7 +519,7 @@ describe('Test Suite: Notation', function () {
         expect(flat['company.name']).toEqual(o.company.name);
         expect(flat['company.address.location.lat']).toEqual(o.company.address.location.lat);
 
-        var expanded = Notation.create(flat).expand().value;
+        const expanded = Notation.create(flat).expand().value;
         expect(expanded.name).toEqual(o.name);
         expect(expanded.account.id).toEqual(o.account.id);
         expect(expanded.account.likes.length).toEqual(o.account.likes.length);
@@ -333,11 +527,11 @@ describe('Test Suite: Notation', function () {
         expect(expanded.company.address.location.lat).toEqual(o.company.address.location.lat);
     });
 
-    it('should iterate `each` and `eachValue`', function () {
-        var assets = { boat: "none", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } },
+    it('should iterate `each` and `eachValue`', () => {
+        const assets = { boat: 'none', car: { brand: 'Ford', model: 'Mustang', year: 1970, color: 'red' } },
             nota = Notation.create(assets),
             result = [];
-        nota.each(function (notation, key, value, object) {
+        nota.each((notation, key, value, object) => {
             result.push(notation);
         });
         expect(result.length).toEqual(5);
@@ -347,28 +541,28 @@ describe('Test Suite: Notation', function () {
         expect(result).toContain('car.year');
         expect(result).toContain('car.color');
 
-        nota.eachValue('car.brand', function (levelValue, levelNotation, note, index, list) {
+        nota.eachValue('car.brand', (levelValue, levelNotation, note, index, list) => { // eslint-disable-line max-params
             if (index === 0) expect(levelValue.model).toEqual('Mustang');
             if (index === 1) expect(levelValue).toEqual('Ford');
         });
     });
 
-    it('should merge / separate notations object', function () {
-        var nota = new Notation(_.cloneDeep(o));
+    it('should merge / separate notations object', () => {
+        const nota = new Notation(_.cloneDeep(o));
         nota.merge({
             'key': null,
             'newkey.p1': 13,
             'newkey.p2': false,
             'newkey.p3.val': []
         });
-        var merged = nota.value;
+        const merged = nota.value;
         // console.log(o);
         expect(merged.key).toEqual(null);
         expect(merged.newkey.p1).toEqual(13);
         expect(merged.newkey.p2).toEqual(false);
         expect(merged.newkey.p3.val).toEqual(jasmine.any(Array));
 
-        var separated = nota.separate(['newkey.p1', 'newkey.p2', 'newkey.p3.val']).value;
+        const separated = nota.separate(['newkey.p1', 'newkey.p2', 'newkey.p3.val']).value;
         expect(separated.key).toBeUndefined();
         expect(separated.newkey.p1).toEqual(13);
         expect(separated.newkey.p2).toEqual(false);
@@ -380,8 +574,8 @@ describe('Test Suite: Notation', function () {
         expect(merged.newkey.p3.val).toBeUndefined();
     });
 
-    it('should check if object has / hasDefined notation', function () {
-        var nota = new Notation(_.cloneDeep(o));
+    it('should check if object has / hasDefined notation', () => {
+        const nota = new Notation(_.cloneDeep(o));
         expect(nota.has('name')).toEqual(true);
         expect(nota.has('company.address.location.lat')).toEqual(true);
         expect(nota.has('company.notDefined')).toEqual(true);
@@ -399,16 +593,16 @@ describe('Test Suite: Notation', function () {
         expect(nota.hasDefined('company.notProp2')).toEqual(false);
     });
 
-    it('should `get` value', function () {
-        var nota = new Notation(_.cloneDeep(o));
+    it('should `get` value', () => {
+        const nota = new Notation(_.cloneDeep(o));
         expect(nota.get('name')).toEqual(o.name);
         expect(nota.get('account.id')).toEqual(o.account.id);
         expect(nota.get('company.address.location.lat')).toEqual(o.company.address.location.lat);
         expect(nota.get('account.noProp')).toBeUndefined();
     });
 
-    it('should `set` value', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should `set` value', () => {
+        const nota = new Notation(_.cloneDeep(o)),
             obj = nota.value;
         expect(obj.name).toEqual('onur');
         nota.set('name', 'cute');
@@ -434,8 +628,8 @@ describe('Test Suite: Notation', function () {
         expect(obj.account.newProp.val).toEqual('YES');
     });
 
-    it('should `remove` property', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should `remove` property', () => {
+        const nota = new Notation(_.cloneDeep(o)),
             obj = nota.value;
         // console.log('before', o);
         expect(obj.age).toBeDefined();
@@ -449,18 +643,18 @@ describe('Test Suite: Notation', function () {
 
         // deleting non-existing property..
         // this should have no effect.
-        var k = Object.keys(obj.company).length;
+        const k = Object.keys(obj.company).length;
         nota.remove('company.noProp');
         expect(Object.keys(obj.company).length).toEqual(k);
 
-        var assets = { boat: 'none', car: { model: 'Mustang' } };
+        const assets = { boat: 'none', car: { model: 'Mustang' } };
         Notation.create(assets).remove('car.model');
         expect(assets.car).toEqual({});
         // console.log(assets);
     });
 
-    it('should `rename` notation', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should `rename` notation', () => {
+        const nota = new Notation(_.cloneDeep(o)),
             obj = nota.value;
         expect(obj.company.address.location).toBeDefined();
         nota.rename('company.address.location', 'company.loc.geo');
@@ -476,11 +670,11 @@ describe('Test Suite: Notation', function () {
         expect(obj.me.name).toBeDefined();
     });
 
-    it('should `copyTo` or `extract` notation', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should `copyTo` or `extract` notation', () => {
+        const nota = new Notation(_.cloneDeep(o)),
             obj = nota.value;
         // `extract(notation)` is same as `copyTo({}, notation)`
-        var ex;
+        let ex;
         ex = nota.extract('company');
         expect(obj.company.name).toEqual('pilot co');
         expect(ex.company.name).toEqual('pilot co');
@@ -489,11 +683,11 @@ describe('Test Suite: Notation', function () {
         expect(ex.company.address.country).toEqual('TR');
     });
 
-    it('should `moveTo` or `extrude` notation', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should `moveTo` or `extrude` notation', () => {
+        const nota = new Notation(_.cloneDeep(o)),
             obj = nota.value;
         // `extrude(notation)` is same as `moveTo({}, notation)`
-        var ex;
+        let ex;
         ex = nota.extrude('company.address.country');
         expect(obj.company.address.country).toBeUndefined();
         expect(ex.company.address.country).toEqual('TR');
@@ -503,9 +697,9 @@ describe('Test Suite: Notation', function () {
         expect(ex.comp.my.name).toEqual('pilot co');
     });
 
-    it('should return `undefined` for invalid notations', function () {
-        var nota = new Notation(_.cloneDeep(o));
-        var level1 = 'noProp',
+    it('should return `undefined` for invalid notations', () => {
+        const nota = new Notation(_.cloneDeep(o));
+        const level1 = 'noProp',
             level2 = 'noProp.level2';
         expect(nota.get(level1)).toBeUndefined();
         expect(nota.hasDefined(level1)).toEqual(false);
@@ -513,8 +707,8 @@ describe('Test Suite: Notation', function () {
         expect(nota.hasDefined(level2)).toEqual(false);
     });
 
-    it('should ignore invalid notations', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should ignore invalid notations', () => {
+        let nota = new Notation(_.cloneDeep(o)),
             obj = nota.value,
             ex,
             level1 = 'noProp',
@@ -541,8 +735,8 @@ describe('Test Suite: Notation', function () {
         expect(obj.renamedProp).toBeUndefined();
     });
 
-    it('should throw if invalid object or notation', function () {
-        var nota = new Notation(_.cloneDeep(o)),
+    it('should throw if invalid object or notation', () => {
+        let nota = new Notation(_.cloneDeep(o)),
             b = null; // undefined will NOT throw
 
         function invalidSrc() {
