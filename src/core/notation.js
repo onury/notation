@@ -1,13 +1,6 @@
-import utils from '../lib/utils';
+import utils from '../utils';
 import NotationGlob from './notation.glob';
 import NotationError from './notation.error';
-
-// TODO:
-// templates? ${some.property}
-// Error if source object has flattened (dotted) keys.
-// expand if dotted keyed object is passed to constructor?
-
-// https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Operators/Property_accessors
 
 const ERR = {
     SOURCE: 'Invalid source object.',
@@ -20,15 +13,15 @@ const ERR = {
  *  Notation.js for Node and Browser.
  *
  *  Like in most programming languages, JavaScript makes use of dot-notation to
- *  access the value a member of an object (or class). `Notation` class provides
- *  various methods for modifying / processing the contents of the given object;
- *  by parsing object notation strings or globs.
+ *  access the value of a member of an object (or class). `Notation` class
+ *  provides various methods for modifying / processing the contents of the
+ *  given object; by parsing object notation strings or globs.
  *
- *  Note that this class will only deal with enumerable properties of the
- *  source object; so it should be used to manipulate data objects. It will
- *  not deal with preserving the prototype-chain of the given object.
+ *  Note that this class will only deal with enumerable properties of the source
+ *  object; so it should be used to manipulate data objects. It will not deal
+ *  with preserving the prototype-chain of the given object.
  *
- *  @author   Onur Yıldırım (onur@cutepilot.com)
+ *  @author   Onur Yıldırım <onur@cutepilot.com>
  *  @license  MIT
  */
 class Notation {
@@ -39,8 +32,8 @@ class Notation {
      *  @param {Object} [object={}] - The source object to be notated.
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var notation = new Notation(obj);
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const notation = new Notation(obj);
      *  notation.get('car.model'); // "Charger"
      */
     constructor(object = {}) {
@@ -60,8 +53,8 @@ class Notation {
      *  @type {Object}
      *
      *  @example
-     *  var person = { name: "Onur" };
-     *  var me = Notation.create(person)
+     *  const person = { name: "Onur" };
+     *  const me = Notation.create(person)
      *      .set("age", 36)
      *      .set("car.brand", "Ford")
      *      .set("car.model", "Mustang")
@@ -90,7 +83,7 @@ class Notation {
      *  @returns {void}
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      *  Notation.create(obj).each(function (notation, key, value, object) {
      *      console.log(notation, value);
      *  });
@@ -137,7 +130,7 @@ class Notation {
      *  @returns {void}
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      *  Notation.create(obj)
      *      .eachValue("car.brand", function (levelValue, note, index, list) {
      *          console.log(note, levelValue); // "car.brand" "Dodge"
@@ -161,8 +154,8 @@ class Notation {
      *  @returns {Array} - An array of notation strings.
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var notations = Notation.create(obj).getNotations();
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const notations = Notation.create(obj).getNotations();
      *  console.log(notations); // [ "car.brand", "car.model", "car.year" ]
      */
     getNotations() {
@@ -179,9 +172,10 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  var flat = Notation.create(obj).flatten().value;
-     *  console.log(flat); // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const flat = Notation.create(obj).flatten().value;
+     *  console.log(flat);
+     *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
      */
     flatten() {
         let o = {};
@@ -204,8 +198,8 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
-     *  var expanded = Notation.create(obj).expand().value;
+     *  const obj = { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+     *  const expanded = Notation.create(obj).expand().value;
      *  console.log(expanded); // { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      */
     expand() {
@@ -276,7 +270,7 @@ class Notation {
      *  @returns {InspectResult} - The result object.
      *
      *  @example
-     *  var obj = { name: "John", car: { year: 1970 } };
+     *  const obj = { name: "John", car: { year: 1970 } };
      *  Notation.create(obj).inspectRemove("car.year"); // { has: true, value: 1970 }
      *  // obj » { name: "John", car: {} }
      *  Notation.create(obj).inspectRemove("car.year", true); // { has: true, value: 1970 }
@@ -382,7 +376,7 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", year: 1970 } };
+     *  const obj = { car: { brand: "Dodge", year: 1970 } };
      *  Notation.create(obj)
      *      .set("car.brand", "Ford")
      *      .set("car.model", "Mustang")
@@ -439,15 +433,14 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", year: 1970 } };
-     *  Notation.create(obj)
-     *      .merge({
-     *          "car.brand": "Ford",
-     *          "car.model": "Mustang",
-     *          "car.year": 1965,
-     *          "car.color": "red",
-     *          "boat": "none"
-     *      });
+     *  const obj = { car: { brand: "Dodge", year: 1970 } };
+     *  Notation.create(obj).merge({
+     *      "car.brand": "Ford",
+     *      "car.model": "Mustang",
+     *      "car.year": 1965,
+     *      "car.color": "red",
+     *      "boat": "none"
+     *  });
      *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
@@ -474,8 +467,8 @@ class Notation {
      *  @returns {Object} - An object with the removed properties.
      *
      *  @example
-     *  var obj = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
-     *  var separated = Notation.create(obj).separate(["car.brand", "boat" ]);
+     *  const obj = { car: { brand: "Dodge", year: 1970 }, notebook: "Mac" };
+     *  const separated = Notation.create(obj).separate(["car.brand", "boat" ]);
      *  console.log(separated);
      *  // { notebook: "Mac", car: { brand: "Ford" } };
      *  console.log(obj);
@@ -493,10 +486,6 @@ class Notation {
         this._source = o._source;
         return this;
     }
-
-    // iterate globs
-    // remove non-star negated globs directly
-    // get non-star part iterate thru obj keys
 
     /**
      *  Deep clones the source object while filtering its properties
@@ -519,33 +508,37 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
-     *  var notation = Notation.create(obj);
+     *  const obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
+     *  const notation = Notation.create(obj);
      *  notation.filter([ "*", "!car.*", "car.model" ]);
-     *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
-     *  notation.filter("*");
-     *  console.log(obj); // { notebook: "Mac", car: { model: "Mustang" } }
-     *  notation.filter(); // or notation.filter("");
-     *  console.log(obj); // {}
+     *  console.log(obj);       // { notebook: "Mac", car: { model: "Mustang" } }
+     *  notation.filter("*");   // re-filtering the current contents
+     *  console.log(obj);       // { notebook: "Mac", car: { model: "Mustang" } }
+     *  notation.filter();      // or notation.filter("");
+     *  console.log(obj);       // {}
      */
     filter(globNotations) {
-        let original = this.value,
-            copy = utils.deepCopy(original);
-        // if globNotations is "*" or ["*"] set the "copy" as source and
-        // return.
-        if (utils.stringOrArrayOf(globNotations, '*')) {
+        let original = this.value;
+        let copy = utils.deepCopy(original);
+
+        // ensure array, normalize and sort the globs in logical order. we also
+        // concat the array first (to prevent mutating the original) bec. we'll
+        // change it's content via `.shift()`
+        let globs = NotationGlob.normalize(globNotations).concat();
+
+        // if globs only consist of "*"; set the "copy" as source and return.
+        if (utils.stringOrArrayOf(globs, '*')) {
             this._source = copy;
             return this;
         }
-        // if globNotations is "" or [""] set source to `{}` and return.
-        if (arguments.length === 0 || utils.stringOrArrayOf(globNotations, '')) {
+        // if globs is "" or [""] set source to `{}` and return.
+        if (arguments.length === 0
+                || utils.stringOrArrayOf(globs, '')
+                || utils.stringOrArrayOf(globs, '!*')) {
             this._source = {};
             return this;
         }
-        let globs = utils.isArray(globNotations)
-            // sort the globs in logical order. we also concat the array first
-            // bec. we'll change it's content via `.shift()`
-            ? NotationGlob.sort(globNotations.concat()) : [globNotations];
+
         let filtered;
         // if the first item of sorted globs is "*" we set the source to the
         // (full) "copy" and remove the "*" from globs (not to re-process).
@@ -557,14 +550,17 @@ class Notation {
             // add notations/properties to it.
             filtered = new Notation({});
         }
+
         let g, endStar, normalized;
         // iterate through globs
         utils.each(globs, (globNotation, index, array) => {
+            // console.log('--->', globNotation);
             g = new NotationGlob(globNotation);
             // set flag that indicates whether the glob ends with `.*`
-            endStar = g.normalized.slice(-2) === '.*';
+            endStar = g.absGlob.slice(-2) === '.*';
             // get the remaining part as the (extra) normalized glob
-            normalized = endStar ? g.normalized.slice(0, -2) : g.normalized;
+            normalized = endStar ? g.absGlob.slice(0, -2) : g.absGlob;
+            // normalized = endStar ? g.absGlob.replace(/(\.\*)+$/, '') : g.absGlob;
             // check if normalized glob has no wildcard stars e.g. "a.b" or
             // "!a.b.c" etc..
             if (normalized.indexOf('*') < 0) {
@@ -591,14 +587,25 @@ class Notation {
             // notation, get the non-star left part of the glob and iterate
             // that property of the source object.
             this.each((originalNotation, key, value, obj) => {
-                // console.log(originalNotation, key);
-                if (g.test(originalNotation)) {
-                    if (g.isNegated) {
-                        filtered.remove(originalNotation);
-                    } else {
-                        filtered.set(originalNotation, value, true);
+                // console.log('>>', originalNotation);
+
+                // iterating each note of original notation. i.e.:
+                // note1.note2.note3 is iterated from left to right, as:
+                // 'note1', 'note1.note2', 'note1.note2.note3' — in order.
+                Notation.eachNote(originalNotation, (levelNotation, note, index, list) => {
+                    if (g.test(levelNotation)) {
+                        if (g.isNegated) {
+                            // console.log('removing', levelNotation, 'of', originalNotation);
+                            filtered.remove(levelNotation);
+                            // we break and return early if removed bec. deeper
+                            // level props are also removed with this parent.
+                            // e.g. when 'note1.note2' of 'note1.note2.note3' is
+                            // removed, we no more have 'note3'.
+                            return false;
+                        }
+                        filtered.set(levelNotation, value, true);
                     }
-                }
+                });
             });
         });
         // finally set the filtered's value as the source of our instance and
@@ -607,14 +614,9 @@ class Notation {
         return this;
     }
 
-    // store.partners.*
-    // *.host » iterate original obj
-    // store.*.host » iterate store obj
-
-    // TODO: remove support for char-star. e.g. `prop1.prop*2`
-
     /**
-     *  Removes the property at the given notation, from the source object.
+     *  Removes the property from the source object, at the given notation.
+     *  @alias Notation#delete
      *  @chainable
      *
      *  @param {String} notation - The notation to be inspected.
@@ -622,7 +624,7 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { notebook: "Mac", car: { model: "Mustang" } };
+     *  const obj = { notebook: "Mac", car: { model: "Mustang" } };
      *  Notation.create(obj).remove("car.model");
      *  console.log(obj); // { notebook: "Mac", car: { } }
      */
@@ -630,7 +632,14 @@ class Notation {
         this.inspectRemove(notation);
         return this;
     }
-    // TODO: alias delete
+    /**
+     *  Alias of `Notation#remove`
+     *  @private
+     */
+    delete(notation) {
+        this.remove(notation);
+        return this;
+    }
 
     /**
      *  Clones the `Notation` instance to a new one.
@@ -662,12 +671,12 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var models = { dodge: "Charger" };
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const models = { dodge: "Charger" };
      *  Notation.create(obj).copyTo(models, "car.model", "ford");
      *  console.log(models);
      *  // { dodge: "Charger", ford: "Mustang" }
-     *  // obj object is not modified
+     *  // source object (obj) is not modified
      */
     copyTo(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
@@ -698,8 +707,8 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var models = { dodge: "Charger" };
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const models = { dodge: "Charger" };
      *  Notation.create(obj).copyFrom(models, "dodge", "car.model", true);
      *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Charger" } }
@@ -734,8 +743,8 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var models = { dodge: "Charger" };
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const models = { dodge: "Charger" };
      *  Notation.create(obj).moveTo(models, "car.model", "ford");
      *  console.log(obj);
      *  // { car: { brand: "Ford" } }
@@ -771,8 +780,8 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var models = { dodge: "Charger" };
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const models = { dodge: "Charger" };
      *  Notation.create(obj).moveFrom(models, "dodge", "car.model", true);
      *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Charger" } }
@@ -803,7 +812,7 @@ class Notation {
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
      *  Notation.create(obj)
      *      .rename("car.brand", "carBrand")
      *      .rename("car.model", "carModel");
@@ -836,8 +845,8 @@ class Notation {
      *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var extracted = Notation.create(obj).extract("car.brand", "carBrand");
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const extracted = Notation.create(obj).extract("car.brand", "carBrand");
      *  console.log(extracted);
      *  // { carBrand: "Ford" }
      *  // obj is not modified
@@ -869,8 +878,8 @@ class Notation {
      *  @returns {Object} - Returns a new object with the notated property.
      *
      *  @example
-     *  var obj = { car: { brand: "Ford", model: "Mustang" } };
-     *  var extruded = Notation.create(obj).extrude("car.brand", "carBrand");
+     *  const obj = { car: { brand: "Ford", model: "Mustang" } };
+     *  const extruded = Notation.create(obj).extrude("car.brand", "carBrand");
      *  console.log(obj);
      *  // { car: { model: "Mustang" } }
      *  console.log(extruded);
@@ -902,16 +911,23 @@ class Notation {
      *  @returns {Notation} - The created instance.
      *
      *  @example
-     *  var notation = Notation.create(obj);
+     *  const notation = Notation.create(obj);
      *  // equivalent to:
-     *  var notation = new Notation(obj);
+     *  const notation = new Notation(obj);
      */
     static create(object = {}) {
         return new Notation(object);
     }
 
     /**
-     *  Checks whether the given notation string is valid.
+     *  Checks whether the given notation string is valid. Note that the star
+     *  (`*`) (which is a valid character, even if irregular) is NOT treated as
+     *  wildcard here. This checks for normal dot-notation, not a glob-notation.
+     *  For glob notation validation, use `Notation.Glob.isValid()` method. Same
+     *  goes for the negation character/prefix (`!`).
+     *
+     *  Note that, even though `obj['some.name']` is possible in JS, dot (`.`) is
+     *  always treated as a level (property) separator in Notation strings.
      *
      *  @param {String} notation - The notation string to be checked.
      *
@@ -920,11 +936,35 @@ class Notation {
      *  @example
      *  Notation.isValid('prop1.prop2.prop3'); // true
      *  Notation.isValid('prop1'); // true
+     *  Notation.isValid('prop.*'); // true (but star is not treated as wildcard)
+     *  Notation.isValid('@1'); // true (bec. obj['@1'] is possible in JS.)
      *  Notation.isValid(null); // false
      */
     static isValid(notation) {
         return (typeof notation === 'string') &&
-            (/^[^\s\.!]+(\.[^\s\.!]+)*$/).test(notation);
+            (/^[^\s.!]+(\.[^\s.!]+)*$/).test(notation);
+    }
+
+    /**
+     *  Counts the number of notes/levels in the given notation.
+     *  @alias Notation.countLevels
+     *
+     *  @param {*} notation - The notation string to be processed.
+     *
+     *  @returns {Number}
+     */
+    static countNotes(notation) {
+        if (!Notation.isValid(notation)) {
+            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
+        }
+        return notation.split('.').length + 1;
+    }
+    /**
+     *  Alias of `Notation.countNotes`.
+     *  @private
+     */
+    static countLevels(notation) {
+        return Notation.countNotes(notation);
     }
 
     /**
@@ -980,12 +1020,13 @@ class Notation {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
         return notation.indexOf('.') >= 0
-            ? notation.replace(/\.[^\.]*$/, '')
+            ? notation.replace(/\.[^.]*$/, '')
             : null;
     }
 
     /**
-     *  Iterates through each note of the given notation string.
+     *  Iterates through each note/level of the given notation string.
+     *  @alias Notation.eachLevel
      *
      *  @param {String} notation - The notation string to be iterated through.
      *  @param {Function} callback - The callback function to be invoked on
@@ -996,12 +1037,13 @@ class Notation {
      *  @returns {void}
      *
      *  @example
-     *  Notation.eachNote("first.prop2.last", function (levelNotation, note, index, list) {
+     *  const notation = 'first.prop2.last';
+     *  Notation.eachNote(notation, function (levelNotation, note, index, list) {
      *      console.log(index, note, levelNotation);
      *  });
-     *  // 0 "first" "first"
-     *  // 1 "first.prop2" "prop2"
-     *  // 2 "first.prop2.last" "last"
+     *  // 0  "first"             "first"
+     *  // 1  "first.prop2"       "prop2"
+     *  // 2  "first.prop2.last"  "last"
      */
     static eachNote(notation, callback) {
         if (!Notation.isValid(notation)) {
@@ -1015,6 +1057,13 @@ class Notation {
             levelNotation = levelNotes.join('.');
             if (callback(levelNotation, note, index, notes) === false) return false;
         }, Notation);
+    }
+    /**
+     *  Alias of `Notation.eachNote`.
+     *  @private
+     */
+    static eachLevel(notation, callback) {
+        Notation.eachNote(notation, callback);
     }
 
 }
