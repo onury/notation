@@ -1,4 +1,4 @@
-import utils from '../lib/utils';
+import utils from '../utils';
 import NotationError from './notation.error';
 
 // http://www.linfo.org/wildcard.html
@@ -18,17 +18,17 @@ import NotationError from './notation.error';
  *
  *  @example
  *  // for the following object;
- *  { name: "John", billing: { account: { id: 1, active: true } } };
+ *  { name: 'John', billing: { account: { id: 1, active: true } } };
  *
- *  "billing.account.*"  // represents `{ id: 1, active: true }`
- *  "billing.account.id" // represents `1`
- *  "!billing.account.*" // represents `{ name: "John" }`
- *  "name" // represents `"John"`
- *  "*" // represents the whole object
+ *  'billing.account.*'  // represents value `{ id: 1, active: true }`
+ *  'billing.account.id' // represents value `1`
+ *  '!billing.account.*' // represents value `{ name: 'John' }`
+ *  'name' // represents `'John'`
+ *  '*' // represents the whole object
  *
  *  @example
- *  var glob = new Notation.Glob("billing.account.*");
- *  glob.test("billing.account.id"); // true
+ *  var glob = new Notation.Glob('billing.account.*');
+ *  glob.test('billing.account.id'); // true
  */
 class NotationGlob {
 
@@ -42,16 +42,77 @@ class NotationGlob {
         if (!NotationGlob.isValid(glob)) {
             throw new NotationError('Invalid notation glob: "' + glob + '"');
         }
-        this.glob = glob;
-        let ng = NotationGlob.normalize(glob);
-        this.normalized = ng.glob;
-        this.isNegated = ng.isNegated;
-        this.regexp = NotationGlob.toRegExp(this.normalized);
-        this.levels = this.normalized.split('.');
+
+        let ng = NotationGlob.inspect(glob);
+        this._ = {
+            glob,
+            absGlob: ng.absGlob,
+            isNegated: ng.isNegated,
+            regexp: NotationGlob.toRegExp(ng.absGlob),
+            levels: ng.absGlob.split('.')
+        };
     }
 
     // --------------------------------
-    // NotationGlob Instance Members
+    // NotationGlob Instance Properties
+    // --------------------------------
+
+    /**
+     *  Gets the original glob notation string.
+     *  @name Notation.Glob#glob
+     *  @type {String}
+     */
+    get glob() {
+        return this._.glob;
+    }
+
+    /**
+     *  Gets the absolute glob notation (without the preceeding bang `!`).
+     *  @name Notation.Glob#absGlob
+     *  @type {String}
+     */
+    get absGlob() {
+        return this._.absGlob;
+    }
+
+    /**
+     *  Specifies whether this glob is negated with a `!` prefix.
+     *  @name Notation.Glob#isNegated
+     *  @type {Boolean}
+     */
+    get isNegated() {
+        return this._.isNegated;
+    }
+
+    /**
+     *  Represents this glob in regular expressions.
+     *  Note that the negation (`!`) is ignored, if any.
+     *  @name Notation.Glob#regexp
+     *  @type {RegExp}
+     */
+    get regexp() {
+        return this._.regexp;
+    }
+
+    /**
+     *  List of notes/levels of this glob notation.
+     *  @name Notation.Glob#notes
+     *  @alias Notation.Glob#levels
+     *  @type {Array}
+     */
+    get notes() {
+        return this._.levels;
+    }
+    /**
+     *  Alias of `Notation.Glob#notes`.
+     *  @private
+     */
+    get levels() {
+        return this._.levels;
+    }
+
+    // --------------------------------
+    // NotationGlob Instance Methods
     // --------------------------------
 
     /**
@@ -64,14 +125,14 @@ class NotationGlob {
      *  @returns {Boolean}
      *
      *  @example
-     *  var glob = new Notation.Glob("!prop.*.name");
+     *  const glob = new Notation.Glob('!prop.*.name');
      *  glob.test("prop.account.name"); // true
      */
     test(notation) {
-        // we allow "*" to match everything. We check for this here
+        // we allow '*' to match everything. We check for this here
         // instead of the regexp bec. we care for dots (.) within the glob.
-        return this.normalized === '*'
-            || (this.normalized !== '' && notation !== '' && this.regexp.test(notation));
+        return this.absGlob === '*'
+            || (this.absGlob !== '' && notation !== '' && this.regexp.test(notation));
     }
 
     // --------------------------------
@@ -89,44 +150,47 @@ class NotationGlob {
      *  @returns {NotationGlob}
      *
      *  @example
-     *  var glob = Notation.Glob.create(strGlob);
+     *  const glob = Notation.Glob.create(strGlob);
      *  // equivalent to:
-     *  var glob = new Notation.Glob(strGlob);
+     *  const glob = new Notation.Glob(strGlob);
      */
     static create(glob) {
         return new NotationGlob(glob);
     }
 
     /**
-     *  Modified from http://stackoverflow.com/a/13818704/112731
-     *  @private
+     *  Gets a regular expressions instance from the given glob notation.
+     *  Note that the bang `!` prefix will be ignored if the given glob is negated.
+     *  @name Notation.Glob.toRegExp
+     *  @function
+     *
+     *  @param {String} glob - Glob notation to be converted.
+     *
+     *  @returns {RegExp}
      */
-    static toRegExp(glob, opts) {
+    static toRegExp(glob) {
+        if (glob.indexOf('!') === 0) glob = glob.slice(1);
+        // Modified from http://stackoverflow.com/a/13818704/112731
         glob = utils.pregQuote(glob).replace(/\\\*/g, '[^\\s\\.]*').replace(/\\\?/g, '.');
-        return new RegExp('^' + glob, opts || '');
-        // we don't end it with a $ so the ending is open
-        // `company.*` will produce `/^company\.[^\s\.]*/`
-        // which will match both `company.name` and `company.address.street`
-        // but will not match `some.company.name`
+        return new RegExp('^' + glob);
+        // we don't end it with a $ so the ending is open `company.*` will
+        // produce `/^company\.[^\s\.]*/` which will match both `company.name`
+        // and `company.address.street` but will not match `some.company.name`
     }
 
     /**
      *  @private
      */
-    static normalize(glob) {
-        // replace multiple stars with single
-        glob = glob.replace(/\*+/g, '*');
-        // empty glob if invalid e.g. '!' | '.abc' | '!*'
-        glob = !NotationGlob.isValid(glob) ? '' : glob;
+    static inspect(glob) {
         let bang = glob.slice(0, 1) === '!';
         glob = bang ? glob.slice(1) : glob;
         return {
-            glob: glob,
+            absGlob: glob,
             isNegated: bang
         };
     }
 
-    // Created test at: https://regex101.com/r/tJ7yI9/
+    // Created test at: https://regex101.com/r/tJ7yI9/4
     /**
      *  Validates the given notation glob.
      *  @name Notation.Glob.isValid
@@ -136,24 +200,22 @@ class NotationGlob {
      *  @returns {Boolean}
      */
     static isValid(glob) {
-        return (typeof glob === 'string') &&
-            (/^!?[^\s\.!]+(\.[^\s\.!]+)*$/).test(glob);
+        return (typeof glob === 'string')
+            && (/^(!?([^\s.!*]+|\*)(\.([^\s.!*]+|\*))*)$/).test(glob);
     }
-
-    // TODO: if both "prop.id" and "!prop.id" exists normalize them.
-    // since negated will win, remove the other.
 
     /**
      *  Compares two given notation globs and returns an integer value as a
      *  result. This is generally used to sort glob arrays. Loose globs (with
      *  stars especially closer to beginning of the glob string) and globs
      *  representing the parent/root of the compared property glob come first.
-     *  Verbose/detailed/exact globs come last. (`* < *abc < abc`). For
-     *  instance; `store.address` comes before `store.address.street`. So this
-     *  works both for `*, store.address.street, !store.address` and
-     *  `*, store.address, !store.address.street`. For cases such as
-     *  `prop.id` vs `!prop.id` which represent the same property;
-     *  the negated glob wins (comes last).
+     *  Verbose/detailed/exact globs come last. (`* < *abc < abc`).
+     *
+     *  For instance; `store.address` comes before `store.address.street`. So
+     *  this works both for `*, store.address.street, !store.address` and `*,
+     *  store.address, !store.address.street`. For cases such as `prop.id` vs
+     *  `!prop.id` which represent the same property; the negated glob wins
+     *  (comes last).
      *  @name Notation.Glob.compare
      *  @function
      *
@@ -164,7 +226,7 @@ class NotationGlob {
      *  first and `0` if equivalent priority.
      *
      *  @example
-     *  var result = Notation.Glob.compare("prop.*.name", "prop.*");
+     *  let result = Notation.Glob.compare('prop.*.name', 'prop.*');
      *  console.log(result); // 1
      */
     static compare(a, b) {
@@ -203,25 +265,27 @@ class NotationGlob {
     }
 
     /**
-     *  Sorts the notation globs in the given array by their priorities.
-     *  Loose globs (with stars especially closer to beginning of the glob string);
-     *  globs representing the parent/root of the compared property glob come first.
-     *  Verbose/detailed/exact globs come last. (`* < *abc < abc`). For
-     *  instance; `store.address` comes before `store.address.street`. For cases
-     *  such as `prop.id` vs `!prop.id` which represent the same property; the
-     *  negated glob wins (comes last).
+     *  Sorts the notation globs in the given array by their priorities. Loose
+     *  globs (with stars especially closer to beginning of the glob string);
+     *  globs representing the parent/root of the compared property glob come
+     *  first. Verbose/detailed/exact globs come last. (`* < *abc < abc`).
+     *
+     *  For instance; `store.address` comes before `store.address.street`. For
+     *  cases such as `prop.id` vs `!prop.id` which represent the same property;
+     *  the negated glob wins (comes last).
      *  @name Notation.Glob.sort
      *  @function
      *
-     *  @param {Array} globsArray - The notation globs array to be sorted.
-     *  The passed array reference is modified.
+     *  @param {Array} globsArray - The notation globs array to be sorted. The
+     *  passed array reference is modified.
      *
      *  @returns {Array}
      *
      *  @example
-     *  var globs = ["!prop.*.name", "prop.*", "prop.id"];
-     *  Notation.Glob.sort(globs);
-     *  // ["prop.*", "prop.id", "!prop.*.name"];
+     *  const globs = ['!prop.*.name', 'prop.*', 'prop.id'];
+     *  const sorted = Notation.Glob.sort(globs);
+     *  console.log(sorted);
+     *  // ['prop.*', 'prop.id', '!prop.*.name'];
      */
     static sort(globsArray) {
         return globsArray.sort(NotationGlob.compare);
@@ -229,75 +293,279 @@ class NotationGlob {
     }
 
     /**
-     *  Gets the union from the given couple of glob arrays and returns
-     *  a new array of globs. If the exact same element is found in both
-     *  arrays, one of them is removed to prevent duplicates. If one of the
-     *  arrays contains a negated equivalent of an item in the other array,
-     *  the negated item is removed. If any item covers/matches a negated
-     *  item in the other array, the negated item is removed.
-     *  @name Notation.Glob.union
+     *  Normalizes the given notation globs array by removing unnecessary,
+     *  redundant items and returns a priority-sorted globs array.
+     *
+     *  <ul>
+     *  <li>If any exact duplicates found, all except first is removed.</li>
+     *  <li>If both normal and negated versions of a glob are found, negated wins.
+     *  <br />example: `['id', '!id']` normalizes to `['!id']`.</li>
+     *  <li>If a glob is covered by another, it's removed.
+     *  <br />example: `['car.*', 'car.model']` normalizes to `['car.*']`.</li>
+     *  <li>If a glob is covered by another negated glob, it's kept.
+     *  <br />example: `['!car.*', 'car.model']` normalizes as is.</li>
+     *  <li>If a negated glob is covered by another glob, it's also kept.
+     *  <br />example: `['car.*', '!car.model']` normalizes as is.</li>
+     *  </ul>
+     *  @name Notation.Glob.normalize
      *  @function
      *
-     *  @param {Array} arrA - First array of glob strings.
-     *  @param {Array} arrB - Second array of glob strings.
-     *  @param {Boolean} [sort=true] - Whether to sort the globs in the final
-     *  array.
+     *  @param {Array} globsArray - Notation globs array to be normalized.
      *
      *  @returns {Array}
      *
      *  @example
-     *  var a = [ 'foo.bar', 'bar.baz', '!*.qux' ],
-     *      b = [ '!foo.bar', 'bar.qux', 'bar.baz' ],
-     *  console.log(Notation.Glob.union(a, b));
-     *  // [ '!*.qux', 'foo.bar', 'bar.baz', 'bar.qux' ]
+     *  const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
+     *  const normalized = Notation.Glob.normalize(globs);
+     *  console.log(normalized);
+     *  // ['*', '!id', 'car.model', '!car.*']
      */
-    static union(arrA, arrB, sort) {
-        let nonegA, re, bIndex;
-        // iterate through first array
-        utils.eachRight(arrA, (a, ia) => {
-            // check if the exact item exists in the second array and remove
-            // if exists (to prevent duplicates).
-            bIndex = arrB.indexOf(a);
-            if (bIndex >= 0) arrB.splice(bIndex, 1);
-            // look for negateds and when one found; check if non-negated
-            // equivalent exists in the second array. if it exists, remove
-            // "this negated" from first array.
-            // e.g. [ '!foo.bar' ] + [ 'foo.bar' ] => [ 'foo.bar' ]
-            if (a.indexOf('!') === 0) {
-                nonegA = a.slice(1);
-                if (arrB.indexOf(nonegA) >= 0) {
-                    arrA.splice(ia, 1);
-                    return true;
-                }
-                // non-negated is not found in the second. so, iterate through
-                // the second array; look for non-negateds and when found,
-                // check if it covers/matches the negated from the first
-                // array. if so, remove the negated from the first array.
-                // [ '!foo.bar' ] + [ 'foo.*' ]  => [ 'foo.*' ]              // wild covers !v, remove !v
-                // [ 'foo.bar' ]  + [ '!foo.*' ] => [ '!foo.*', 'foo.bar' ]  // !wild covers v, both kept
-                // [ 'baz.que' ]  + [ '!foo.*' ] => [ '!foo.*', 'baz.que' ]  // !wild doesn't cover, both kept
-                utils.eachRight(arrB, (b, ib) => {
-                    if (b.indexOf('!') < 0) {
-                        re = NotationGlob.toRegExp(b);
-                        if (re.test(nonegA)) arrA.splice(ia, 1);
-                    }
-                });
-            } else {
-                // item in the first array is not negated; so check if a
-                // negated equivalent exists in the second and remove if
-                // exists.
-                // e.g. [ 'foo.bar' ] + [ '!foo.bar' ] => [ 'foo.bar' ]
-                bIndex = arrB.indexOf('!' + a);
-                if (bIndex >= 0) arrB.splice(bIndex, 1);
+    static normalize(globsArray) {
+        // e.g. ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
+        // =>   ['*', '!id', 'car.model', '!car.*']
+        globsArray = utils.ensureArray(globsArray).map(item => item.trim());
+        globsArray = NotationGlob.sort(globsArray);
+        utils.eachRight(globsArray, (glob, index) => {
+            // remove duplicates
+            let indexOfDuplicate = globsArray.indexOf(glob);
+            if (indexOfDuplicate >= 0 && indexOfDuplicate !== index) {
+                globsArray.splice(index, 1); // remove current index (at the end)
+                return; // no break
             }
+
+            //   ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
+            // » ['*', '!id', '!car.*', 'car.model']
+
+            // negated globs will not be removed
+            if (glob.indexOf('!') === 0) return; // no break
+
+            // inspect/compare the current glob with the rest of the array
+            utils.eachRight(globsArray, (globToCheck, i) => {
+                // don't inspect glob with itself
+                if (i === index) return; // no break
+
+                let ins = NotationGlob.inspect(globToCheck);
+                // console.log(glob, 'vs', ins);
+                let re = NotationGlob.toRegExp(ins.absGlob);
+                // checked item matches/covers current, non-negated glob, so...
+                if (re.test(glob)) {
+                    // we'll remove the current, non-negated glob if;
+                    // - checked item IS negated and exactly the same as current
+                    //   glob (in other words, reverse of it)
+                    // - checked item IS NOT negated, but it covers the current
+                    //   glob
+                    if (!ins.isNegated || glob === ins.absGlob) {
+                        globsArray.splice(index, 1);
+                    }
+                    return false; // break
+                }
+            });
         });
 
-        // concat both arrays and sort (if enabled) so we get a nice union
-        // array.
-        let result = arrA.concat(arrB);
-        return (sort === undefined || sort === true)
-            ? NotationGlob.sort(result)
-            : result;
+        // since negated wins in the same array, ['*', '!*'] is already reduced
+        // to ['!*'] so we can safely remove !* if found, since it's redundant.
+        // e.g. ['!*', 'name'] => ['name']
+        let i = globsArray.indexOf('!*');
+        if (i >= 0) globsArray.splice(i, 1);
+
+        return globsArray;
+    }
+
+    /**
+     *  Gets the union from the given couple of glob arrays and returns
+     *  a new array of globs.
+     *  <ul>
+     *  <li>If the exact same element is found in both
+     *  arrays, one of them is removed to prevent duplicates.
+     *  <br />example: `['!id', 'name'] ∪ ['!id']` unites to `['!id', 'name']`</li>
+     *  <li>If any non-negated item is covered by a glob in the same
+     *  or other array, the redundant item is removed.
+     *  <br />example: `['*', 'name'] ∪ ['email']` unites to `['*']`</li>
+     *  <li>If one of the arrays contains a negated equivalent of an
+     *  item in the other array, the negated item is removed.
+     *  <br />example: `['!id'] ∪ ['id']` unites to `['id']`</li>
+     *  <li>If any item covers/matches a negated item in the other array,
+     *  the negated item is removed.
+     *  <br />example #1: `['!user.id'] ∪ ['user.*']` unites to `['user.*']`
+     *  <br />example #2: `['*'] ∪ ['!password']` unites to `['*']`
+     *  </li>
+     *  <li>So on... For a better understanding read the inline code
+     *  documentation.</li>
+     *  </ul>
+     *  @name Notation.Glob.union
+     *  @function
+     *
+     *  @param {Array} globsA - First array of glob strings.
+     *  @param {Array} globsB - Second array of glob strings.
+     *
+     *  @returns {Array}
+     *
+     *  @example
+     *  const a = ['foo.bar', 'bar.baz', '!*.qux'];
+     *  const b = ['!foo.bar', 'bar.qux', 'bar.baz'];
+     *  const union = Notation.Glob.union(a, b);
+     *  console.log(union);
+     *  // ['!*.qux', 'foo.bar', 'bar.baz', 'bar.qux']
+     */
+    static union(globsA, globsB) {
+        // NOTE: The logic here is quite complex. For making this easier to
+        // understand; below code is written a bit verbose. Do not modify this
+        // only to make it shorter. This will already get minified.
+
+        // -----------------------
+
+        // if any of the arrays has a single glob item of only a wildcard (e.g.
+        // `['*']`); this covers all, so...
+        if (utils.hasSingleItemOf(globsA, '*') || utils.hasSingleItemOf(globsB, '*')) {
+            return ['*'];
+        }
+
+        // clone arrays so we don't mutate the originals.
+        const arrA = globsA.concat(); // NotationGlob.normalize(globsA.concat());
+        const arrB = globsB.concat(); // NotationGlob.normalize(globsB.concat());
+        // no need to normalize. we'll do it at the end.
+
+        let reA, reB, insA, insB;
+
+        // storage for tracking (winner) negated globs that are compared with
+        // another negated in the other array. For example:
+        // ['*', '!user.*'] ∪ ['*', '!user.id']
+        // '!user.id' should be kept in the union when compared with '!user.*'.
+        // but later, '!user.id' will be unioned with '*' in the other array
+        // which will cover and remove '!user.id'. so we'll keep a storage for
+        // to prevent this.
+        let keepNegated = [];
+
+        // iterate through array A
+        utils.eachRight(arrA, (a, aIndex) => {
+            insA = NotationGlob.inspect(a);
+            reA = NotationGlob.toRegExp(insA.absGlob);
+
+            // iterate through array B for each item in A
+            utils.eachRight(arrB, (b, bIndex) => {
+                insB = NotationGlob.inspect(b);
+                reB = NotationGlob.toRegExp(insB.absGlob);
+
+                // console.log(a, 'vs', b);
+
+                if (insA.isNegated && !insB.isNegated) {
+                    // if we have the non-negated version of the same glob in B,
+                    // we'll remove item in A. In union, non-negated wins
+                    // (unlike normalize — in normalize, negated wins within the
+                    // same array).
+                    if (insA.absGlob === insB.absGlob) {
+                        arrA.splice(aIndex, 1);
+                        // console.log(`${a} removed: ${a} reverses ${b}`);
+                        // console.log(arrA, '∪', arrB);
+                        return false; // break from B
+                    }
+
+                    // remove the negated from A only if the same value is not in B.
+                    // e.g. 1)  ['!x.y'] ∪ ['x.*'] => ['x.*']
+                    // e.g. 2)  ['!x.y'] ∪ ['x.*', '!x.y'] => ['x.*', '!x.y']
+                    if (reB.test(insA.absGlob) && arrB.indexOf(a) === -1 && keepNegated.indexOf(a) === -1) {
+                        arrA.splice(aIndex, 1);
+                        // console.log(`${a} removed: ${b} covers ${a}`);
+                        // console.log(arrA, '∪', arrB);
+                        return false; // break from B
+                    }
+                }
+
+                if (!insA.isNegated && insB.isNegated) {
+                    // if we have the non-negated version of the same glob in A,
+                    // we'll remove item in B.
+                    if (insA.absGlob === insB.absGlob) {
+                        arrB.splice(bIndex, 1);
+                        // console.log(`${b} removed: ${b} reverses ${a}`);
+                        // console.log(arrA, '∪', arrB);
+                        return; // move to next in B
+                    }
+
+                    // remove the negated from B only if the same value is not in A.
+                    // e.g. 1)  ['!x.y'] ∪ ['x.*'] => ['x.*']
+                    // e.g. 2)  ['!x.y'] ∪ ['x.*', '!x.y'] => ['x.*', '!x.y']
+                    if (reA.test(insB.absGlob) && arrA.indexOf(b) === -1 && keepNegated.indexOf(b) === -1) {
+                        arrB.splice(bIndex, 1);
+                        // console.log(`${b} removed: ${a} covers ${b}`);
+                        // console.log(arrA, '∪', arrB);
+                        return; // move to next in B
+                    }
+                }
+
+                if (insA.isNegated && insB.isNegated) {
+                    // if both A and B are negated and NOT equal, we'll check
+                    // for coverage over one or the other.
+                    if (a !== b) {
+                        // if B covers A, we'll remove from B.
+                        // e.g. '!user.*' covers '!user.id'
+                        if (reB.test(insA.absGlob)) {
+                            arrB.splice(bIndex, 1);
+                            keepNegated.push(a);
+                            // console.log(`${b} removed: ${a} neg-covers ${b}`);
+                            // console.log(arrA, '∪', arrB);
+                            return; // move to next in B
+                        }
+                        // if A covers B, we'll remove from A.
+                        if (reA.test(insB.absGlob)) {
+                            arrA.splice(aIndex, 1);
+                            keepNegated.push(b);
+                            // console.log(`${a} removed: ${b} neg-covers ${a}`);
+                            // console.log(arrA, '∪', arrB);
+                            return false; // break from B
+                        }
+                    }
+                    // else, if they are equal, we'll not remove any bec. it
+                    // means both arrays disalow that glob.
+                }
+
+                if (!insA.isNegated && !insB.isNegated) {
+                    // if both A and B are NOT negated and equal, we'll remove
+                    // from A.
+                    if (a === b) {
+                        arrA.splice(aIndex, 1);
+                        // console.log(`${a} removed: ${a} === ${b}`);
+                        // console.log(arrA, '∪', arrB);
+                        return false;
+                    }
+
+                    // else -> (a !== b)
+
+                    // Leave the rest to the normalizing process
+                    // (Notation.Glob.normalize) bec. when both A and B are
+                    // non-negated, the one which is covered by the other will
+                    // be removed incorrectly.
+
+                    // For example:
+                    // ['!x.y'] ∪ ['x.*'] => ['x.*']
+                    // ['*', '!x.*'] ∪ ['*', '!x.*', 'x.o']
+                    // '*' in A will cover and remove 'x.o' in B incorrectly bec.
+                    // 'x.o' is a remainder from '!x.*' which is both in A and B.
+
+                    // So when this is left as is; the final union before
+                    // normalizing is: ['*', '!x.*', '*', 'x.o']
+                    // normalized to:  ['*', '!x.*', 'x.o']
+
+                    // if (reB.test(insA.absGlob)) {
+                    //     arrA.splice(aIndex, 1);
+                    //     console.log(`${a} removed: ${b} covers ${a}`);
+                    //     console.log(arrA, '∪', arrB);
+                    //     return false;
+                    // }
+                    // if (reA.test(insB.absGlob)) {
+                    //     arrB.splice(bIndex, 1);
+                    //     console.log(`${b} removed: ${a} covers ${b}`);
+                    //     console.log(arrA, '∪', arrB);
+                    //     return;
+                    // }
+                }
+
+            });
+        });
+
+        // concat both arrays, normalize and sort so we get a nice union array.
+        const result = arrA.concat(arrB);
+        // console.log('-->', result);
+        return NotationGlob.normalize(result);
     }
 
 }
