@@ -293,7 +293,7 @@ class NotationGlob {
     }
 
     /**
-     *  Normalizes the given notation globs array by removing unnecessary,
+     *  Normalizes the given notation globs array by removing duplicate or
      *  redundant items and returns a priority-sorted globs array.
      *
      *  <ul>
@@ -303,7 +303,7 @@ class NotationGlob {
      *  <li>If a glob is covered by another, it's removed.
      *  <br />example: `['car.*', 'car.model']` normalizes to `['car.*']`.</li>
      *  <li>If a glob is covered by another negated glob, it's kept.
-     *  <br />example: `['!car.*', 'car.model']` normalizes as is.</li>
+     *  <br />example: `['*', '!car.*', 'car.model']` normalizes as is.</li>
      *  <li>If a negated glob is covered by another glob, it's also kept.
      *  <br />example: `['car.*', '!car.model']` normalizes as is.</li>
      *  </ul>
@@ -318,48 +318,93 @@ class NotationGlob {
      *  const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
      *  const normalized = Notation.Glob.normalize(globs);
      *  console.log(normalized);
-     *  // ['*', '!id', 'car.model', '!car.*']
+     *  // ['*', '!car.*', '!id', 'car.model']
      */
     static normalize(globsArray) {
-        // e.g. ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
-        // =>   ['*', '!id', 'car.model', '!car.*']
         globsArray = utils.ensureArray(globsArray).map(item => item.trim());
         globsArray = NotationGlob.sort(globsArray);
-        utils.eachRight(globsArray, (glob, index) => {
-            // remove duplicates
-            let indexOfDuplicate = globsArray.indexOf(glob);
-            if (indexOfDuplicate >= 0 && indexOfDuplicate !== index) {
-                globsArray.splice(index, 1); // remove current index (at the end)
-                return; // no break
-            }
 
-            //   ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
-            // » ['*', '!id', '!car.*', 'car.model']
+        utils.eachRight(globsArray, (globA, indexA) => {
 
-            // negated globs will not be removed
-            if (glob.indexOf('!') === 0) return; // no break
+            // example #1:
+            // ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
+            // => ['*', '!id', '!car.*', 'car.model']
+
+            // example #2:
+            // ['!id', 'name', 'car.model', '!car.*', 'id', '!email']
+            // => ['!car.*', 'car.model', 'name']
+
+            let insA = NotationGlob.inspect(globA);
+            // console.log(' • ', globA, '=>', globsArray);
+
+            let duplicate = false;
+            let hasExactNegative = false;
+            let negCoversNeg = false;
+            let noPosCoversNeg = true;
+            let posCoversPos = false;
+            let noNegCoversPos = true;
 
             // inspect/compare the current glob with the rest of the array
-            utils.eachRight(globsArray, (globToCheck, i) => {
+            utils.eachRight(globsArray, (globB, indexB) => {
                 // don't inspect glob with itself
-                if (i === index) return; // no break
+                if (indexB === indexA) return; // no break, move to next
 
-                let ins = NotationGlob.inspect(globToCheck);
-                // console.log(glob, 'vs', ins);
-                let re = NotationGlob.toRegExp(ins.absGlob);
-                // checked item matches/covers current, non-negated glob, so...
-                if (re.test(glob)) {
-                    // we'll remove the current, non-negated glob if;
-                    // - checked item IS negated and exactly the same as current
-                    //   glob (in other words, reverse of it)
-                    // - checked item IS NOT negated, but it covers the current
-                    //   glob
-                    if (!ins.isNegated || glob === ins.absGlob) {
-                        globsArray.splice(index, 1);
-                    }
+                let insB = NotationGlob.inspect(globB);
+                let reB = NotationGlob.toRegExp(insB.absGlob);
+
+                // console.log(globA, 'vs', globB);
+
+                // (A) remove if duplicate
+                if (globA === globB) {
+                    duplicate = true;
                     return false; // break
                 }
+
+                // (B) remove if positive has an exact negative
+                // e.g. ['prop', '!prop'] => ['!prop']
+                // negated wins when normalized
+                if (insB.isNegated && globA === insB.absGlob) {
+                    hasExactNegative = true;
+                    return false; // break
+                }
+
+                // (C) remove negated if:
+                //    1) any negative covers it
+                //       ['!a.b', '!a.*']  => '!a.b' is removed
+                //    2) no positive covers it
+                //       ['!a.b', 'a.c']   => '!a.b' is removed
+
+                // (D) remove positive if:
+                //    1) any positive covers it AND no negative covers it
+                //       ['*', 'a.b']            => 'a.b' is removed
+                //       ['*', 'a.b', '!a.*']    => 'a.b' is kept
+
+                if (insA.isNegated) {
+                    if (insB.isNegated && reB.test(insA.absGlob)) {
+                        negCoversNeg = true;
+                        return false; // break
+                    } else if (noPosCoversNeg && reB.test(insA.absGlob)) {
+                        noPosCoversNeg = false;
+                    }
+                } else { // if (!insA.isNegated)
+                    if (!insB.isNegated && reB.test(insA.absGlob)) {
+                        posCoversPos = true;
+                    } else if (noNegCoversPos && reB.test(insA.absGlob)) {
+                        noNegCoversPos = false;
+                    }
+                }
+
             });
+
+            let redundant = insA.isNegated
+                ? (negCoversNeg || noPosCoversNeg)
+                : (posCoversPos && noNegCoversPos);
+
+            if (duplicate || hasExactNegative || redundant) {
+                // remove the current (at the end)
+                globsArray.splice(indexA, 1);
+            }
+
         });
 
         // since negated wins in the same array, ['*', '!*'] is already reduced
@@ -421,8 +466,8 @@ class NotationGlob {
         }
 
         // clone arrays so we don't mutate the originals.
-        const arrA = globsA.concat(); // NotationGlob.normalize(globsA.concat());
-        const arrB = globsB.concat(); // NotationGlob.normalize(globsB.concat());
+        const arrA = globsA.concat();
+        const arrB = globsB.concat();
         // no need to normalize. we'll do it at the end.
 
         let reA, reB, insA, insB;
@@ -564,7 +609,6 @@ class NotationGlob {
 
         // concat both arrays, normalize and sort so we get a nice union array.
         const result = arrA.concat(arrB);
-        // console.log('-->', result);
         return NotationGlob.normalize(result);
     }
 
