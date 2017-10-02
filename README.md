@@ -11,7 +11,7 @@ for Node and Browser.
 
 > © 2017, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
 
-Utility for modifying / processing the contents of Javascript objects by parsing object notation strings or globs.
+Utility for modifying / processing the contents of Javascript objects via object notation strings or globs.
 
 Note that this library will only deal with enumerable properties of the source object; so it should be used to manipulate data objects. It will not deal with preserving the prototype-chain of the given object.
 
@@ -24,11 +24,13 @@ Install via **NPM**:
 npm i notation --save
 ```
 
-```js
-var Notation = require('notation');
+### Modify the contents of a data object
 
-var obj = { car: { brand: "Dodge", model: "Charger" }, dog: { breed: "Akita" } };
-var notation = new Notation(obj);
+```js
+const Notation = require('notation');
+
+const obj = { car: { brand: "Dodge", model: "Charger" }, dog: { breed: "Akita" } };
+const notation = new Notation(obj);
 notation.get('car.model');      // "Charger"
 notation
     .set('car.color', 'red')         // { car: { brand: "Dodge", model: "Charger", color: "red" }, dog: { breed: "Akita" } }
@@ -42,11 +44,38 @@ notation
     .value;                          // source object
 ```
 
+### Normalize a glob notation list
+
+Removes duplicates, redundant items and logically sorts the array:
+```js
+const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
+console.log(Notation.Glob.normalize(globs));
+// => ['*', '!car.*', '!id', 'car.model']
+```
+_Note that `Notation#filter()` and `Notation.Glob.union()` methods automtically normalizes the give glob list(s)._
+
+### Union two glob notation lists
+
+Unites two glob arrays optimistically and logically sorts the array:
+```js
+const globsA = ['*', '!car.model', 'car.brand', '!*.age'];
+const globsB = ['car.model', 'user.age', 'user.name'];
+console.log(Notation.Glob.union(globsA, globsB));
+// => ['*', '!*.age', 'user.age']
+```
+
 ## Documentation
 
 You can read the full [**API reference** here][docs].
 
 ## Change-Log
+
+**1.3.5** (2017-10-03)  
+
+- Redundant, negated globs should are also removed when normalized. Fixes [issue #5](https://github.com/onury/notation/issues/5).
+- Fixed index shift issue with `Notation.Glob.normalize(array)`.
+- Fixed `countNotes()` method.
+- Minor revisions.
 
 **1.3.0** (2017-09-30)  
 
@@ -58,7 +87,7 @@ You can read the full [**API reference** here][docs].
 - Fixed an issue where negated wildcards would be filtered incorrectly in some edge cases (e.g. `!*.*.*`).
 - Added `Notation.Glob.normalize(array)` static method.
 - Added `Notation.Glob.toRegExp(glob)` static method.
-- Aded `Notation.countNotes(notation)` convenience method.
+- Added `Notation.countNotes(notation)` convenience method.
 - Improved glob validation.
 - Fix import typo that prevents Travis builds succeed.
 - Minor revisions, clean-up.
