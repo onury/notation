@@ -957,7 +957,7 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        return notation.split('.').length + 1;
+        return notation.split('.').length;
     }
     /**
      *  Alias of `Notation.countNotes`.
