@@ -22,7 +22,7 @@ const utils = {
 
     deepCopy(object) {
         if (!utils.isObject(object)) return object;
-        var k, o,
+        let k, o,
             copy = {};
         for (k in object) {
             if (utils.hasOwn(object, k)) {
@@ -36,7 +36,7 @@ const utils = {
     // iterates over elements of an array, executing the callback for each
     // element.
     each(array, callback, thisArg) {
-        var length = array.length,
+        let length = array.length,
             index = -1;
         while (++index < length) {
             if (callback.call(thisArg, array[index], index, array) === false) break;
@@ -44,7 +44,7 @@ const utils = {
     },
 
     eachRight(array, callback) {
-        var index = array.length;
+        let index = array.length;
         while (index--) {
             if (callback(array[index], index, array) === false) break;
         }
