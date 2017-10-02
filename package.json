@@ -25,8 +25,8 @@
     "build:nomin": "webpack --env.WEBPACK_OUT=nomin --progress --colors",
     "build": "npm run build:min && npm run build:nomin",
     "watch": "webpack --env.WEBPACK_OUT=nomin --progress --colors --watch",
-    "test": "npm run build && node test",
-    "dev": "npm run build:nomin && npm run test",
+    "dev": "npm run build && node test",
+    "test": "npm run build:nomin && node test",
     "docs": "docma -c ./docma.config.json",
     "release": "npm run build && node test && npm run docs"
   },
