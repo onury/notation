@@ -204,7 +204,7 @@ describe('Test Suite: Notation.Glob', () => {
         expect(o.company.name).toBeDefined();
         expect(o.company.limited).toBeDefined();
         expect(o.account.id).toBeDefined();
-        // return;
+
         const assets = { model: 'Onur', phone: { brand: 'Apple', model: 'iPhone' }, car: { brand: 'Ford', model: 'Mustang' } };
         const N = Notation.create(assets),
             m1 = N.filter('*').value,
@@ -285,19 +285,25 @@ describe('Test Suite: Notation.Glob', () => {
         expect(normalize(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
         expect(normalize(['user.*', '!user.pwd'])).toEqual(['user.*', '!user.pwd']);
         expect(normalize(['*', '!*.id'])).toEqual(['*', '!*.id']);
-        expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', '!*.id', 'x.id']);
+        expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', 'x.id']);
         expect(normalize(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
         expect(normalize(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
-        // console.log(normalize(['*', 'user.*', '!user.pwd']));
+        // console.log(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']));
         expect(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']))
             .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+        // console.log(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']));
+        expect(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+
+        // console.log(normalize(['name', 'pwd', '!id']));
+        expect(normalize(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
     });
 
     it('should `union` notation-globs arrays', () => {
         const union = Notation.Glob.union;
         let u;
 
-        const globA = ['foo.bar.baz', '!bar.id', 'bar.name', '!foo.qux.boo']; // '!foo.*.boo'
+        const globA = ['foo.bar.baz', 'bar.*', '!bar.id', 'bar.name', '!foo.qux.boo'];
         const globB = ['!foo.*.baz', 'bar.id', 'bar.name', '!bar.*', 'foo.qux.*'];
 
         // for checking mutation
@@ -305,20 +311,21 @@ describe('Test Suite: Notation.Glob', () => {
         const cloneGlobB = globB.concat();
 
         // expected union
-        // [ 'foo.bar.baz', '!foo.*.baz', 'bar.id', 'bar.name', 'foo.qux.*' ]
+        // [ 'bar.*', 'foo.qux.*', 'foo.bar.baz' ]
 
         u = union(globA, globB);
         // should not mutate given globs arrays
         expect(globA).toEqual(cloneGlobA);
         expect(globB).toEqual(cloneGlobB);
 
-        expect(u.length).toEqual(5);
-        expect(u).toContain('bar.id');
-        expect(u).not.toContain('!bar.id');
-        expect(u).toContain('bar.name'); // only once
+        // console.log(u);
+
+        expect(u.length).toEqual(3);
+        expect(u).toContain('bar.*');
         expect(u).toContain('foo.qux.*');
-        expect(u).not.toContain('!foo.qux.boo');
-        expect(u.indexOf('!bar.*')).toBeLessThan(u.indexOf('bar.id'));
+        expect(u).toContain('foo.bar.baz');
+        // globs with wildcard come first
+        expect(u.indexOf('foo.qux.*')).toBeLessThan(u.indexOf('foo.bar.baz'));
 
         expect(union(['*'], ['!id'])).toEqual(['*']);
         expect(union(['!id'], ['*'])).toEqual(['*']);
@@ -341,8 +348,14 @@ describe('Test Suite: Notation.Glob', () => {
 
         u = union(['*', 'a', 'b', '!id', '!x.*'], ['*', '!b', 'id', '!pwd', 'x.o']);
         expect(u).toEqual(['*']);
+
         u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*', 'x.o']);
+        // console.log(u);
         expect(u).toEqual(['*', '!x.*', 'x.o']);
+
+        // console.log(Notation.Glob.normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']));
+        expect(Notation.Glob.normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
 
         u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*.*', 'x.o']);
         expect(u).toEqual(['*', '!x.*.*']);
@@ -492,6 +505,13 @@ describe('Test Suite: Notation', () => {
         expect(Notation.first(notation)).toEqual('single');
         expect(Notation.last(notation)).toEqual('single');
         expect(Notation.parent(notation)).toEqual(null);
+    });
+
+    it('should count notes', () => {
+        expect(Notation.countNotes('a')).toEqual(1);
+        expect(Notation.countNotes('a.b')).toEqual(2);
+        expect(Notation.countNotes('a.b.c')).toEqual(3);
+        expect(function () { Notation.countNotes(''); }).toThrow(); // eslint-disable-line
     });
 
     it('should validate notation', () => {
