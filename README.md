@@ -119,7 +119,7 @@ You can read the full [**API reference** here][docs].
 
 ## Change-Log
 
-**1.3.5** (2017-10-03)  
+**1.3.5** (2017-10-04)  
 
 - Redundant, negated globs should are also removed when normalized. Fixes [issue #5](https://github.com/onury/notation/issues/5).
 - Fixed shifted index issue with `Notation.Glob.normalize(array)`.
