@@ -327,9 +327,12 @@ describe('Test Suite: Notation.Glob', () => {
         // globs with wildcard come first
         expect(u.indexOf('foo.qux.*')).toBeLessThan(u.indexOf('foo.bar.baz'));
 
+        // order of parameters should not matter
         expect(union(['*'], ['!id'])).toEqual(['*']);
         expect(union(['!id'], ['*'])).toEqual(['*']);
         expect(union(['id'], ['*'])).toEqual(['*']);
+        expect(union(['*', '!id'], ['*'])).toEqual(['*']);
+        expect(union(['*'], ['*', '!id'])).toEqual(['*']);
 
         const a = ['*', '!id'];
         const b = ['*', '!pwd'];
@@ -359,7 +362,6 @@ describe('Test Suite: Notation.Glob', () => {
 
         u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*.*', 'x.o']);
         expect(u).toEqual(['*', '!x.*.*']);
-        // console.log(u);
     });
 
     it('should notate/filter wildcards', () => {
