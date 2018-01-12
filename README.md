@@ -7,10 +7,10 @@ for Node and Browser.
 [![release](https://img.shields.io/github/release/onury/notation.svg)](https://github.com/onury/notation)
 [![dependencies](https://david-dm.org/onury/notation.svg)](https://david-dm.org/onury/notation)
 [![license](http://img.shields.io/npm/l/notation.svg)](https://github.com/onury/notation/blob/master/LICENSE)
-[![maintained](https://img.shields.io/maintenance/yes/2017.svg)](https://github.com/onury/notation/graphs/commit-activity)
+[![maintained](https://img.shields.io/maintenance/yes/2018.svg)](https://github.com/onury/notation/graphs/commit-activity)
 [![documentation](https://img.shields.io/badge/documentation-click_to_read-c27cf4.svg?documentation=click_to_read)](http://onury.io/notation/?api=notation)
 
-> © 2017, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
+> © 2018, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
 
 Utility for modifying / processing the contents of Javascript objects via object notation strings or globs.
 
