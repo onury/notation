@@ -119,6 +119,10 @@ You can read the full [**API reference** here][docs].
 
 ## Change-Log
 
+**1.3.6** (2018-02-24)  
+
+- Fixed an issue with `Notation.Glob.toRegExp()` method that would cause some globs to be cleared out incorrectly when `.normalize()`d. e.g. `"!password"` would match `"!password_reset"` and remove the later. Fixes [issue #7](https://github.com/onury/notation/issues/7).
+
 **1.3.5** (2017-10-04)  
 
 - Redundant, negated globs are also removed when normalized. Fixes [issue #5](https://github.com/onury/notation/issues/5).
