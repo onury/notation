@@ -54,8 +54,10 @@ function shuffle(o) { // v1.0
 describe('Test Suite: Notation.Glob', () => {
     'use strict';
 
+    const valid = Notation.Glob.isValid;
+    const normalize = Notation.Glob.normalize;
+
     it('should validate notation glob', () => {
-        const valid = Notation.Glob.isValid;
         expect(valid('prop.mid.last')).toEqual(true);
         expect(valid('prop.*.')).toEqual(false);
         expect(valid('prop.*')).toEqual(true);
@@ -276,7 +278,6 @@ describe('Test Suite: Notation.Glob', () => {
     });
 
     it('should `normalize` notation-globs array', () => {
-        const normalize = Notation.Glob.normalize;
         expect(normalize(['*'])).toEqual(['*']);
         expect(normalize(['!*'])).toEqual([]);
         expect(normalize(['*', '!*'])).toEqual([]);
@@ -297,6 +298,23 @@ describe('Test Suite: Notation.Glob', () => {
 
         // console.log(normalize(['name', 'pwd', '!id']));
         expect(normalize(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+    });
+
+    it('`normalize` (issue #7)', () => {
+        const globs = [
+            '!pass',
+            '!password.prop',
+            '*',
+            '!password',
+            '!password_reset_code'
+        ];
+        // console.log(normalize(globs));
+        expect(normalize(globs)).toEqual([
+            '*',
+            '!pass',
+            '!password',
+            '!password_reset_code'
+        ]);
     });
 
     it('should `union` notation-globs arrays', () => {
