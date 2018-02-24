@@ -171,11 +171,14 @@ class NotationGlob {
     static toRegExp(glob) {
         if (glob.indexOf('!') === 0) glob = glob.slice(1);
         // Modified from http://stackoverflow.com/a/13818704/112731
-        glob = utils.pregQuote(glob).replace(/\\\*/g, '[^\\s\\.]*').replace(/\\\?/g, '.');
-        return new RegExp('^' + glob);
-        // we don't end it with a $ so the ending is open `company.*` will
-        // produce `/^company\.[^\s\.]*/` which will match both `company.name`
-        // and `company.address.street` but will not match `some.company.name`
+        glob = utils.pregQuote(glob)
+            .replace(/\\\*/g, '[^\\s\\.]*')
+            .replace(/\\\?/g, '.');
+        return new RegExp('^' + glob + '(\\..+|$)');
+        // it should either end ($) or continue with a dot. So for example,
+        // `company.*` will produce `/^company\.[^\s\.]*/` which will match both
+        // `company.name` and `company.address.street` but will not match
+        // `some.company.name`. Also `!password` will not match `!password_reset`.
     }
 
     /**
