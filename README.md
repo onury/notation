@@ -111,7 +111,7 @@ console.log(filtered);
 // }
 ```
 
-> _**Note**: `Notation#filter()` and `Notation.Glob.union()` methods automtically normalizes the given glob list(s)._
+> _**Note**: `Notation#filter()` and `Notation.Glob.union()` methods automtically normalize the given glob list(s)._
 
 ## Documentation
 
