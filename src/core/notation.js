@@ -92,20 +92,35 @@ class Notation {
      *  // "car.year"  1970
      */
     each(callback) {
-        let o = this._source,
-            keys = Object.keys(o);
+        const o = this._source;
+        const keys = Object.keys(o);
+        const isArray = utils.isArray(o);
         utils.each(keys, (key, index, list) => {
             // this is preserved in arrow functions
-            let prop = o[key],
-                N;
+            const prop = o[key];
+            const keyName = isArray ? `[${key}]` : key;
+            let N;
             if (utils.isObject(prop)) {
                 N = new Notation(prop);
                 N.each((notation, nKey, value, prop) => {
-                    let subKey = key + '.' + notation;
+                    let subKey = keyName + '.' + notation;
                     callback.call(N, subKey, nKey, value, o);
                 });
+            } else if (utils.isArray(prop)) {
+                for (const [i, p] of prop.entries()) {
+                    let subKey = `${keyName}[${i}]`;
+                    if (!(utils.isObject(p) || utils.isArray(p))) {
+                        callback.call(this, subKey, subKey, p, o);
+                    } else {
+                        N = new Notation(p);
+                        N.each((notation, nKey, value, prop) => {
+                            let _subKey = subKey + '.' + notation;
+                            callback.call(N, _subKey, nKey, value, o);
+                        });
+                    }
+                }
             } else {
-                callback.call(this, key, key, prop, o);
+                callback.call(this, keyName, keyName, prop, o);
             }
         });
     }
@@ -940,9 +955,11 @@ class Notation {
      *  Notation.isValid('@1'); // true (bec. obj['@1'] is possible in JS.)
      *  Notation.isValid(null); // false
      */
+
     static isValid(notation) {
         return (typeof notation === 'string') &&
-            (/^[^\s.!]+(\.[^\s.!]+)*$/).test(notation);
+            // https://regex101.com/r/fSUY00/2
+            (/^[^\s.!\[\]]+((\.[^\s.!\[\]]+)|(\[(\d+|(['"`]){1}\*?\5{1})\]))*$/).test(notation);
     }
 
     /**

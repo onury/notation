@@ -20,6 +20,16 @@ let o = {
             balance: -293
         }
     },
+    hobbies: {
+        fishing: {
+            days: 'sundays',
+            location: 'river'
+        },
+        rockClimbing: {
+            days: 'saturdays',
+            location: 'mountain'
+        }
+    },
     company: {
         name: 'pilot co',
         address: {
@@ -34,12 +44,30 @@ let o = {
             id: 33,
             taxNo: 12345
         },
+        employees: [
+            {
+                name: 'jon',
+                age: 24,
+                email: 'jon@mail.com'
+            },
+            {
+                name: 'joe',
+                age: 32,
+                email: 'joe@mail.com'
+            },
+            {
+                name: 'james',
+                age: 27,
+                email: 'james@mail.com'
+            }
+        ],
         limited: true,
         notDefined: undefined,
         nuller: null,
         zero: 0
     }
 };
+
 
 // shuffle array
 function shuffle(o) { // v1.0
@@ -531,7 +559,13 @@ describe('Test Suite: Notation', () => {
         expect(Notation.countNotes('a')).toEqual(1);
         expect(Notation.countNotes('a.b')).toEqual(2);
         expect(Notation.countNotes('a.b.c')).toEqual(3);
+        expect(Notation.countNotes('a[0].b.c')).toEqual(3);
+        expect(Notation.countNotes('a[0].b[1].c')).toEqual(3);
+        expect(Notation.countNotes('a[0].b[1].c[2]')).toEqual(3);
         expect(function () { Notation.countNotes(''); }).toThrow(); // eslint-disable-line
+        expect(function () { Notation.countNotes('a[]'); }).toThrow(); // eslint-disable-line
+        expect(function () { Notation.countNotes('[0]a'); }).toThrow(); // eslint-disable-line
+        expect(function () { Notation.countNotes('a[*]'); }).toThrow(); // eslint-disable-line
     });
 
     it('should validate notation', () => {
@@ -546,25 +580,51 @@ describe('Test Suite: Notation', () => {
         // star is NOT treated as wildcard here. this is normal dot-notation,
         // not a glob.
         expect(Notation.isValid('prop.*')).toEqual(true);
+        // same as above
+        expect(Notation.isValid('prop["*"]')).toEqual(true);
+        // indicates wildcard which is not allowed in Notation but allowed in
+        // NotationGlob
+        expect(Notation.isValid('prop[*]')).toEqual(false);
+        expect(Notation.isValid('prop[]')).toEqual(false); // error
+        expect(Notation.isValid('prop[""]')).toEqual(true); // possible in JS
+        expect(Notation.isValid('prop[0]')).toEqual(true); // indicates index
+        expect(Notation.isValid('prop[1]')).toEqual(true); // indicates index
+        expect(Notation.isValid('prop[11]')).toEqual(true); // indicates index
+        expect(Notation.isValid('[0]prop')).toEqual(false);
+        expect(Notation.isValid('prop[0]x')).toEqual(false);
+        expect(Notation.isValid('prop[0].a')).toEqual(true);
+        expect(Notation.isValid('prop[0].a[1]')).toEqual(true);
+        expect(Notation.isValid('prop[0].a[1].b')).toEqual(true);
+        expect(Notation.isValid('prop[0].a[1].b[2]')).toEqual(true);
+        expect(Notation.isValid('prop[0].a[*].b[2]')).toEqual(false);
+        expect(Notation.isValid('prop[0].a["*"].b[2]')).toEqual(true);
+        expect(Notation.isValid('prop[0].a["*\'].b[2]')).toEqual(false);
     });
 
     it('should flatten / expand object', () => {
         const nota = new Notation(_.cloneDeep(o));
         const flat = nota.flatten().value;
 
-        // console.log(flat);
+        console.log(flat);
         expect(flat.name).toEqual(o.name);
         expect(flat['account.id']).toEqual(o.account.id);
-        expect(flat['account.likes'].length).toEqual(o.account.likes.length);
+        expect(flat['account.likes[0]']).toEqual(o.account.likes[0]);
         expect(flat['company.name']).toEqual(o.company.name);
         expect(flat['company.address.location.lat']).toEqual(o.company.address.location.lat);
+        expect(flat['company.employees[0].age']).toEqual(o.company.employees[0].age);
+        expect(flat['company.employees[1].name']).toEqual(o.company.employees[1].name);
+        expect(flat['company.employees[2].email']).toEqual(o.company.employees[2].email);
 
         const expanded = Notation.create(flat).expand().value;
+        // console.log('expanded:\n', JSON.stringify(expanded, null, '  '));
         expect(expanded.name).toEqual(o.name);
         expect(expanded.account.id).toEqual(o.account.id);
-        expect(expanded.account.likes.length).toEqual(o.account.likes.length);
+        expect(expanded.account.likes[0]).toEqual(o.account.likes[0]);
         expect(expanded.company.name).toEqual(o.company.name);
         expect(expanded.company.address.location.lat).toEqual(o.company.address.location.lat);
+        expect(expanded.company.employees[0].age).toEqual(o.company.employees[0].age);
+        expect(expanded.company.employees[1].name).toEqual(o.company.employees[1].name);
+        expect(expanded.company.employees[2].email).toEqual(o.company.employees[2].email);
     });
 
     it('should iterate `each` and `eachValue`', () => {
