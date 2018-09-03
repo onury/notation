@@ -71,8 +71,7 @@ const utils = {
     },
 
     splitNotation (notation) {
-        // needs rethink
-        return notation.split(/\.|\b(?=\[)/);
+        return notation.split(/\.|(?<=.)(?=\[(?=\d|['`"]{1}.+['"`]{1}\]))/);
     },
 
     concatNotes (notes) {
