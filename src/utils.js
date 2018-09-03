@@ -64,8 +64,38 @@ const utils = {
     hasSingleItemOf(arr, itemValue) {
         return arr.length === 1
             && (arguments.length === 2 ? arr[0] === itemValue : true);
-    }
+    },
 
+    isArrIndex (note) {
+        return /^\[\d+\]$/.test(note);
+    },
+
+    splitNotation (notation) {
+        return notation.split(/\.|\b(?=\[)/);
+    },
+
+    concatNotes (notes) {
+        return notes.reduce((acc, note) => acc + (this.isArrIndex(note) ? note : `.${note}`))
+    },
+
+    getIndexNumber (notation) {
+        return +notation.replace(/[\[\]]/g, '');
+    },
+
+    removeEmptyArraySpots (obj) {
+        if (this.isObject(obj)) {
+            for (const key of Object.keys(obj)) {
+                obj[key] = this.removeEmptyArraySpots(obj[key]);
+            }
+            return obj;
+        } else if (this.isArray(obj)) {
+            return obj
+                .filter((e) => e !== undefined)
+                .map((e) => this.removeEmptyArraySpots(e));
+        } else {
+            return obj;
+        }
+    },
 };
 
 export default utils;
