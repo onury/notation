@@ -71,6 +71,7 @@ const utils = {
     },
 
     splitNotation (notation) {
+        // needs rethink
         return notation.split(/\.|\b(?=\[)/);
     },
 
