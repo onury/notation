@@ -66,23 +66,55 @@ const utils = {
             && (arguments.length === 2 ? arr[0] === itemValue : true);
     },
 
-    isArrIndex (note) {
+    isArrIndex(note) {
         return /^\[\d+\]$/.test(note);
     },
 
-    splitNotation (notation) {
-        return notation.split(/\.|(?<=.)(?=\[(?=\d|['`"]{1}.+['"`]{1}\]))/);
+    splitNotation(notation) {
+        const notes = [];
+        const chars = notation.split('');
+        let start = 0;
+        let bracketCount = 0;
+        for (let i = 0; i < chars.length; i++) {
+          let note;
+          switch (true) {
+            case chars[i] === '.':
+              note = chars.slice(start, i).join('');
+              start = i + 1;
+              break;
+            case chars[i] === '[':
+              if (!bracketCount && start !== i) {
+                note = chars.slice(start, i).join('');
+                start = i;
+              }
+              bracketCount += 1;
+              break;
+            case chars[i] === ']':
+              bracketCount -= 1;
+              if (!bracketCount) {
+                note = chars.slice(start, i + 1).join('');
+                start = i + 1;
+              }
+              break;
+            case i === chars.length - 1:
+              note = chars.slice(start, i + 1).join('');
+              break;
+          }
+          if (typeof note === 'string' && note.length)
+            notes.push(note);
+        }
+        return notes;
     },
 
-    concatNotes (notes) {
+    concatNotes(notes) {
         return notes.reduce((acc, note) => acc + (this.isArrIndex(note) ? note : `.${note}`))
     },
 
-    getIndexNumber (notation) {
+    getIndexNumber(notation) {
         return +notation.replace(/[\[\]]/g, '');
     },
 
-    removeEmptyArraySpots (obj) {
+    removeEmptyArraySpots(obj) {
         if (this.isObject(obj)) {
             for (const key of Object.keys(obj)) {
                 obj[key] = this.removeEmptyArraySpots(obj[key]);
