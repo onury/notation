@@ -21,8 +21,7 @@
         "navigator": false,
         "window": false
     },
-    "extends": "xo",
-    // "extends": "eslint:recommended",
+    "extends": "eslint:recommended",
     "rules": {
         "indent": [2, 4, {"SwitchCase": 1}],
         "curly": [2, "multi-line", "consistent"],

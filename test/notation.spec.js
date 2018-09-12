@@ -244,14 +244,14 @@ describe('Test Suite: Notation.Glob', () => {
         // console.log('value ---:', nota.value);
 
         const globs = [
-            '!company.limited',
-            'billing.account.credit',
-            'company.*',
-            'account.id',
-            'hobbies.*.days',
-            '!company.employees[*].age',
-            '!company.employees[1].name'
-        ],
+                '!company.limited',
+                'billing.account.credit',
+                'company.*',
+                'account.id',
+                'hobbies.*.days',
+                '!company.employees[*].age',
+                '!company.employees[1].name'
+            ],
             filtered = nota.filter(globs).value;
         // console.log('filtered ---:', filtered);
 
@@ -261,12 +261,12 @@ describe('Test Suite: Notation.Glob', () => {
         expect(filtered.account.id).toBeDefined();
         expect(filtered.account.likes).toBeUndefined();
         expect(filtered.billing.account.credit).toBeDefined();
-        expect(filtered.hobbies.fishing.days).toBeDefined()
-        expect(filtered.hobbies.fishing.location).toBeUndefined()
-        expect(filtered.company.employees[0].name).toBeDefined()
-        expect(filtered.company.employees[0].email).toBeDefined()
-        expect(filtered.company.employees[0].age).toBeUndefined()
-        expect(filtered.company.employees[1].name).toBeUndefined()
+        expect(filtered.hobbies.fishing.days).toBeDefined();
+        expect(filtered.hobbies.fishing.location).toBeUndefined();
+        expect(filtered.company.employees[0].name).toBeDefined();
+        expect(filtered.company.employees[0].email).toBeDefined();
+        expect(filtered.company.employees[0].age).toBeUndefined();
+        expect(filtered.company.employees[1].name).toBeUndefined();
 
         // original object should not be modied
         expect(o.company.name).toBeDefined();

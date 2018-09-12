@@ -2,7 +2,6 @@
 let toString = Object.prototype.toString;
 
 const utils = {
-
     isObject(o) {
         return toString.call(o) === '[object Object]';
     },
@@ -76,38 +75,39 @@ const utils = {
         let start = 0;
         let bracketCount = 0;
         for (let i = 0; i < chars.length; i++) {
-          let note;
-          switch (true) {
-            case chars[i] === '.':
-              note = chars.slice(start, i).join('');
-              start = i + 1;
-              break;
-            case chars[i] === '[':
-              if (!bracketCount && start !== i) {
-                note = chars.slice(start, i).join('');
-                start = i;
-              }
-              bracketCount += 1;
-              break;
-            case chars[i] === ']':
-              bracketCount -= 1;
-              if (!bracketCount) {
-                note = chars.slice(start, i + 1).join('');
-                start = i + 1;
-              }
-              break;
-            case i === chars.length - 1:
-              note = chars.slice(start, i + 1).join('');
-              break;
-          }
-          if (typeof note === 'string' && note.length)
-            notes.push(note);
+            let note;
+            switch (true) {
+                case chars[i] === '.':
+                    note = chars.slice(start, i).join('');
+                    start = i + 1;
+                    break;
+                case chars[i] === '[':
+                    if (!bracketCount && start !== i) {
+                        note = chars.slice(start, i).join('');
+                        start = i;
+                    }
+                    bracketCount += 1;
+                    break;
+                case chars[i] === ']':
+                    bracketCount -= 1;
+                    if (!bracketCount) {
+                        note = chars.slice(start, i + 1).join('');
+                        start = i + 1;
+                    }
+                    break;
+                case i === chars.length - 1:
+                    note = chars.slice(start, i + 1).join('');
+                    break;
+            }
+            if (typeof note === 'string' && note.length) {
+                notes.push(note);
+            }
         }
         return notes;
     },
 
     concatNotes(notes) {
-        return notes.reduce((acc, note) => acc + (this.isArrIndex(note) ? note : `.${note}`))
+        return notes.reduce((acc, note) => acc + (this.isArrIndex(note) ? note : `.${note}`));
     },
 
     getIndexNumber(notation) {
