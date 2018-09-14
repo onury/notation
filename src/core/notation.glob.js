@@ -174,7 +174,7 @@ class NotationGlob {
         glob = utils.pregQuote(glob)
             .replace(/\\\*/g, '[^\\s\\.]*')
             .replace(/\\\?/g, '.');
-        return new RegExp('^' + glob + '(\\.|\\[.+|$)');
+        return new RegExp('^' + glob + '(\\..+|$)');
         // it should either end ($) or continue with a dot. So for example,
         // `company.*` will produce `/^company\.[^\s\.]*/` which will match both
         // `company.name` and `company.address.street` but will not match

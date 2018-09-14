@@ -703,17 +703,9 @@ describe('Test Suite: Notation', () => {
             'key': null,
             'newkey.p1': 13,
             'newkey.p2': false,
-            'newkey.p3.val': []
-            // TODO: should add support for this later.
-            // 'company.employees[2].age': 40,
-            // 'company.employees[3]': {
-            //     name: 'jon',
-            //     age: 24,
-            //     email: 'jon@mail.com'
-            // }
+            'newkey.p3.val': [],
         });
         const merged = nota.value;
-        // console.log(o);
         expect(merged.key).toEqual(null);
         expect(merged.newkey.p1).toEqual(13);
         expect(merged.newkey.p2).toEqual(false);

@@ -107,7 +107,7 @@ class Notation {
                     let subKey = keyName + '.' + notation;
                     callback.call(N, subKey, nKey, value, o);
                 });
-            } else if (utils.isArray(prop)) {
+            } else if (utils.isArray(prop) && prop.length) {
                 handleArrayEach(this, callback, prop, keyName);
             } else {
                 callback.call(this, keyName, keyName, prop, o);
@@ -648,6 +648,10 @@ class Notation {
                             // removed, we no more have 'note3'.
                             return false;
                         }
+                        if (list.length - 1 > index) {
+                            let nextLevelNotation = utils.concatNotes([levelNotation, list[index + 1]]);
+                            if (g.test(nextLevelNotation)) return;
+                        }
                         filtered.set(levelNotation, value, true);
                     }
                 });
@@ -655,7 +659,7 @@ class Notation {
         });
         // finally set the filtered's value as the source of our instance and
         // return.
-        this._source = utils.removeEmptyArraySpots(filtered.value);
+        this._source = filtered.value;
         return this;
     }
 

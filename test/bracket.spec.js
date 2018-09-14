@@ -318,13 +318,14 @@ describe('Test Suite: Array/Bracket notation', () => {
 
     it('Notation #filter()', () => {
         let filter = fnFilter(objSource);
-        expect(filter('arr[1].x').value).toEqual({ arr: [{ x: { y: 1 } }] });
-        // console.log(JSON.stringify(filter('arr[1].x').value));
+        expect(filter('arr[1].x').value).toEqual({ arr: [, { x: { y: 1 } }] });
         expect(filter('arr[*].z').value).toEqual({ arr: [{ z: 3 }, { z: 4 }, { z: 5 }] });
-        console.log(filter('arr[*].x'));
-        // expect(filter('arr[*].x').value.arr.length).toEqual(3);
+        expect(filter('arr[*].x').value.arr.length).toEqual(3);
 
-        const o1 = { a: [1, 2, 3], b: [] };
+        const o1 = {
+            a: [1, 2, 3],
+            b: [],
+        };
         expect(create(o1).filter('a[2]').value).toEqual({ a: [, , 3] });
         expect(create(o1).filter('a[1]').value).toEqual({ a: [, 2] });
         expect(create(o1).filter('b[*]').value).toEqual({ b: [] });
