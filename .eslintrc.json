@@ -38,6 +38,7 @@
         "no-multi-spaces": 0,
         "no-lonely-if": 0,
         "semi": [2, "always"],
-        "valid-jsdoc": 0
+        "valid-jsdoc": 0,
+        "space-before-function-paren": [2, "never"]
     }
 }

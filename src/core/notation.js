@@ -62,7 +62,7 @@ class Notation {
      *  console.log(me); // { name: "Onur", age: 36, car: { brand: "Ford", model: "Mustang" } }
      *  console.log(person === me); // true
      */
-    get value () {
+    get value() {
         return this._source;
     }
 
@@ -91,7 +91,7 @@ class Notation {
      *  // "car.model"  "Charger"
      *  // "car.year"  1970
      */
-    each (callback) {
+    each(callback) {
         const o = this._source;
         const keys = Object.keys(o);
         const isArray = utils.isArray(o);
@@ -114,7 +114,7 @@ class Notation {
             }
         });
 
-        function handleArrayEach (self, cb, arr, key) {
+        function handleArrayEach(self, cb, arr, key) {
             const len = arr.length;
             for (let i = 0; i < len; i++) {
                 const subkey = `${key}[${i}]`;
@@ -136,7 +136,7 @@ class Notation {
      *  Alias for `#each`
      *  @private
      */
-    eachKey (callback) {
+    eachKey(callback) {
         return this.each(callback);
     }
 
@@ -159,7 +159,7 @@ class Notation {
      *          console.log(note, levelValue); // "car.brand" "Dodge"
      *      });
      */
-    eachValue (notation, callback) {
+    eachValue(notation, callback) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -181,7 +181,7 @@ class Notation {
      *  const notations = Notation.create(obj).getNotations();
      *  console.log(notations); // [ "car.brand", "car.model", "car.year" ]
      */
-    getNotations () {
+    getNotations() {
         let list = [];
         this.each((notation, key, value, obj) => {
             list.push(notation);
@@ -200,7 +200,7 @@ class Notation {
      *  console.log(flat);
      *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
      */
-    flatten () {
+    flatten() {
         let o = {};
         this.each((notation, key, value, obj) => {
             o[notation] = value;
@@ -225,7 +225,7 @@ class Notation {
      *  const expanded = Notation.create(obj).expand().value;
      *  console.log(expanded); // { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      */
-    expand () {
+    expand() {
         this._source = Notation.create({}).merge(this._source).value;
         return this;
     }
@@ -233,7 +233,7 @@ class Notation {
      *  Alias for `#expand`
      *  @private
      */
-    aggregate () {
+    aggregate() {
         return this.expand();
     }
 
@@ -254,7 +254,7 @@ class Notation {
      *  Notation.create({ car: { color: undefined } }).inspect("car.color");
      *  // { has: true, value: undefined }
      */
-    inspect (notation) {
+    inspect(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -306,7 +306,7 @@ class Notation {
      *  Notation.create({ car: { color: undefined } }).inspectRemove("car.color");
      *  // { has: true, value: undefined }
      */
-    inspectRemove (notation) {
+    inspectRemove(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -351,7 +351,7 @@ class Notation {
      *  Notation.create({ car: { year: undefined } }).has("car.year"); // true
      *  Notation.create({}).has("car.color"); // false
      */
-    has (notation) {
+    has(notation) {
         return this.inspect(notation).has;
     }
 
@@ -369,7 +369,7 @@ class Notation {
      *  Notation.create({ car: { year: undefined } }).hasDefined("car.year"); // false
      *  Notation.create({}).hasDefined("car.color"); // false
      */
-    hasDefined (notation) {
+    hasDefined(notation) {
         return this.inspect(notation).value !== undefined;
     }
 
@@ -389,7 +389,7 @@ class Notation {
      *  Notation.create({ car: {} }).get("car.model", "Challenger"); // "Challenger"
      *  Notation.create({ car: { model: undefined } }).get("car.model", "Challenger"); // undefined
      */
-    get (notation, defaultValue) {
+    get(notation, defaultValue) {
         let result = this.inspect(notation);
         return !result.has ? defaultValue : result.value;
     }
@@ -419,7 +419,7 @@ class Notation {
      *  console.log(obj);
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
-    set (notation, value, overwrite = true, concatArrays = false) {
+    set(notation, value, overwrite = true, concatArrays = false) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -485,7 +485,7 @@ class Notation {
      *  console.log(obj);
      *  // { car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
-    merge (notationsObject, overwrite = true) {
+    merge(notationsObject, overwrite = true) {
         if (!utils.isObject(notationsObject)) {
             throw new NotationError(ERR.NOTA_OBJ + '`' + notationsObject + '`');
         }
@@ -517,7 +517,7 @@ class Notation {
      *  console.log(obj);
      *  // { car: { year: 1970 } };
      */
-    separate (notations) {
+    separate(notations) {
         if (!utils.isArray(notations)) {
             throw new NotationError(ERR.NOTA_OBJ + '`' + notations + '`');
         }
@@ -559,7 +559,7 @@ class Notation {
      *  notation.filter();      // or notation.filter("");
      *  console.log(obj);       // {}
      */
-    filter (globNotations) {
+    filter(globNotations) {
         let original = this.value;
         let copy = utils.deepCopy(original);
 
@@ -677,7 +677,7 @@ class Notation {
      *  Notation.create(obj).remove("car.model");
      *  console.log(obj); // { notebook: "Mac", car: { } }
      */
-    remove (notation) {
+    remove(notation) {
         this.inspectRemove(notation);
         return this;
     }
@@ -685,7 +685,7 @@ class Notation {
      *  Alias of `Notation#remove`
      *  @private
      */
-    delete (notation) {
+    delete(notation) {
         this.remove(notation);
         return this;
     }
@@ -695,7 +695,7 @@ class Notation {
      *
      *  @returns {Notation} - A new copy of the instance.
      */
-    clone () {
+    clone() {
         let o = utils.deepCopy(this.value);
         return new Notation(o);
     }
@@ -727,7 +727,7 @@ class Notation {
      *  // { dodge: "Charger", ford: "Mustang" }
      *  // source object (obj) is not modified
      */
-    copyTo (destination, notation, newNotation = null, overwrite = true) {
+    copyTo(destination, notation, newNotation = null, overwrite = true) {
         if (!(utils.isObject(destination) || utils.isArray(destination)))
         {throw new NotationError(ERR.DEST);}
 
@@ -765,7 +765,7 @@ class Notation {
      *  // { car: { brand: "Ford", model: "Charger" } }
      *  // models object is not modified
      */
-    copyFrom (destination, notation, newNotation = null, overwrite = true) {
+    copyFrom(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
         let result = new Notation(destination).inspect(notation);
         if (result.has) {
@@ -802,7 +802,7 @@ class Notation {
      *  console.log(models);
      *  // { dodge: "Charger", ford: "Mustang" }
      */
-    moveTo (destination, notation, newNotation = null, overwrite = true) {
+    moveTo(destination, notation, newNotation = null, overwrite = true) {
         if (!(utils.isObject(destination) || utils.isArray(destination)))
         {throw new NotationError(ERR.DEST);}
         let result = this.inspectRemove(notation);
@@ -841,7 +841,7 @@ class Notation {
      *  console.log(models);
      *  // {}
      */
-    moveFrom (destination, notation, newNotation = null, overwrite = true) {
+    moveFrom(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
         let result = new Notation(destination).inspectRemove(notation);
         if (result.has) {
@@ -872,7 +872,7 @@ class Notation {
      *  console.log(obj);
      *  // { carBrand: "Ford", carModel: "Mustang" }
      */
-    rename (notation, newNotation, overwrite) {
+    rename(notation, newNotation, overwrite) {
         if (!newNotation) return this;
         return this.moveTo(this._source, notation, newNotation, overwrite);
     }
@@ -880,7 +880,7 @@ class Notation {
      *  Alias for `#rename`
      *  @private
      */
-    renote (notation, newNotation, overwrite) {
+    renote(notation, newNotation, overwrite) {
         return this.rename(notation, newNotation, overwrite);
     }
 
@@ -904,7 +904,7 @@ class Notation {
      *  // { carBrand: "Ford" }
      *  // obj is not modified
      */
-    extract (notation, newNotation) {
+    extract(notation, newNotation) {
         let o = {};
         this.copyTo(o, notation, newNotation);
         // remove all empty array fields
@@ -915,7 +915,7 @@ class Notation {
      *  Alias for `#extract`
      *  @private
      */
-    copyToNew (notation, newNotation) {
+    copyToNew(notation, newNotation) {
         return this.extract(notation, newNotation);
     }
 
@@ -940,7 +940,7 @@ class Notation {
      *  console.log(extruded);
      *  // { carBrand: "Ford" }
      */
-    extrude (notation, newNotation) {
+    extrude(notation, newNotation) {
         let o = {};
         this.moveTo(o, notation, newNotation);
         o = utils.removeEmptyArraySpots(o);
@@ -950,7 +950,7 @@ class Notation {
      *  Alias for `#extrude`
      *  @private
      */
-    moveToNew (notation, newNotation) {
+    moveToNew(notation, newNotation) {
         return this.extrude(notation, newNotation);
     }
 
@@ -971,7 +971,7 @@ class Notation {
      *  // equivalent to:
      *  const notation = new Notation(obj);
      */
-    static create (object = {}) {
+    static create(object = {}) {
         return new Notation(object);
     }
 
@@ -997,7 +997,7 @@ class Notation {
      *  Notation.isValid(null); // false
      */
 
-    static isValid (notation) {
+    static isValid(notation) {
         return (typeof notation === 'string') &&
             // https://regex101.com/r/fSUY00/2
             (/^[^\s.!\[\]]+((\.[^\s.!\[\]]+)|(\[(\d+|(['"`]){1}\*?\5{1})\]))*$/).test(notation);
@@ -1011,7 +1011,7 @@ class Notation {
      *
      *  @returns {Number}
      */
-    static countNotes (notation) {
+    static countNotes(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -1021,7 +1021,7 @@ class Notation {
      *  Alias of `Notation.countNotes`.
      *  @private
      */
-    static countLevels (notation) {
+    static countLevels(notation) {
         return Notation.countNotes(notation);
     }
 
@@ -1035,7 +1035,7 @@ class Notation {
      *  @example
      *  Notation.first('first.prop2.last'); // "first"
      */
-    static first (notation) {
+    static first(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -1053,7 +1053,7 @@ class Notation {
      *  @example
      *  Notation.last('first.prop2.last'); // "last"
      */
-    static last (notation) {
+    static last(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -1073,7 +1073,7 @@ class Notation {
      *  Notation.parent('first.prop2.last'); // "first.prop2"
      *  Notation.parent('single'); // null
      */
-    static parent (notation) {
+    static parent(notation) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -1104,7 +1104,7 @@ class Notation {
      *  // 1  "first.prop2"       "prop2"
      *  // 2  "first.prop2.last"  "last"
      */
-    static eachNote (notation, callback) {
+    static eachNote(notation, callback) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
@@ -1122,7 +1122,7 @@ class Notation {
      *  Alias of `Notation.eachNote`.
      *  @private
      */
-    static eachLevel (notation, callback) {
+    static eachLevel(notation, callback) {
         Notation.eachNote(notation, callback);
     }
 
