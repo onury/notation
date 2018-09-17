@@ -1,5 +1,7 @@
-import utils from '../utils';
+/* eslint no-use-before-define:0, consistent-return:0 */
+
 import NotationError from './notation.error';
+import utils from '../utils';
 
 // http://www.linfo.org/wildcard.html
 // http://en.wikipedia.org/wiki/Glob_%28programming%29
@@ -43,7 +45,7 @@ class NotationGlob {
             throw new NotationError('Invalid notation glob: "' + glob + '"');
         }
 
-        let ng = NotationGlob.inspect(glob);
+        const ng = NotationGlob.inspect(glob);
         this._ = {
             glob,
             absGlob: ng.absGlob,
@@ -103,9 +105,13 @@ class NotationGlob {
     get notes() {
         return this._.levels;
     }
+
     /**
      *  Alias of `Notation.Glob#notes`.
      *  @private
+     *  @name Notation.Glob#notes
+     *  @alias Notation.Glob#levels
+     *  @type {Array}
      */
     get levels() {
         return this._.levels;
@@ -119,10 +125,8 @@ class NotationGlob {
      *  Checks whether the given notation value matches the source notation glob.
      *  @name Notation.Glob#test
      *  @function
-     *
      *  @param {String} notation - The notation string to be tested.
-     *
-     *  @returns {Boolean}
+     *  @returns {Boolean} -
      *
      *  @example
      *  const glob = new Notation.Glob('!prop.*.name');
@@ -144,10 +148,8 @@ class NotationGlob {
      *  with the given glob string.
      *  @name Notation.Glob.create
      *  @function
-     *
      *  @param {String} glob - The source notation glob.
-     *
-     *  @returns {NotationGlob}
+     *  @returns {NotationGlob} -
      *
      *  @example
      *  const glob = Notation.Glob.create(strGlob);
@@ -166,15 +168,15 @@ class NotationGlob {
      *
      *  @param {String} glob - Glob notation to be converted.
      *
-     *  @returns {RegExp}
+     *  @returns {RegExp} - A `RegExp` instance from the glob.
      */
     static toRegExp(glob) {
-        if (glob.indexOf('!') === 0) glob = glob.slice(1);
+        let g = glob.indexOf('!') === 0 ? glob.slice(1) : glob;
         // Modified from http://stackoverflow.com/a/13818704/112731
-        glob = utils.pregQuote(glob)
+        g = utils.pregQuote(g)
             .replace(/\\\*/g, '[^\\s\\.]*')
             .replace(/\\\?/g, '.');
-        return new RegExp('^' + glob + '(\\..+|$)');
+        return new RegExp('^' + g + '(\\..+|$)');
         // it should either end ($) or continue with a dot. So for example,
         // `company.*` will produce `/^company\.[^\s\.]*/` which will match both
         // `company.name` and `company.address.street` but will not match
@@ -182,13 +184,16 @@ class NotationGlob {
     }
 
     /**
+     *  Undocumented.
      *  @private
+     *  @param {String} glob -
+     *  @returns {Object} -
      */
     static inspect(glob) {
-        let bang = glob.slice(0, 1) === '!';
-        glob = bang ? glob.slice(1) : glob;
+        const bang = glob.slice(0, 1) === '!';
+        const absGlob = bang ? glob.slice(1) : glob;
         return {
-            absGlob: glob,
+            absGlob,
             isNegated: bang
         };
     }
@@ -200,7 +205,7 @@ class NotationGlob {
      *  @function
      *
      *  @param {String} glob - Notation glob to be validated.
-     *  @returns {Boolean}
+     *  @returns {Boolean} -
      */
     static isValid(glob) {
         return (typeof glob === 'string')
@@ -235,27 +240,27 @@ class NotationGlob {
     static compare(a, b) {
         // trivial case, both are exactly the same!
         if (a === b) return 0;
-        let levelsA = a.split('.'),
-            levelsB = b.split('.');
+        const levelsA = a.split('.');
+        const levelsB = b.split('.');
         // Check depth (number of levels)
         if (levelsA.length === levelsB.length) {
             // count wildcards (assuming more wildcards comes first)
-            let wild = /(?:^|\.)\*(?:$|\.)/g,
-                mA = a.match(wild),
-                mB = b.match(wild),
-                wildA = mA ? mA.length : 0,
-                wildB = mB ? mB.length : 0;
+            const wild = /(?:^|\.)\*(?:$|\.)/g;
+            const mA = a.match(wild);
+            const mB = b.match(wild);
+            const wildA = mA ? mA.length : 0;
+            const wildB = mB ? mB.length : 0;
             if (wildA === wildB) {
                 // check for negation
-                let negA = a.indexOf('!') === 0,
-                    negB = b.indexOf('!') === 0;
+                const negA = a.indexOf('!') === 0;
+                const negB = b.indexOf('!') === 0;
                 if (negA === negB) {
                     // both are negated or neither are, just return alphabetical
                     return a < b ? -1 : 1;
                 }
                 // compare without the negatation
-                let nonNegA = negA ? a.slice(1) : a,
-                    nonNegB = negB ? b.slice(1) : b;
+                const nonNegA = negA ? a.slice(1) : a;
+                const nonNegB = negB ? b.slice(1) : b;
                 if (nonNegA === nonNegB) {
                     return negA ? 1 : -1;
                 }
@@ -278,11 +283,9 @@ class NotationGlob {
      *  the negated glob wins (comes last).
      *  @name Notation.Glob.sort
      *  @function
-     *
      *  @param {Array} globsArray - The notation globs array to be sorted. The
      *  passed array reference is modified.
-     *
-     *  @returns {Array}
+     *  @returns {Array} -
      *
      *  @example
      *  const globs = ['!prop.*.name', 'prop.*', 'prop.id'];
@@ -312,10 +315,8 @@ class NotationGlob {
      *  </ul>
      *  @name Notation.Glob.normalize
      *  @function
-     *
      *  @param {Array} globsArray - Notation globs array to be normalized.
-     *
-     *  @returns {Array}
+     *  @returns {Array} -
      *
      *  @example
      *  const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
@@ -324,10 +325,10 @@ class NotationGlob {
      *  // ['*', '!car.*', '!id', 'car.model']
      */
     static normalize(globsArray) {
-        globsArray = utils.ensureArray(globsArray).map(item => item.trim());
-        globsArray = NotationGlob.sort(globsArray);
+        let gArr = utils.ensureArray(globsArray).map(item => item.trim());
+        gArr = NotationGlob.sort(gArr);
 
-        utils.eachRight(globsArray, (globA, indexA) => {
+        utils.eachRight(gArr, (globA, indexA) => {
 
             // example #1:
             // ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name']
@@ -337,7 +338,7 @@ class NotationGlob {
             // ['!id', 'name', 'car.model', '!car.*', 'id', '!email']
             // => ['!car.*', 'car.model', 'name']
 
-            let insA = NotationGlob.inspect(globA);
+            const insA = NotationGlob.inspect(globA);
             // console.log(' • ', globA, '=>', globsArray);
 
             let duplicate = false;
@@ -352,8 +353,8 @@ class NotationGlob {
                 // don't inspect glob with itself
                 if (indexB === indexA) return; // no break, move to next
 
-                let insB = NotationGlob.inspect(globB);
-                let reB = NotationGlob.toRegExp(insB.absGlob);
+                const insB = NotationGlob.inspect(globB);
+                const reB = NotationGlob.toRegExp(insB.absGlob);
 
                 // console.log(globA, 'vs', globB);
 
@@ -399,7 +400,7 @@ class NotationGlob {
 
             });
 
-            let redundant = insA.isNegated
+            const redundant = insA.isNegated
                 ? (negCoversNeg || noPosCoversNeg)
                 : (posCoversPos && noNegCoversPos);
 
@@ -413,7 +414,7 @@ class NotationGlob {
         // since negated wins in the same array, ['*', '!*'] is already reduced
         // to ['!*'] so we can safely remove !* if found, since it's redundant.
         // e.g. ['!*', 'name'] => ['name']
-        let i = globsArray.indexOf('!*');
+        const i = globsArray.indexOf('!*');
         if (i >= 0) globsArray.splice(i, 1);
 
         return globsArray;
@@ -446,7 +447,7 @@ class NotationGlob {
      *  @param {Array} globsA - First array of glob strings.
      *  @param {Array} globsB - Second array of glob strings.
      *
-     *  @returns {Array}
+     *  @returns {Array} -
      *
      *  @example
      *  const a = ['foo.bar', 'bar.baz', '!*.qux'];
@@ -482,7 +483,7 @@ class NotationGlob {
         // but later, '!user.id' will be unioned with '*' in the other array
         // which will cover and remove '!user.id'. so we'll keep a storage for
         // to prevent this.
-        let keepNegated = [];
+        const keepNegated = [];
 
         // iterate through array A
         utils.eachRight(arrA, (a, aIndex) => {
