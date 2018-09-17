@@ -1,13 +1,20 @@
-import utils from '../utils';
-import NotationGlob from './notation.glob';
+/* eslint no-use-before-define:0, consistent-return:0 */
+
 import NotationError from './notation.error';
+import NotationGlob from './notation.glob';
+import utils from '../utils';
 
 const ERR = {
-    SOURCE: 'Invalid source object.',
-    DEST: 'Invalid destination object.',
+    SOURCE: 'Invalid source. Expected a data object or array.',
+    DEST: 'Invalid destination. Expected a data object or array.',
     NOTATION: 'Invalid notation: ',
-    NOTA_OBJ: 'Invalid notations object: '
+    NOTA_OBJ: 'Invalid notations object. '
 };
+
+// created test @ https://regex101.com/r/vLE16M/2
+const reMATCHER = /(\[(\d+|".*"|'.*')\]|[a-z$_][a-z$_\d]*)/gi;
+// created test @ https://regex101.com/r/fL3PJt/1/
+const reVALIDATOR = /^([a-z$_][a-z$_\d]*|\[(\d+|".*"|'.*')\])(\[(\d+|".*"|'.*')\]|(\.[a-z$_][a-z$_\d]*))*$/i;
 
 /**
  *  Notation.js for Node and Browser.
@@ -28,20 +35,19 @@ class Notation {
 
     /**
      *  Initializes a new instance of `Notation`.
-     *
-     *  @param {Object} [object={}] - The source object to be notated.
+     *  @param {Object|Array} [source={}] - The source object (or array) to be
+     *  notated.
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      *  const notation = new Notation(obj);
      *  notation.get('car.model'); // "Charger"
      */
-    constructor(object = {}) {
-        // if defined, it should be an object.
-        if (!utils.isObject(object)) {
+    constructor(source = {}) {
+        if (!utils.isCollection(source)) {
             throw new NotationError(ERR.SOURCE);
         }
-        this._source = object;
+        this._source = source;
     }
 
     // --------------------------------
@@ -50,7 +56,7 @@ class Notation {
 
     /**
      *  Gets the value of the source object.
-     *  @type {Object}
+     *  @type {Object|Array}
      *
      *  @example
      *  const person = { name: "Onur" };
@@ -73,14 +79,13 @@ class Notation {
     /**
      *  Recursively iterates through each key of the source object and invokes
      *  the given callback function with parameters, on each non-object value.
-     *  @alias Notation#eachKey
      *
      *  @param {Function} callback - The callback function to be invoked on
      *  each on each non-object value. To break out of the loop, return `false`
      *  from within the callback.
      *  Callback signature: `callback(notation, key, value, object) { ... }`
      *
-     *  @returns {void}
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -92,29 +97,8 @@ class Notation {
      *  // "car.year"  1970
      */
     each(callback) {
-        let o = this._source,
-            keys = Object.keys(o);
-        utils.each(keys, (key, index, list) => {
-            // this is preserved in arrow functions
-            let prop = o[key],
-                N;
-            if (utils.isObject(prop)) {
-                N = new Notation(prop);
-                N.each((notation, nKey, value, prop) => {
-                    let subKey = key + '.' + notation;
-                    callback.call(N, subKey, nKey, value, o);
-                });
-            } else {
-                callback.call(this, key, key, prop, o);
-            }
-        });
-    }
-    /**
-     *  Alias for `#each`
-     *  @private
-     */
-    eachKey(callback) {
-        return this.each(callback);
+        _each(this._source, callback);
+        return this;
     }
 
     /**
@@ -124,10 +108,9 @@ class Notation {
      *  @param {String} notation - The notation string to be iterated through.
      *  @param {Function} callback - The callback function to be invoked on
      *  each iteration. To break out of the loop, return `false` from within
-     *  the callback.
-     *  Callback signature: `callback(levelValue, note, index, list) { ... }`
+     *  the callback. Signature: `callback(levelValue, note, index, list)`
      *
-     *  @returns {void}
+     *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -137,15 +120,13 @@ class Notation {
      *      });
      */
     eachValue(notation, callback) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        var level = this._source;
+        let level = this._source;
         Notation.eachNote(notation, (levelNotation, note, index, list) => {
             level = utils.hasOwn(level, note) ? level[note] : undefined;
             if (callback(level, levelNotation, note, index, list) === false) return false;
 
         });
+        return this;
     }
 
     /**
@@ -159,8 +140,8 @@ class Notation {
      *  console.log(notations); // [ "car.brand", "car.model", "car.year" ]
      */
     getNotations() {
-        let list = [];
-        this.each((notation, key, value, obj) => {
+        const list = [];
+        this.each(notation => {
             list.push(notation);
         });
         return list;
@@ -178,8 +159,8 @@ class Notation {
      *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
      */
     flatten() {
-        let o = {};
-        this.each((notation, key, value, obj) => {
+        const o = {};
+        this.each((notation, key, value) => {
             o[notation] = value;
         });
         // return o;
@@ -206,9 +187,11 @@ class Notation {
         this._source = Notation.create({}).merge(this._source).value;
         return this;
     }
+
     /**
      *  Alias for `#expand`
      *  @private
+     *  @returns {Notation} -
      */
     aggregate() {
         return this.expand();
@@ -218,32 +201,36 @@ class Notation {
      *  Inspects the given notation on the source object by checking
      *  if the source object actually has the notated property;
      *  and getting its value if exists.
-     *
      *  @param {String} notation - The notation string to be inspected.
-     *
      *  @returns {InspectResult} - The result object.
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).inspect("car.year");
-     *  // { has: true, value: 1970 }
+     *  // { has: true, value: 1970, lastNote: 'year', lastNoteNormalized: 'year' }
      *  Notation.create({ car: { year: 1970 } }).inspect("car.color");
-     *  // { has: false, value: undefined }
+     *  // { has: false }
      *  Notation.create({ car: { color: undefined } }).inspect("car.color");
-     *  // { has: true, value: undefined }
+     *  // { has: true, value: undefined, lastNote: 'color', lastNoteNormalized: 'color' }
+     *  Notation.create({ car: { brands: ['Ford', 'Dodge'] } }).inspect("car.brands[1]");
+     *  // { has: true, value: 'Dodge', lastNote: '[1]', lastNoteNormalized: 1 }
      */
     inspect(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        let level = this._source,
-            result = { has: false, value: undefined };
-        Notation.eachNote(notation, (levelNotation, note, index, list) => {
-            if (utils.hasOwn(level, note)) {
-                level = level[note];
-                result = { has: true, value: level };
+        let level = this._source;
+        let result = { has: false, value: undefined };
+        Notation.eachNote(notation, (levelNotation, note) => {
+            const normalizedNote = utils.normalizeNote(note);
+            if (utils.hasOwn(level, normalizedNote)) {
+                level = level[normalizedNote];
+                result = {
+                    notation,
+                    has: true,
+                    value: level,
+                    lastNote: note,
+                    lastNoteNormalized: normalizedNote
+                };
             } else {
                 // level = undefined;
-                result = { has: false, value: undefined };
+                result = { notation, has: false };
                 return false; // break out
             }
         });
@@ -253,11 +240,18 @@ class Notation {
      *  Notation inspection result object.
      *  @typedef Notation~InspectResult
      *  @type Object
-     *  @property {Boolean} has - Indicates whether the source object has the given
-     *  notation as a (leveled) enumerable property. If the property exists but has
-     *  a value of `undefined`, this will still return `true`.
-     *  @property {*} value - The value of the notated property. If the source object
-     *  does not have the notation, the value will be `undefined`.
+     *  @property {String} notation - Notation that is inspected.
+     *  @property {Boolean} has - Indicates whether the source object has the
+     *  given notation as a (leveled) enumerable property. If the property
+     *  exists but has a value of `undefined`, this will still return `true`.
+     *  @property {*} value - The value of the notated property. If the source
+     *  object does not have the notation, the value will be `undefined`.
+     *  @property {String} lastNote - Last note of the notation, if actually
+     *  exists. For example, last note of `'a.b.c'` is `'c'`.
+     *  @property {String|Number} lastNoteNormalized - Normalized representation
+     *  of the last note of the notation, if actually exists. For example, last
+     *  note of `'a.b[1]` is `'[1]'` and will be normalized to number `1`; which
+     *  indicates an array index.
      */
 
     /**
@@ -270,35 +264,43 @@ class Notation {
      *  @returns {InspectResult} - The result object.
      *
      *  @example
-     *  const obj = { name: "John", car: { year: 1970 } };
-     *  Notation.create(obj).inspectRemove("car.year"); // { has: true, value: 1970 }
+     *  let obj = { name: "John", car: { year: 1970 } };
+     *  let result = Notation.create(obj).inspectRemove("car.year");
+     *  // result » { notation: "car.year", has: true, value: 1970, lastNote: "year", lastNoteNormalized: "year" }
      *  // obj » { name: "John", car: {} }
-     *  Notation.create(obj).inspectRemove("car.year", true); // { has: true, value: 1970 }
-     *  // obj » { name: "John" }
-     *  Notation.create({ car: { year: 1970 } }).inspectRemove("car.color");
-     *  // { has: false, value: undefined }
-     *  Notation.create({ car: { color: undefined } }).inspectRemove("car.color");
-     *  // { has: true, value: undefined }
+     *
+     *  result = Notation.create({ car: { year: 1970 } }).inspectRemove("car.color");
+     *  // result » { notation: "car.color", has: false }
+     *  Notation.create({ car: { color: undefined } }).inspectRemove("car['color']");
+     *  // { notation: "car.color", has: true, value: undefined, lastNote: "['color']", lastNoteNormalized: "color" }
+     *
+     *  let obj = { car: { colors: ["black", "white"] } };
+     *  let result = Notation.create().inspectRemove("car.colors[0]");
+     *  // result » { notation: "car.colors[0]", has: true, value: "black", lastNote: "[0]", lastNoteNormalized: 0 }
+     *  // obj » { car: { colors: [(empty), "white"] } }
      */
     inspectRemove(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        let o, lastNote;
-        if (notation.indexOf('.') < 0) {
-            lastNote = notation;
-            o = this._source;
-        } else {
-            let upToLast = Notation.parent(notation);
-            lastNote = Notation.last(notation);
-            o = this.inspect(upToLast).value;
-        }
+        if (!notation) throw new Error(ERR.NOTATION + `'${notation}'`);
+        const parentNotation = Notation.parent(notation);
+        const parent = parentNotation ? this.get(parentNotation) : this._source;
+        const lastNote = Notation.last(notation);
+        const lastNoteNormalized = utils.normalizeNote(lastNote);
+
         let result;
-        if (utils.hasOwn(o, lastNote)) {
-            result = { has: true, value: o[lastNote] };
-            delete o[lastNote];
+        if (utils.hasOwn(parent, lastNoteNormalized)) {
+            result = {
+                notation,
+                has: true,
+                value: parent[lastNoteNormalized],
+                lastNote,
+                lastNoteNormalized
+            };
+            // for array we also do this instead of splice. remove should
+            // not change other indexes. TODO: add an option for remove
+            // with shifting the index.
+            delete parent[lastNoteNormalized];
         } else {
-            result = { has: false, value: undefined };
+            result = { notation, has: false };
         }
 
         return result;
@@ -308,10 +310,8 @@ class Notation {
      *  Checks whether the source object has the given notation
      *  as a (leveled) enumerable property. If the property exists
      *  but has a value of `undefined`, this will still return `true`.
-     *
      *  @param {String} notation - The notation string to be checked.
-     *
-     *  @returns {Boolean}
+     *  @returns {Boolean} -
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).has("car.year"); // true
@@ -326,10 +326,8 @@ class Notation {
      *  Checks whether the source object has the given notation
      *  as a (leveled) defined enumerable property. If the property
      *  exists but has a value of `undefined`, this will return `false`.
-     *
      *  @param {String} notation - The notation string to be checked.
-     *
-     *  @returns {Boolean}
+     *  @returns {Boolean} -
      *
      *  @example
      *  Notation.create({ car: { year: 1970 } }).hasDefined("car.year"); // true
@@ -357,7 +355,7 @@ class Notation {
      *  Notation.create({ car: { model: undefined } }).get("car.model", "Challenger"); // undefined
      */
     get(notation, defaultValue) {
-        let result = this.inspect(notation);
+        const result = this.inspect(notation);
         return !result.has ? defaultValue : result.value;
     }
 
@@ -387,28 +385,41 @@ class Notation {
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
     set(notation, value, overwrite = true) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        let level = this._source,
-            last;
+        if (!notation.trim()) throw new NotationError(ERR.NOTATION + `'${notation}'`);
+
+        let level = this._source;
+        let currentIsLast, nCurrentNote, nNextNote, nextIsArrayNote;
+
         Notation.eachNote(notation, (levelNotation, note, index, list) => {
-            last = index === list.length - 1;
+            currentIsLast = index === list.length - 1;
+            nCurrentNote = nNextNote || utils.normalizeNote(note);
+            nNextNote = currentIsLast ? null : utils.normalizeNote(list[index + 1]);
+
+            if (utils.isArray(level) && typeof nCurrentNote !== 'number') {
+                const parent = Notation.parent(levelNotation) || 'source';
+                throw new NotationError(`Cannot set string key '${note}' on array ${parent}`);
+            }
+
             // check if the property is at this level
-            if (utils.hasOwn(level, note)) {
+            if (utils.hasOwn(level, nCurrentNote)) {
                 // check if we're at the last level
-                if (last) {
+                if (currentIsLast) {
                     // if overwrite is set, assign the value.
-                    if (overwrite) level[note] = value;
+                    if (overwrite) level[nCurrentNote] = value;
                 } else {
                     // if not, just re-reference the current level.
-                    level = level[note];
+                    level = level[nCurrentNote];
                 }
             } else {
-                // we don't have this property at this level
-                // so; if this is the last level, we set the value
-                // if not, we set an empty object for the next level
-                level = level[note] = (last ? value : {});
+                // if next normalized note is a number, it indicates that the
+                // current note is actually an array.
+                nextIsArrayNote = typeof nNextNote === 'number';
+
+                // we don't have this property at this level so; if this is the
+                // last level, we set the value if not, we set an empty
+                // collection for the next level
+                level[nCurrentNote] = (currentIsLast ? value : (nextIsArrayNote ? [] : {}));
+                level = level[nCurrentNote];
             }
         });
         return this;
@@ -446,11 +457,10 @@ class Notation {
      */
     merge(notationsObject, overwrite = true) {
         if (!utils.isObject(notationsObject)) {
-            throw new NotationError(ERR.NOTA_OBJ + '`' + notationsObject + '`');
+            throw new NotationError(ERR.NOTA_OBJ + 'Expected an object.');
         }
         let value;
-        utils.each(Object.keys(notationsObject), (notation, index, obj) => {
-            // this is preserved in arrow functions
+        utils.each(Object.keys(notationsObject), notation => {
             value = notationsObject[notation];
             this.set(notation, value, overwrite);
         });
@@ -476,11 +486,11 @@ class Notation {
      */
     separate(notations) {
         if (!utils.isArray(notations)) {
-            throw new NotationError(ERR.NOTA_OBJ + '`' + notations + '`');
+            throw new NotationError(ERR.NOTA_OBJ + 'Expected an array.');
         }
-        let o = new Notation({});
-        utils.each(notations, (notation, index, obj) => {
-            let result = this.inspectRemove(notation);
+        const o = new Notation({});
+        utils.each(notations, notation => {
+            const result = this.inspectRemove(notation);
             o.set(notation, result.value);
         });
         this._source = o._source;
@@ -518,13 +528,13 @@ class Notation {
      *  console.log(obj);       // {}
      */
     filter(globNotations) {
-        let original = this.value;
-        let copy = utils.deepCopy(original);
+        const original = this.value;
+        const copy = utils.deepCopy(original);
 
         // ensure array, normalize and sort the globs in logical order. we also
         // concat the array first (to prevent mutating the original) bec. we'll
         // change it's content via `.shift()`
-        let globs = NotationGlob.normalize(globNotations).concat();
+        const globs = NotationGlob.normalize(globNotations).concat();
 
         // if globs only consist of "*"; set the "copy" as source and return.
         if (utils.stringOrArrayOf(globs, '*')) {
@@ -553,8 +563,7 @@ class Notation {
 
         let g, endStar, normalized;
         // iterate through globs
-        utils.each(globs, (globNotation, index, array) => {
-            // console.log('--->', globNotation);
+        utils.each(globs, globNotation => {
             g = new NotationGlob(globNotation);
             // set flag that indicates whether the glob ends with `.*`
             endStar = g.absGlob.slice(-2) === '.*';
@@ -586,13 +595,13 @@ class Notation {
             // TODO: Optimize the loop below. Instead of checking each key's
             // notation, get the non-star left part of the glob and iterate
             // that property of the source object.
-            this.each((originalNotation, key, value, obj) => {
+            this.each((originalNotation, key, value) => {
                 // console.log('>>', originalNotation);
 
                 // iterating each note of original notation. i.e.:
                 // note1.note2.note3 is iterated from left to right, as:
                 // 'note1', 'note1.note2', 'note1.note2.note3' — in order.
-                Notation.eachNote(originalNotation, (levelNotation, note, index, list) => {
+                Notation.eachNote(originalNotation, levelNotation => {
                     if (g.test(levelNotation)) {
                         if (g.isNegated) {
                             // console.log('removing', levelNotation, 'of', originalNotation);
@@ -618,9 +627,7 @@ class Notation {
      *  Removes the property from the source object, at the given notation.
      *  @alias Notation#delete
      *  @chainable
-     *
      *  @param {String} notation - The notation to be inspected.
-     *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
      *
      *  @example
@@ -632,9 +639,12 @@ class Notation {
         this.inspectRemove(notation);
         return this;
     }
+
     /**
      *  Alias of `Notation#remove`
      *  @private
+     *  @param {String} notation -
+     *  @returns {Notation} -
      */
     delete(notation) {
         this.remove(notation);
@@ -643,12 +653,10 @@ class Notation {
 
     /**
      *  Clones the `Notation` instance to a new one.
-     *
      *  @returns {Notation} - A new copy of the instance.
      */
     clone() {
-        let o = utils.deepCopy(this.value);
-        return new Notation(o);
+        return new Notation(utils.deepCopy(this.value));
     }
 
     /**
@@ -679,10 +687,11 @@ class Notation {
      *  // source object (obj) is not modified
      */
     copyTo(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        let result = this.inspect(notation);
+        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
+        const result = this.inspect(notation);
         if (result.has) {
-            new Notation(destination).set(newNotation || notation, result.value, overwrite);
+            const newN = utils.getNewNotation(newNotation, notation);
+            new Notation(destination).set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -715,10 +724,11 @@ class Notation {
      *  // models object is not modified
      */
     copyFrom(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        let result = new Notation(destination).inspect(notation);
+        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
+        const result = new Notation(destination).inspect(notation);
         if (result.has) {
-            this.set(newNotation || notation, result.value, overwrite);
+            const newN = utils.getNewNotation(newNotation, notation);
+            this.set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -752,10 +762,11 @@ class Notation {
      *  // { dodge: "Charger", ford: "Mustang" }
      */
     moveTo(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        let result = this.inspectRemove(notation);
+        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
+        const result = this.inspectRemove(notation);
         if (result.has) {
-            new Notation(destination).set(newNotation || notation, result.value, overwrite);
+            const newN = utils.getNewNotation(newNotation, notation);
+            new Notation(destination).set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -789,10 +800,11 @@ class Notation {
      *  // {}
      */
     moveFrom(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
-        let result = new Notation(destination).inspectRemove(notation);
+        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
+        const result = new Notation(destination).inspectRemove(notation);
         if (result.has) {
-            this.set(newNotation || notation, result.value, overwrite);
+            const newN = utils.getNewNotation(newNotation, notation);
+            this.set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -820,12 +832,16 @@ class Notation {
      *  // { carBrand: "Ford", carModel: "Mustang" }
      */
     rename(notation, newNotation, overwrite) {
-        if (!newNotation) return this;
         return this.moveTo(this._source, notation, newNotation, overwrite);
     }
+
     /**
      *  Alias for `#rename`
      *  @private
+     *  @param {String} notation -
+     *  @param {String} newNotation -
+     *  @param {Boolean} [overwrite=true] -
+     *  @returns {Notation} -
      */
     renote(notation, newNotation, overwrite) {
         return this.rename(notation, newNotation, overwrite);
@@ -852,13 +868,17 @@ class Notation {
      *  // obj is not modified
      */
     extract(notation, newNotation) {
-        let o = {};
+        const o = {};
         this.copyTo(o, notation, newNotation);
         return o;
     }
+
     /**
      *  Alias for `#extract`
      *  @private
+     *  @param {String} notation -
+     *  @param {String} newNotation -
+     *  @returns {Object} -
      */
     copyToNew(notation, newNotation) {
         return this.extract(notation, newNotation);
@@ -886,13 +906,17 @@ class Notation {
      *  // { carBrand: "Ford" }
      */
     extrude(notation, newNotation) {
-        let o = {};
+        const o = {};
         this.moveTo(o, notation, newNotation);
         return o;
     }
+
     /**
      *  Alias for `#extrude`
      *  @private
+     *  @param {String} notation -
+     *  @param {String} newNotation -
+     *  @returns {Object} -
      */
     moveToNew(notation, newNotation) {
         return this.extrude(notation, newNotation);
@@ -922,46 +946,74 @@ class Notation {
     /**
      *  Checks whether the given notation string is valid. Note that the star
      *  (`*`) (which is a valid character, even if irregular) is NOT treated as
-     *  wildcard here. This checks for normal dot-notation, not a glob-notation.
+     *  wildcard here. This checks for regular dot-notation, not a glob-notation.
      *  For glob notation validation, use `Notation.Glob.isValid()` method. Same
      *  goes for the negation character/prefix (`!`).
      *
-     *  Note that, even though `obj['some.name']` is possible in JS, dot (`.`) is
-     *  always treated as a level (property) separator in Notation strings.
-     *
      *  @param {String} notation - The notation string to be checked.
-     *
-     *  @returns {Boolean}
+     *  @returns {Boolean} -
      *
      *  @example
      *  Notation.isValid('prop1.prop2.prop3'); // true
-     *  Notation.isValid('prop1'); // true
-     *  Notation.isValid('prop.*'); // true (but star is not treated as wildcard)
-     *  Notation.isValid('@1'); // true (bec. obj['@1'] is possible in JS.)
+     *  Notation.isValid('x'); // true
+     *  Notation.isValid('x.arr[0].y'); // true
+     *  Notation.isValid('x["*"]'); // true
+     *  Notation.isValid('x.*'); // false (this would be valid for Notation#filter() only or Notation.Glob class)
+     *  Notation.isValid('@1'); // false (should be "['@1']")
      *  Notation.isValid(null); // false
      */
     static isValid(notation) {
-        return (typeof notation === 'string') &&
-            (/^[^\s.!]+(\.[^\s.!]+)*$/).test(notation);
+        return (typeof notation === 'string')
+            && reVALIDATOR.test(notation);
+    }
+
+    /**
+     *  Splits the given notation string into its notes (levels).
+     *  @param {String} notation  Notation string to be splitted.
+     *  @returns {Array} - A string array of notes (levels).
+     */
+    static split(notation) {
+        const errMsg = ERR.NOTATION + `'${notation}'`;
+        if (!Notation.isValid(notation)) {
+            throw new NotationError(errMsg);
+        }
+        const match = notation.match(reMATCHER);
+        if (!match) throw new NotationError(errMsg);
+        return match;
+    }
+
+    /**
+     *  Joins the given notes into a notation string.
+     *  @param {String} notes  Notes (levels) to be joined.
+     *  @returns {String}  Joined notation string.
+     */
+    static join(notes) {
+        const lastIndex = notes.length - 1;
+        return notes.map((current, i) => {
+            if (!current) return '';
+            const next = lastIndex >= i + 1 ? notes[i + 1] : null;
+            const dot = next
+                ? next.slice(0, 1) === '[' ? '' : '.'
+                : '';
+            return current + dot;
+        }).join('');
     }
 
     /**
      *  Counts the number of notes/levels in the given notation.
      *  @alias Notation.countLevels
-     *
-     *  @param {*} notation - The notation string to be processed.
-     *
-     *  @returns {Number}
+     *  @param {String} notation - The notation string to be processed.
+     *  @returns {Number} - Number of notes.
      */
     static countNotes(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        return notation.split('.').length;
+        return Notation.split(notation).length;
     }
+
     /**
      *  Alias of `Notation.countNotes`.
      *  @private
+     *  @param {String} notation -
+     *  @returns {Number} -
      */
     static countLevels(notation) {
         return Notation.countNotes(notation);
@@ -969,59 +1021,42 @@ class Notation {
 
     /**
      *  Gets the first (root) note of the notation string.
-     *
      *  @param {String} notation - The notation string to be processed.
-     *
-     *  @returns {String}
+     *  @returns {String} - First note.
      *
      *  @example
      *  Notation.first('first.prop2.last'); // "first"
      */
     static first(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        // return notation.replace(/.*\.([^\.]*$)/, '$1');
-        return notation.split('.')[0];
+        return Notation.split(notation)[0];
     }
 
     /**
      *  Gets the last note of the notation string.
-     *
      *  @param {String} notation - The notation string to be processed.
-     *
-     *  @returns {String}
+     *  @returns {String} - Last note.
      *
      *  @example
      *  Notation.last('first.prop2.last'); // "last"
      */
     static last(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        // return notation.replace(/.*\.([^\.]*$)/, '$1');
-        return notation.split('.').reverse()[0];
+        const list = Notation.split(notation);
+        return list[list.length - 1];
     }
 
     /**
      *  Gets the parent notation (up to but excluding the last note)
      *  from the notation string.
-     *
      *  @param {String} notation - The notation string to be processed.
-     *
-     *  @returns {String}
+     *  @returns {String} - Parent note if any. Otherwise, `null`.
      *
      *  @example
      *  Notation.parent('first.prop2.last'); // "first.prop2"
      *  Notation.parent('single'); // null
      */
     static parent(notation) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        return notation.indexOf('.') >= 0
-            ? notation.replace(/\.[^.]*$/, '')
-            : null;
+        const last = Notation.last(notation);
+        return notation.slice(0, -last.length).replace(/\.$/, '') || null;
     }
 
     /**
@@ -1046,21 +1081,20 @@ class Notation {
      *  // 2  "first.prop2.last"  "last"
      */
     static eachNote(notation, callback) {
-        if (!Notation.isValid(notation)) {
-            throw new NotationError(ERR.NOTATION + '`' + notation + '`');
-        }
-        let notes = notation.split('.'),
-            levelNotes = [],
-            levelNotation;
-        utils.each(notes, (note, index, list) => {
+        const notes = Notation.split(notation);
+        const levelNotes = [];
+        utils.each(notes, (note, index) => {
             levelNotes.push(note);
-            levelNotation = levelNotes.join('.');
-            if (callback(levelNotation, note, index, notes) === false) return false;
+            if (callback(Notation.join(levelNotes), note, index, notes) === false) return false;
         }, Notation);
     }
+
     /**
      *  Alias of `Notation.eachNote`.
      *  @private
+     *  @param {String} notation -
+     *  @param {Function} callback -
+     *  @returns {void}
      */
     static eachLevel(notation, callback) {
         Notation.eachNote(notation, callback);
@@ -1086,6 +1120,52 @@ Notation.Error = NotationError;
  *  @see `{@link #Notation.Glob}`
  */
 Notation.Glob = NotationGlob;
+
+/**
+ *  Undocumented
+ *  @private
+ */
+Notation.utils = utils;
+
+// --------------------------------
+// HELPERS
+// --------------------------------
+
+/**
+ *  Deep iterates through each note (level) of each item in the given
+ *  collection.
+ *  @private
+ *  @param {Object|Array} collection  A data object or an array, as the source.
+ *  @param {Function} callback  A function to be executed on each iteration,
+ *  with the following arguments: `(levelNotation, note, value, collection)`
+ *  @param {String} parentNotation  Storage for parent (previous) notation.
+ *  @param {Collection} topSource  Storage for initial/main collection.
+ *  @param {Boolean} [byLevel=false]  Indicates whether to iterate notations by
+ *  each level or by the end value.  For example, if we have a collection of
+ *  `{a: { b: true } }`, and `byLevel` is set; the callback will be invoked on
+ *  the following notations: `a`, `a.b`. Otherwise, it will be invoked only on
+ *  `a.b`.
+ *  @returns {void}
+ */
+function _each(collection, callback, parentNotation, topSource, byLevel = false) { // eslint-disable-line max-params
+    const source = topSource || collection;
+    if (utils.isCollection(collection)) {
+        utils.eachItem(collection, (value, keyOrIndex) => {
+            const note = typeof keyOrIndex === 'number'
+                ? `[${keyOrIndex}]`
+                : keyOrIndex;
+            const currentNotation = Notation.join([parentNotation, note]);
+            const isCollection = utils.isCollection(value);
+            // if it's not a collection we'll execute the callback. if it's a
+            // collection but byLevel is set, we'll also execute the callback.
+            if (!isCollection || byLevel) {
+                if (callback(currentNotation, note, value, source) === false) return false;
+            }
+            // deep iterating if collection
+            if (isCollection) _each(value, callback, currentNotation, source, byLevel);
+        });
+    }
+}
 
 // --------------------------------
 // EXPORT
