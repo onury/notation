@@ -31,7 +31,8 @@ class NotationError extends Error {
             value: message
         });
 
-        if (Error.hasOwnProperty('captureStackTrace')) { // V8
+        // V8
+        if (Error.hasOwnProperty('captureStackTrace')) { // eslint-disable-line no-prototype-builtins
             Error.captureStackTrace(this, this.constructor);
         } else {
             Object.defineProperty(this, 'stack', {
@@ -41,6 +42,7 @@ class NotationError extends Error {
             });
         }
     }
+
 }
 
 export default NotationError;
