@@ -2,7 +2,6 @@
 let toString = Object.prototype.toString;
 
 const utils = {
-
     isObject(o) {
         return toString.call(o) === '[object Object]';
     },
@@ -64,8 +63,71 @@ const utils = {
     hasSingleItemOf(arr, itemValue) {
         return arr.length === 1
             && (arguments.length === 2 ? arr[0] === itemValue : true);
-    }
+    },
 
+    isArrIndex(note) {
+        return /^\[\d+\]$/.test(note);
+    },
+
+    splitNotation(notation) {
+        const notes = [];
+        const chars = notation.split('');
+        let start = 0;
+        let bracketCount = 0;
+        for (let i = 0; i < chars.length; i++) {
+            let note;
+            switch (true) {
+                case chars[i] === '.':
+                    note = chars.slice(start, i).join('');
+                    start = i + 1;
+                    break;
+                case chars[i] === '[':
+                    if (!bracketCount && start !== i) {
+                        note = chars.slice(start, i).join('');
+                        start = i;
+                    }
+                    bracketCount += 1;
+                    break;
+                case chars[i] === ']':
+                    bracketCount -= 1;
+                    if (!bracketCount) {
+                        note = chars.slice(start, i + 1).join('');
+                        start = i + 1;
+                    }
+                    break;
+                case i === chars.length - 1:
+                    note = chars.slice(start, i + 1).join('');
+                    break;
+            }
+            if (typeof note === 'string' && note.length) {
+                notes.push(note);
+            }
+        }
+        return notes;
+    },
+
+    concatNotes(notes) {
+        return notes.reduce((acc, note) => acc + (this.isArrIndex(note) ? note : `.${note}`));
+    },
+
+    getIndexNumber(notation) {
+        return +notation.replace(/[\[\]]/g, '');
+    },
+
+    removeEmptyArraySpots(obj) {
+        if (this.isObject(obj)) {
+            for (const key of Object.keys(obj)) {
+                obj[key] = this.removeEmptyArraySpots(obj[key]);
+            }
+            return obj;
+        } else if (this.isArray(obj)) {
+            return obj
+                .filter((e) => e !== undefined)
+                .map((e) => this.removeEmptyArraySpots(e));
+        } else {
+            return obj;
+        }
+    },
 };
 
 export default utils;

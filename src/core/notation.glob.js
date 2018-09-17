@@ -194,6 +194,7 @@ class NotationGlob {
     }
 
     // Created test at: https://regex101.com/r/tJ7yI9/4
+    // regex from https://github.com/BenoitRanque/notation
     /**
      *  Validates the given notation glob.
      *  @name Notation.Glob.isValid
@@ -204,7 +205,7 @@ class NotationGlob {
      */
     static isValid(glob) {
         return (typeof glob === 'string')
-            && (/^(!?([^\s.!*]+|\*)(\.([^\s.!*]+|\*))*)$/).test(glob);
+            && (/^(!?([^\s.!*\[\]]+|\*)((\.([^\s.!*\[\]]+|\*))|(\[([0-9]+|\*)\]))*)$/).test(glob);
     }
 
     /**

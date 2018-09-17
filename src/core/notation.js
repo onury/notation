@@ -92,22 +92,45 @@ class Notation {
      *  // "car.year"  1970
      */
     each(callback) {
-        let o = this._source,
-            keys = Object.keys(o);
+        const o = this._source;
+        const keys = Object.keys(o);
+        const isArray = utils.isArray(o);
+
         utils.each(keys, (key, index, list) => {
             // this is preserved in arrow functions
-            let prop = o[key],
-                N;
+            const prop = o[key];
+            const keyName = isArray ? `[${key}]` : key;
+            let N;
             if (utils.isObject(prop)) {
                 N = new Notation(prop);
                 N.each((notation, nKey, value, prop) => {
-                    let subKey = key + '.' + notation;
+                    let subKey = keyName + '.' + notation;
                     callback.call(N, subKey, nKey, value, o);
                 });
+            } else if (utils.isArray(prop) && prop.length) {
+                handleArrayEach(this, callback, prop, keyName);
             } else {
-                callback.call(this, key, key, prop, o);
+                callback.call(this, keyName, keyName, prop, o);
             }
         });
+
+        function handleArrayEach(self, cb, arr, key) {
+            const len = arr.length;
+            for (let i = 0; i < len; i++) {
+                const subkey = `${key}[${i}]`;
+                if (utils.isObject(arr[i])) {
+                    const N = new Notation(arr[i]);
+                    N.each((notation, nKey, value, prop) => {
+                        const _subKey = subkey + '.' + notation;
+                        cb.call(N, _subKey, nKey, value, o);
+                    });
+                } else if (utils.isArray(arr[i])) {
+                    handleArrayEach(self, cb, arr[i], subkey);
+                } else {
+                    cb.call(self, subkey, `[${i}]`, arr[i]);
+                }
+            }
+        }
     }
     /**
      *  Alias for `#each`
@@ -142,9 +165,9 @@ class Notation {
         }
         var level = this._source;
         Notation.eachNote(notation, (levelNotation, note, index, list) => {
-            level = utils.hasOwn(level, note) ? level[note] : undefined;
+            const noteKey = utils.isArrIndex(note) ? utils.getIndexNumber(note) : note;
+            level = utils.hasOwn(level, noteKey) ? level[noteKey] : undefined;
             if (callback(level, levelNotation, note, index, list) === false) return false;
-
         });
     }
 
@@ -237,12 +260,12 @@ class Notation {
         }
         let level = this._source,
             result = { has: false, value: undefined };
-        Notation.eachNote(notation, (levelNotation, note, index, list) => {
+        Notation.eachNote(notation, (levelNotation, note, index, list, isArray) => {
+            note = utils.isArrIndex(note) ? utils.getIndexNumber(note) : note;
             if (utils.hasOwn(level, note)) {
                 level = level[note];
                 result = { has: true, value: level };
             } else {
-                // level = undefined;
                 result = { has: false, value: undefined };
                 return false; // break out
             }
@@ -285,7 +308,8 @@ class Notation {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
         let o, lastNote;
-        if (notation.indexOf('.') < 0) {
+        const notes = utils.splitNotation(notation);
+        if (notes.length === 1) {
             lastNote = notation;
             o = this._source;
         } else {
@@ -294,9 +318,15 @@ class Notation {
             o = this.inspect(upToLast).value;
         }
         let result;
+        lastNote = utils.isArrIndex(lastNote) ? utils.getIndexNumber(lastNote) : lastNote;
+
         if (utils.hasOwn(o, lastNote)) {
-            result = { has: true, value: o[lastNote] };
-            delete o[lastNote];
+            if (utils.isArray(o)) {
+                result = { has: true, value: o.splice(lastNote, 1)[0] };
+            } else {
+                result = { has: true, value: o[lastNote] };
+                delete o[lastNote];
+            }
         } else {
             result = { has: false, value: undefined };
         }
@@ -386,20 +416,28 @@ class Notation {
      *  console.log(obj);
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
-    set(notation, value, overwrite = true) {
+    set(notation, value, overwrite = true, concatArrays = false) {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
         let level = this._source,
             last;
-        Notation.eachNote(notation, (levelNotation, note, index, list) => {
+        Notation.eachNote(notation, (levelNotation, note, index, list, isArray) => {
+            note = utils.isArrIndex(note) ? utils.getIndexNumber(note) : note;
             last = index === list.length - 1;
+
             // check if the property is at this level
             if (utils.hasOwn(level, note)) {
                 // check if we're at the last level
                 if (last) {
                     // if overwrite is set, assign the value.
-                    if (overwrite) level[note] = value;
+                    if (overwrite) {
+                        if (concatArrays) {
+                            level.push(value);
+                        } else {
+                            level[note] = value;
+                        }
+                    }
                 } else {
                     // if not, just re-reference the current level.
                     level = level[note];
@@ -408,7 +446,7 @@ class Notation {
                 // we don't have this property at this level
                 // so; if this is the last level, we set the value
                 // if not, we set an empty object for the next level
-                level = level[note] = (last ? value : {});
+                level = level[note] = last ? value : isArray ? [] : {};
             }
         });
         return this;
@@ -449,10 +487,12 @@ class Notation {
             throw new NotationError(ERR.NOTA_OBJ + '`' + notationsObject + '`');
         }
         let value;
-        utils.each(Object.keys(notationsObject), (notation, index, obj) => {
+        const N = new Notation(notationsObject).flatten();
+        utils.each(Object.keys(N._source), (notation, index, obj) => {
+            // console.log(notation, index, obj);
             // this is preserved in arrow functions
-            value = notationsObject[notation];
-            this.set(notation, value, overwrite);
+            value = N._source[notation];
+            this.set(notation, value, overwrite, true);
         });
         return this;
     }
@@ -483,8 +523,7 @@ class Notation {
             let result = this.inspectRemove(notation);
             o.set(notation, result.value);
         });
-        this._source = o._source;
-        return this;
+        return o;
     }
 
     /**
@@ -533,8 +572,8 @@ class Notation {
         }
         // if globs is "" or [""] set source to `{}` and return.
         if (arguments.length === 0
-                || utils.stringOrArrayOf(globs, '')
-                || utils.stringOrArrayOf(globs, '!*')) {
+            || utils.stringOrArrayOf(globs, '')
+            || utils.stringOrArrayOf(globs, '!*')) {
             this._source = {};
             return this;
         }
@@ -557,12 +596,15 @@ class Notation {
             // console.log('--->', globNotation);
             g = new NotationGlob(globNotation);
             // set flag that indicates whether the glob ends with `.*`
-            endStar = g.absGlob.slice(-2) === '.*';
+            endStar = g.absGlob.slice(-2) === '.*' || g.absGlob.slice(-3) === '[*]';
+            // set flag that indicates whether the glob ends with `[*]`
+            // endArrStar = g.absGlob.slice(-3) === '[*]';
             // get the remaining part as the (extra) normalized glob
-            normalized = endStar ? g.absGlob.slice(0, -2) : g.absGlob;
+            normalized = g.absGlob.replace(/(\.\*$)|(\[\*\]$)/, '');
             // normalized = endStar ? g.absGlob.replace(/(\.\*)+$/, '') : g.absGlob;
             // check if normalized glob has no wildcard stars e.g. "a.b" or
             // "!a.b.c" etc..
+
             if (normalized.indexOf('*') < 0) {
                 if (g.isNegated) {
                     // directly remove the notation if negated
@@ -602,6 +644,10 @@ class Notation {
                             // e.g. when 'note1.note2' of 'note1.note2.note3' is
                             // removed, we no more have 'note3'.
                             return false;
+                        }
+                        if (list.length - 1 > index) {
+                            let nextLevelNotation = utils.concatNotes([levelNotation, list[index + 1]]);
+                            if (g.test(nextLevelNotation)) return;
                         }
                         filtered.set(levelNotation, value, true);
                     }
@@ -679,7 +725,9 @@ class Notation {
      *  // source object (obj) is not modified
      */
     copyTo(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
+        if (!(utils.isObject(destination) || utils.isArray(destination)))
+        {throw new NotationError(ERR.DEST);}
+
         let result = this.inspect(notation);
         if (result.has) {
             new Notation(destination).set(newNotation || notation, result.value, overwrite);
@@ -752,8 +800,10 @@ class Notation {
      *  // { dodge: "Charger", ford: "Mustang" }
      */
     moveTo(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isObject(destination)) throw new NotationError(ERR.DEST);
+        if (!(utils.isObject(destination) || utils.isArray(destination)))
+        {throw new NotationError(ERR.DEST);}
         let result = this.inspectRemove(notation);
+
         if (result.has) {
             new Notation(destination).set(newNotation || notation, result.value, overwrite);
         }
@@ -854,6 +904,8 @@ class Notation {
     extract(notation, newNotation) {
         let o = {};
         this.copyTo(o, notation, newNotation);
+        // remove all empty array fields
+        o = utils.removeEmptyArraySpots(o);
         return o;
     }
     /**
@@ -888,6 +940,7 @@ class Notation {
     extrude(notation, newNotation) {
         let o = {};
         this.moveTo(o, notation, newNotation);
+        o = utils.removeEmptyArraySpots(o);
         return o;
     }
     /**
@@ -940,9 +993,11 @@ class Notation {
      *  Notation.isValid('@1'); // true (bec. obj['@1'] is possible in JS.)
      *  Notation.isValid(null); // false
      */
+
     static isValid(notation) {
         return (typeof notation === 'string') &&
-            (/^[^\s.!]+(\.[^\s.!]+)*$/).test(notation);
+            // https://regex101.com/r/fSUY00/2
+            (/^[^\s.!\[\]]+((\.[^\s.!\[\]]+)|(\[(\d+|(['"`]){1}\*?\5{1})\]))*$/).test(notation);
     }
 
     /**
@@ -957,7 +1012,7 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        return notation.split('.').length;
+        return utils.splitNotation(notation).length;
     }
     /**
      *  Alias of `Notation.countNotes`.
@@ -982,7 +1037,7 @@ class Notation {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
         // return notation.replace(/.*\.([^\.]*$)/, '$1');
-        return notation.split('.')[0];
+        return utils.splitNotation(notation)[0];
     }
 
     /**
@@ -1000,7 +1055,7 @@ class Notation {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
         // return notation.replace(/.*\.([^\.]*$)/, '$1');
-        return notation.split('.').reverse()[0];
+        return utils.splitNotation(notation).pop();
     }
 
     /**
@@ -1019,8 +1074,9 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        return notation.indexOf('.') >= 0
-            ? notation.replace(/\.[^.]*$/, '')
+        const notes = utils.splitNotation(notation);
+        return notes.length > 1
+            ? utils.concatNotes(notes.slice(0, -1))
             : null;
     }
 
@@ -1049,13 +1105,14 @@ class Notation {
         if (!Notation.isValid(notation)) {
             throw new NotationError(ERR.NOTATION + '`' + notation + '`');
         }
-        let notes = notation.split('.'),
+        let notes = utils.splitNotation(notation),
             levelNotes = [],
             levelNotation;
         utils.each(notes, (note, index, list) => {
             levelNotes.push(note);
-            levelNotation = levelNotes.join('.');
-            if (callback(levelNotation, note, index, notes) === false) return false;
+            levelNotation = utils.concatNotes(levelNotes);
+            const isArray = !!(notes[index + 1] && utils.isArrIndex(notes[index + 1]));
+            if (callback(levelNotation, note, index, notes, isArray) === false) return false;
         }, Notation);
     }
     /**
