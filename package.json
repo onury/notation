@@ -101,7 +101,8 @@
     "eslint": "^5.6.0",
     "jest-cli": "^23.6.0",
     "lodash": "^4.17.11",
-    "webpack": "^4.19.0"
+    "webpack": "^4.19.0",
+    "webpack-cli": "^3.1.0"
   },
   "dependencies": {}
 }
