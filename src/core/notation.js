@@ -261,10 +261,7 @@ class Notation {
         let level = this._source,
             result = { has: false, value: undefined };
         Notation.eachNote(notation, (levelNotation, note, index, list, isArray) => {
-            note = utils.isArrIndex(note)
-                ? utils.getIndexNumber(note)
-                : note;
-
+            note = utils.isArrIndex(note) ? utils.getIndexNumber(note) : note;
             if (utils.hasOwn(level, note)) {
                 level = level[note];
                 result = { has: true, value: level };
@@ -426,7 +423,7 @@ class Notation {
         let level = this._source,
             last;
         Notation.eachNote(notation, (levelNotation, note, index, list, isArray) => {
-            note = utils.isArrIndex(note) ? +note.replace(/[\[\]]/g, '') : note;
+            note = utils.isArrIndex(note) ? utils.getIndexNumber(note) : note;
             last = index === list.length - 1;
 
             // check if the property is at this level
