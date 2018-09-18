@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Changed
 - **Breaking**: Each note of a notation string, should conform to strict EcmaScript variable and dot-notation rules. e.g. `'x[y]'`, `'x.1'`, `'x.y-z'`, `'x.@` are incorrect. `'x["y"]'`, `'x['1']`, `'x["y-z"]'`, `'x["@"]'` are correct.
+- **Breaking**: Now that bracket-notation support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the array name itself.
+- Passing `undefined` as the source object will now throw. This prevents accidental empty initialization. To initialize a `Notation` instance with a new empty object, just omit the argument. e.g. `new Notation()`.
 
 ### Removed
 - **Breaking**: Instance method `Notation#eachKey()` (alias of `#each()`) is removed. Now that bracket (and array) notation supported is added, this name is misleading.
