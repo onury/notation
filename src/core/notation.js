@@ -12,9 +12,25 @@ const ERR = {
 };
 
 // created test @ https://regex101.com/r/vLE16M/2
-const reMATCHER = /(\[(\d+|".*"|'.*')\]|[a-z$_][a-z$_\d]*)/gi;
+const reMATCHER = /(\[(\d+|".*"|'.*'|`.*`)\]|[a-z$_][a-z$_\d]*)/gi;
 // created test @ https://regex101.com/r/fL3PJt/1/
-const reVALIDATOR = /^([a-z$_][a-z$_\d]*|\[(\d+|".*"|'.*')\])(\[(\d+|".*"|'.*')\]|(\.[a-z$_][a-z$_\d]*))*$/i;
+// /^([a-z$_][a-z$_\d]*|\[(\d+|".*"|'.*'|`.*`)\])(\[(\d+|".*"|'.*'|`.*`)\]|(\.[a-z$_][a-z$_\d]*))*$/i
+const reVALIDATOR = new RegExp(
+    '^('
+    + '[a-z$_][a-z$_\\d]*'          // JS variable syntax
+    + '|'                           // OR
+    + '\\[(\\d+|".*"|\'.*\')\\]'    // array index or object bracket notation
+    + ')'                           // exactly once
+    + '('
+    + '\\[(\\d+|".*"|\'.*\')\\]'    // followed by same
+    + '|'                           // OR
+    + '\\.[a-z$_][a-z$_\\d]*'       // dot, then JS variable syntax
+    + ')*'                          // (both) may repeat any number of times
+    + '$'
+    , 'i'
+);
+
+// ^(!?([^\s.!*]+|\*)(\.([^\s.!*]+|\*))*)$
 
 /**
  *  Notation.js for Node and Browser.
@@ -43,11 +59,14 @@ class Notation {
      *  const notation = new Notation(obj);
      *  notation.get('car.model'); // "Charger"
      */
-    constructor(source = {}) {
-        if (!utils.isCollection(source)) {
+    constructor(source) {
+        let src = source;
+        if (arguments.length === 0) {
+            src = {};
+        } else if (!utils.isCollection(source)) {
             throw new NotationError(ERR.SOURCE);
         }
-        this._source = source;
+        this._source = src;
     }
 
     // --------------------------------
@@ -660,12 +679,12 @@ class Notation {
     }
 
     /**
-     *  Copies the notated property from the source object and adds it to the
+     *  Copies the notated property from the source collection and adds it to the
      *  destination — only if the source object actually has that property.
      *  This is different than a property with a value of `undefined`.
      *  @chainable
      *
-     *  @param {Object} destination - The destination object that the notated
+     *  @param {Object|Array} destination - The destination object that the notated
      *  properties will be copied to.
      *  @param {String} notation - The notation to get the corresponding property
      *  from the source object.
@@ -677,6 +696,9 @@ class Notation {
      *  the destination object if it exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If `destination` is not a valid collection.
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -697,23 +719,26 @@ class Notation {
     }
 
     /**
-     *  Copies the notated property from the destination object and adds it to the
-     *  source object — only if the destination object actually has that property.
-     *  This is different than a property with a value of `undefined`.
+     *  Copies the notated property from the target collection and adds it to
+     *  (own) source object — only if the target object actually has that
+     *  property. This is different than a property with a value of `undefined`.
      *  @chainable
      *
-     *  @param {Object} destination - The destination object that the notated
+     *  @param {Object|Array} target - The target collection that the notated
      *  properties will be copied from.
-     *  @param {String} notation - The notation to get the corresponding property
-     *  from the destination object.
-     *  @param {String} [newNotation=null] - The notation to set the destination
-     *  property on the source object. In other words, the copied property
-     *  will be renamed to this value before set on the source object.
-     *  If not set, `notation` argument will be used.
-     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
-     *  on the source object if it exists.
+     *  @param {String} notation - The notation to get the corresponding
+     *  property from the target object.
+     *  @param {String} [newNotation=null] - The notation to set the copied
+     *  property on our source collection. In other words, the copied property
+     *  will be renamed to this value before set. If not set, `notation`
+     *  argument will be used.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
+     *  our collection if it exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If `target` is not a valid collection.
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -723,9 +748,9 @@ class Notation {
      *  // { car: { brand: "Ford", model: "Charger" } }
      *  // models object is not modified
      */
-    copyFrom(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
-        const result = new Notation(destination).inspect(notation);
+    copyFrom(target, notation, newNotation = null, overwrite = true) {
+        if (!utils.isCollection(target)) throw new NotationError(ERR.DEST);
+        const result = new Notation(target).inspect(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
             this.set(newN, result.value, overwrite);
@@ -734,23 +759,26 @@ class Notation {
     }
 
     /**
-     *  Removes the notated property from the source object and adds it to the
-     *  destination — only if the source object actually has that property.
-     *  This is different than a property with a value of `undefined`.
+     *  Removes the notated property from the source (own) collection and adds
+     *  it to the destination — only if the source collection actually has that
+     *  property. This is different than a property with a value of `undefined`.
      *  @chainable
      *
-     *  @param {Object} destination - The destination object that the notated
-     *  properties will be moved to.
+     *  @param {Object|Array} destination - The destination collection that the
+     *  notated properties will be moved to.
      *  @param {String} notation - The notation to get the corresponding
      *  property from the source object.
-     *  @param {String} [newNotation=null] - The notation to set the source property
-     *  on the destination object. In other words, the moved property will be
-     *  renamed to this value before set on the destination object. If not set,
-     *  `notation` argument will be used.
+     *  @param {String} [newNotation=null] - The notation to set the source
+     *  property on the destination object. In other words, the moved property
+     *  will be renamed to this value before set on the destination object. If
+     *  not set, `notation` argument will be used.
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
      *  the destination object if it exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If `destination` is not a valid collection.
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -772,16 +800,16 @@ class Notation {
     }
 
     /**
-     *  Removes the notated property from the destination object and adds it to the
-     *  source object — only if the destination object actually has that property.
+     *  Removes the notated property from the target collection and adds it to (own)
+     *  source collection — only if the target object actually has that property.
      *  This is different than a property with a value of `undefined`.
      *  @chainable
      *
-     *  @param {Object} destination - The destination object that the notated
+     *  @param {Object|Array} target - The target collection that the notated
      *  properties will be moved from.
      *  @param {String} notation - The notation to get the corresponding property
-     *  from the destination object.
-     *  @param {String} [newNotation=null] - The notation to set the destination
+     *  from the target object.
+     *  @param {String} [newNotation=null] - The notation to set the target
      *  property on the source object. In other words, the moved property
      *  will be renamed to this value before set on the source object.
      *  If not set, `notation` argument will be used.
@@ -789,6 +817,9 @@ class Notation {
      *  the source object if it exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If `target` is not a valid collection.
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -799,9 +830,9 @@ class Notation {
      *  console.log(models);
      *  // {}
      */
-    moveFrom(destination, notation, newNotation = null, overwrite = true) {
-        if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
-        const result = new Notation(destination).inspectRemove(notation);
+    moveFrom(target, notation, newNotation = null, overwrite = true) {
+        if (!utils.isCollection(target)) throw new NotationError(ERR.DEST);
+        const result = new Notation(target).inspectRemove(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
             this.set(newN, result.value, overwrite);
@@ -810,18 +841,20 @@ class Notation {
     }
 
     /**
-     *  Renames the notated property of the source object by the new notation.
+     *  Renames the notated property of the source collection by the new notation.
      *  @alias Notation#renote
      *  @chainable
      *
      *  @param {String} notation - The notation to get the corresponding
-     *  property (value) from the source object.
+     *  property (value) from the source collection.
      *  @param {String} newNotation - The new notation for the targeted
-     *  property value. If not set, the source object will not be modified.
+     *  property value. If not set, the source collection will not be modified.
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property at
      *  the new notation, if it exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -849,7 +882,8 @@ class Notation {
 
     /**
      *  Extracts the property at the given notation to a new object by copying
-     *  it from the source object. This is equivalent to `.copyTo({}, notation, newNotation)`.
+     *  it from the source collection. This is equivalent to `.copyTo({},
+     *  notation, newNotation)`.
      *  @alias Notation#copyToNew
      *
      *  @param {String} notation - The notation to get the corresponding
@@ -859,6 +893,8 @@ class Notation {
      *  will be used.
      *
      *  @returns {Object} - Returns a new object with the notated property.
+     *
+     *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
      *  @example
      *  const obj = { car: { brand: "Ford", model: "Mustang" } };
@@ -885,8 +921,9 @@ class Notation {
     }
 
     /**
-     *  Extrudes the property at the given notation to a new object by moving
-     *  it from the source object. This is equivalent to `.moveTo({}, notation, newNotation)`.
+     *  Extrudes the property at the given notation to a new collection by
+     *  moving it from the source collection. This is equivalent to `.moveTo({},
+     *  notation, newNotation)`.
      *  @alias Notation#moveToNew
      *
      *  @param {String} notation - The notation to get the corresponding
@@ -927,11 +964,9 @@ class Notation {
     // --------------------------------
 
     /**
-     *  Basically constructs a new `Notation` instance with the given object.
+     *  Basically constructs a new `Notation` instance.
      *  @chainable
-     *
-     *  @param {Object} [object={}] - The object to be notated.
-     *
+     *  @param {Object|Array} [source={}] - The source collection to be notated.
      *  @returns {Notation} - The created instance.
      *
      *  @example
@@ -939,8 +974,11 @@ class Notation {
      *  // equivalent to:
      *  const notation = new Notation(obj);
      */
-    static create(object = {}) {
-        return new Notation(object);
+    static create(source) {
+        if (arguments.length === 0) {
+            return new Notation({});
+        }
+        return new Notation(source);
     }
 
     /**
@@ -963,23 +1001,20 @@ class Notation {
      *  Notation.isValid(null); // false
      */
     static isValid(notation) {
-        return (typeof notation === 'string')
-            && reVALIDATOR.test(notation);
+        return typeof notation === 'string' && reVALIDATOR.test(notation);
     }
 
     /**
      *  Splits the given notation string into its notes (levels).
      *  @param {String} notation  Notation string to be splitted.
      *  @returns {Array} - A string array of notes (levels).
+     *  @throws {NotationError} - If given notation is invalid.
      */
     static split(notation) {
-        const errMsg = ERR.NOTATION + `'${notation}'`;
         if (!Notation.isValid(notation)) {
-            throw new NotationError(errMsg);
+            throw new NotationError(ERR.NOTATION + `'${notation}'`);
         }
-        const match = notation.match(reMATCHER);
-        if (!match) throw new NotationError(errMsg);
-        return match;
+        return notation.match(reMATCHER);
     }
 
     /**
@@ -993,7 +1028,7 @@ class Notation {
             if (!current) return '';
             const next = lastIndex >= i + 1 ? notes[i + 1] : null;
             const dot = next
-                ? next.slice(0, 1) === '[' ? '' : '.'
+                ? next[0] === '[' ? '' : '.'
                 : '';
             return current + dot;
         }).join('');
@@ -1004,6 +1039,7 @@ class Notation {
      *  @alias Notation.countLevels
      *  @param {String} notation - The notation string to be processed.
      *  @returns {Number} - Number of notes.
+     *  @throws {NotationError} - If given notation is invalid.
      */
     static countNotes(notation) {
         return Notation.split(notation).length;
@@ -1023,6 +1059,7 @@ class Notation {
      *  Gets the first (root) note of the notation string.
      *  @param {String} notation - The notation string to be processed.
      *  @returns {String} - First note.
+     *  @throws {NotationError} - If given notation is invalid.
      *
      *  @example
      *  Notation.first('first.prop2.last'); // "first"
@@ -1035,6 +1072,7 @@ class Notation {
      *  Gets the last note of the notation string.
      *  @param {String} notation - The notation string to be processed.
      *  @returns {String} - Last note.
+     *  @throws {NotationError} - If given notation is invalid.
      *
      *  @example
      *  Notation.last('first.prop2.last'); // "last"
@@ -1049,6 +1087,7 @@ class Notation {
      *  from the notation string.
      *  @param {String} notation - The notation string to be processed.
      *  @returns {String} - Parent note if any. Otherwise, `null`.
+     *  @throws {NotationError} - If given notation is invalid.
      *
      *  @example
      *  Notation.parent('first.prop2.last'); // "first.prop2"
@@ -1070,6 +1109,7 @@ class Notation {
      *  Callback signature: `callback(levelNotation, note, index, list) { ... }`
      *
      *  @returns {void}
+     *  @throws {NotationError} - If given notation is invalid.
      *
      *  @example
      *  const notation = 'first.prop2.last';
@@ -1149,22 +1189,21 @@ Notation.utils = utils;
  */
 function _each(collection, callback, parentNotation, topSource, byLevel = false) { // eslint-disable-line max-params
     const source = topSource || collection;
-    if (utils.isCollection(collection)) {
-        utils.eachItem(collection, (value, keyOrIndex) => {
-            const note = typeof keyOrIndex === 'number'
-                ? `[${keyOrIndex}]`
-                : keyOrIndex;
-            const currentNotation = Notation.join([parentNotation, note]);
-            const isCollection = utils.isCollection(value);
-            // if it's not a collection we'll execute the callback. if it's a
-            // collection but byLevel is set, we'll also execute the callback.
-            if (!isCollection || byLevel) {
-                if (callback(currentNotation, note, value, source) === false) return false;
-            }
-            // deep iterating if collection
-            if (isCollection) _each(value, callback, currentNotation, source, byLevel);
-        });
-    }
+    // if (!utils.isCollection(collection)) throw ... // no need
+    utils.eachItem(collection, (value, keyOrIndex) => {
+        const note = typeof keyOrIndex === 'number'
+            ? `[${keyOrIndex}]`
+            : keyOrIndex;
+        const currentNotation = Notation.join([parentNotation, note]);
+        const isCollection = utils.isCollection(value);
+        // if it's not a collection we'll execute the callback. if it's a
+        // collection but byLevel is set, we'll also execute the callback.
+        if (!isCollection || byLevel) {
+            if (callback(currentNotation, note, value, source) === false) return false;
+        }
+        // deep iterating if collection
+        if (isCollection) _each(value, callback, currentNotation, source, byLevel);
+    });
 }
 
 // --------------------------------
