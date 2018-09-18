@@ -7,6 +7,34 @@ import utils from '../utils';
 // http://en.wikipedia.org/wiki/Glob_%28programming%29
 // http://en.wikipedia.org/wiki/Wildcard_character#Computing
 
+// created test @ https://regex101.com/r/U08luj/2
+const reMATCHER = /(\[(\d+|\*|".*"|'.*')\]|[a-z$_][a-z$_\d]*|\*)/gi; // ! negation should be removed first
+// matches `*` and `[*]` if outside of quotes.
+const reWILDCARDS = /(\*|\[\*\])(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g;
+// created test @ https://regex101.com/r/mC8unE/3
+// /^!?(\*|[a-z$_][a-z$_\d]*|\[(\d+|".*"|'.*'|`.*`|\*)\])(\[(\d+|".*"|'.*'|`.*`|\*)\]|\.[a-z$_][a-z$_\d]*|\.\*)*$/i
+const reVALIDATOR = new RegExp(
+    '^'
+    + '!?('                             // optional negation, only in the front
+    + '\\*'                             // wildcard star
+    + '|'                               // OR
+    + '[a-z$_][a-z$_\\d]*'              // JS variable syntax
+    + '|'                               // OR
+    + '\\[(\\d+|\\*|".*"|\'.*\')\\]'    // array index or wildcard, or object bracket notation
+    + ')'                               // exactly once
+    + '('
+    + '\\[(\\d+|\\*|".*"|\'.*\')\\]'    // followed by same
+    + '|'                               // OR
+    + '\\.[a-z$_][a-z$_\\d]*'           // dot, then JS variable syntax
+    + '|'                               // OR
+    + '\\.\\*'                          // dot, then wildcard star
+    + ')*'                              // (both) may repeat any number of times
+    + '$'
+    , 'i'
+);
+
+const ERR_INVALID = 'Invalid glob notation: ';
+
 /**
  *  `Notation.Glob` is a utility for validating, comparing and sorting
  *  dot-notation globs.
@@ -37,12 +65,13 @@ class NotationGlob {
     /**
      *  Constructs a `Notation.Glob` object with the given glob string.
      *  @constructs Notation.Glob
+     *  @param {String} glob - Notation string with globs.
      *
-     *  @param {String} glob - The glob string.
+     *  @throws {NotationError} - If given notation glob is invalid.
      */
     constructor(glob) {
         if (!NotationGlob.isValid(glob)) {
-            throw new NotationError('Invalid notation glob: "' + glob + '"');
+            throw new NotationError(`${ERR_INVALID} '${glob}'`);
         }
 
         const ng = NotationGlob.inspect(glob);
@@ -51,7 +80,7 @@ class NotationGlob {
             absGlob: ng.absGlob,
             isNegated: ng.isNegated,
             regexp: NotationGlob.toRegExp(ng.absGlob),
-            levels: ng.absGlob.split('.')
+            notes: NotationGlob.split(ng.absGlob)
         };
     }
 
@@ -103,7 +132,7 @@ class NotationGlob {
      *  @type {Array}
      */
     get notes() {
-        return this._.levels;
+        return this._.notes;
     }
 
     /**
@@ -114,7 +143,7 @@ class NotationGlob {
      *  @type {Array}
      */
     get levels() {
-        return this._.levels;
+        return this._.notes;
     }
 
     // --------------------------------
@@ -160,27 +189,40 @@ class NotationGlob {
         return new NotationGlob(glob);
     }
 
+    // const reMATCHER = /(!?)(\[(\d+|\*|".*"|'.*')\]|[a-z$_][a-z$_\d]*|\*)/gi;
+
     /**
      *  Gets a regular expressions instance from the given glob notation.
      *  Note that the bang `!` prefix will be ignored if the given glob is negated.
      *  @name Notation.Glob.toRegExp
      *  @function
-     *
      *  @param {String} glob - Glob notation to be converted.
      *
      *  @returns {RegExp} - A `RegExp` instance from the glob.
+     *
+     *  @throws {NotationError} - If given notation glob is invalid.
      */
     static toRegExp(glob) {
+        if (!NotationGlob.isValid(glob)) {
+            throw new NotationError(`${ERR_INVALID} '${glob}'`);
+        }
+
         let g = glob.indexOf('!') === 0 ? glob.slice(1) : glob;
-        // Modified from http://stackoverflow.com/a/13818704/112731
         g = utils.pregQuote(g)
-            .replace(/\\\*/g, '[^\\s\\.]*')
+            // `[*]` always represents array index e.g. `[1]`. so we'd replace
+            // `\[\*\]` with `\[\d+\]` but we should also watch for quotes: e.g.
+            // `["x[*]y"]`
+            .replace(/\\\[\\\*\\\](?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g, '[\\d+]')
+            // `*` within quotes (e.g. ['*']) is non-wildcard, just a regular star char.
+            // `*` outside of quotes is always JS variable syntax e.g. `prop.*`
+            .replace(/\\\*(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g, '[a-z$_][a-z$_\\d]*')
             .replace(/\\\?/g, '.');
-        return new RegExp('^' + g + '(\\..+|$)');
-        // it should either end ($) or continue with a dot. So for example,
-        // `company.*` will produce `/^company\.[^\s\.]*/` which will match both
-        // `company.name` and `company.address.street` but will not match
-        // `some.company.name`. Also `!password` will not match `!password_reset`.
+        return new RegExp('^' + g + '(?:[\\[\\.].+|$)', 'i');
+        // it should either end ($) or continue with a dot or bracket. So for
+        // example, `company.*` will produce `/^company\.[a-z$_][a-z$_\\d]*(?:[\\[|\\.].+|$)/`
+        // which will match both `company.name` and `company.address.street` but
+        // will not match `some.company.name`. Also `!password` will not match
+        // `!password_reset`.
     }
 
     /**
@@ -190,11 +232,10 @@ class NotationGlob {
      *  @returns {Object} -
      */
     static inspect(glob) {
-        const bang = glob.slice(0, 1) === '!';
-        const absGlob = bang ? glob.slice(1) : glob;
+        const isNegated = glob[0] === '!';
         return {
-            absGlob,
-            isNegated: bang
+            isNegated,
+            absGlob: isNegated ? glob.slice(1) : glob
         };
     }
 
@@ -208,8 +249,22 @@ class NotationGlob {
      *  @returns {Boolean} -
      */
     static isValid(glob) {
-        return (typeof glob === 'string')
-            && (/^(!?([^\s.!*]+|\*)(\.([^\s.!*]+|\*))*)$/).test(glob);
+        return (typeof glob === 'string') && reVALIDATOR.test(glob);
+    }
+
+    /**
+     *  Splits the given glob notation string into its notes (levels).
+     *  Note that this will exclude the `!` negation prefix, if it exists.
+     *  @param {String} glob  Glob notation string to be splitted.
+     *  @returns {Array} - A string array of glob notes (levels).
+     *  @throws {NotationError} - If given glob notation is invalid.
+     */
+    static split(glob) {
+        if (!NotationGlob.isValid(glob)) {
+            throw new NotationError(`${ERR_INVALID} '${glob}'`);
+        }
+        const g = glob[0] === '!' ? glob.slice(1) : glob;
+        return g.match(reMATCHER);
     }
 
     /**
@@ -233,6 +288,8 @@ class NotationGlob {
      *  @returns {Number} - Returns `-1` if `a` comes first, `1` if `b` comes
      *  first and `0` if equivalent priority.
      *
+     *  @throws {NotationError} - If either `a` or `b` is invalid glob notation.
+     *
      *  @example
      *  let result = Notation.Glob.compare('prop.*.name', 'prop.*');
      *  console.log(result); // 1
@@ -240,33 +297,24 @@ class NotationGlob {
     static compare(a, b) {
         // trivial case, both are exactly the same!
         if (a === b) return 0;
-        const levelsA = a.split('.');
-        const levelsB = b.split('.');
+        const levelsA = NotationGlob.split(a);
+        const levelsB = NotationGlob.split(b);
         // Check depth (number of levels)
         if (levelsA.length === levelsB.length) {
             // count wildcards (assuming more wildcards comes first)
-            const wild = /(?:^|\.)\*(?:$|\.)/g;
-            const mA = a.match(wild);
-            const mB = b.match(wild);
-            const wildA = mA ? mA.length : 0;
-            const wildB = mB ? mB.length : 0;
-            if (wildA === wildB) {
+            const wildCountA = (a.match(reWILDCARDS) || []).length;
+            const wildCountB = (b.match(reWILDCARDS) || []).length;
+            if (wildCountA === wildCountB) {
                 // check for negation
-                const negA = a.indexOf('!') === 0;
-                const negB = b.indexOf('!') === 0;
-                if (negA === negB) {
-                    // both are negated or neither are, just return alphabetical
-                    return a < b ? -1 : 1;
-                }
-                // compare without the negatation
-                const nonNegA = negA ? a.slice(1) : a;
-                const nonNegB = negB ? b.slice(1) : b;
-                if (nonNegA === nonNegB) {
-                    return negA ? 1 : -1;
-                }
-                return nonNegA < nonNegB ? -1 : 1;
+                const insA = NotationGlob.inspect(a);
+                const insB = NotationGlob.inspect(b);
+                // both are negated or neither are, just return alphabetical
+                if (insA.isNegated === insB.isNegated) return a < b ? -1 : 1;
+                // compare absoulte globs without the negation
+                if (insA.absGlob === insB.absGlob) return insA.isNegated ? 1 : -1;
+                return insA.absGlob < insB.absGlob ? -1 : 1;
             }
-            return wildA > wildB ? -1 : 1;
+            return wildCountA > wildCountB ? -1 : 1;
         }
 
         return levelsA.length < levelsB.length ? -1 : 1;
