@@ -1,6 +1,5 @@
-/* eslint camelcase:0, max-lines-per-function:0, consistent-return:0, max-statements:0 */
+/* eslint camelcase:0, max-lines-per-function:0, consistent-return:0, max-statements:0, max-lines:0 */
 
-// const Notation = require('../src/core/notation');
 import Notation from '../src/core/notation';
 const _ = require('lodash');
 
@@ -40,7 +39,7 @@ const o = {
     }
 };
 
-describe('Test Suite: Notation', () => {
+describe('Notation', () => {
 
     // beforeEach(() => { });
 
@@ -73,7 +72,7 @@ describe('Test Suite: Notation', () => {
     test('.countNotes()', () => {
         expect(Notation.countNotes('a')).toEqual(1);
         expect(Notation.countNotes('a.b')).toEqual(2);
-        expect(Notation.countNotes('a.b.c')).toEqual(3);
+        expect(Notation.countLevels('a.b.c')).toEqual(3); // alias
         expect(function () { Notation.countNotes(''); }).toThrow(); // eslint-disable-line
     });
 
@@ -99,6 +98,8 @@ describe('Test Suite: Notation', () => {
         expect(Notation.split('a.b[0].x.y["5"].z')).toEqual(['a', 'b', '[0]', 'x', 'y', '["5"]', 'z']);
         expect(Notation.split('a.b[0][1][0]')).toEqual(['a', 'b', '[0]', '[1]', '[0]']);
         expect(() => Notation.split('')).toThrow();
+        expect(() => Notation.split('.')).toThrow();
+        expect(() => Notation.split(' . ')).toThrow();
         expect(() => Notation.split('[]')).toThrow();
         expect(() => Notation.split('.b')).toThrow();
         expect(() => Notation.split('a-b')).toThrow();
@@ -114,7 +115,7 @@ describe('Test Suite: Notation', () => {
         expect(Notation.join(['a', 'b', '[0]', '[1]', '[0]'])).toEqual('a.b[0][1][0]');
     });
 
-    test('.eachNote()', () => {
+    test('.eachNote(), alias: .eachLevel()', () => {
         const pattern = 'arr[0].x[1][0].y[5]';
         const result = {
             0: { levelNota: 'arr', note: 'arr' },
@@ -133,6 +134,16 @@ describe('Test Suite: Notation', () => {
             c++;
         });
         expect(c).toEqual(Notation.countNotes(pattern));
+
+        // alias test
+        c = 0;
+        Notation.eachLevel(pattern, (levelNota, note, index) => {
+            const expected = result[index];
+            expect(levelNota).toEqual(expected.levelNota);
+            expect(note).toEqual(expected.note);
+            c++;
+        });
+        expect(c).toEqual(Notation.countLevels(pattern));
     });
 
     test('constructor(), .create()', () => {
@@ -140,9 +151,19 @@ describe('Test Suite: Notation', () => {
         expect((new Notation({})).set('x', 'value').value.x).toEqual('value');
         expect((new Notation([])).set('[0]', 'value').value[0]).toEqual('value');
 
+        expect(() => new Notation(undefined)).toThrow();
+        expect(() => new Notation(null)).toThrow();
+        expect(() => new Notation(1)).toThrow();
+        expect(() => new Notation('test')).toThrow();
+
         expect(Notation.create().set('x', 'value').value.x).toEqual('value');
         expect(Notation.create({}).set('x', 'value').value.x).toEqual('value');
         expect(Notation.create([]).set('[0]', 'value').value[0]).toEqual('value');
+
+        expect(() => Notation.create(undefined)).toThrow();
+        expect(() => Notation.create(null)).toThrow();
+        expect(() => Notation.create(1)).toThrow();
+        expect(() => Notation.create('test')).toThrow();
     });
 
     test('#flatten(), #exapand()', () => {
@@ -195,7 +216,7 @@ describe('Test Suite: Notation', () => {
             }
         };
         let nota = Notation.create(assets);
-        const result = [];
+        let result = [];
         nota.each(notation => {
             result.push(notation);
         });
@@ -215,6 +236,13 @@ describe('Test Suite: Notation', () => {
             'car.alternate.cars[0].year'
         ];
         expect(result).toEqual(expected);
+
+        result = [];
+        nota.each(notation => {
+            result.push(notation);
+            return result.length < 4; // should break out on 4
+        });
+        expect(result.length).toEqual(4);
 
         let c = 0;
         nota.eachValue('car.alternate.cars[0]', (levelValue, levelNotation, note, index) => {
@@ -307,6 +335,22 @@ describe('Test Suite: Notation', () => {
         expect(nota.get('a.b.c')).toEqual(expect.any(Array));
         expect(nota.get('a.b.c[1].d.e')).toEqual(['value']);
         expect(nota.get('a.b.c[2]')).toEqual(true);
+
+        const data = {
+            obj: { a: { b: true } },
+            arr: [
+                { x: { y: 8 }, z: true },
+                { x: { y: 4 }, z: true },
+                { x: { y: 6 }, z: true }
+            ]
+        };
+        nota = new Notation(data);
+        expect(nota.get('arr[0].x')).toEqual({ y: 8 });
+        expect(nota.get('arr[0].x.y')).toEqual(8);
+        expect(nota.get('arr[1].x')).toEqual({ y: 4 });
+        expect(nota.get('arr[1].x.y')).toEqual(4);
+        expect(nota.get('arr[2].x')).toEqual({ y: 6 });
+        expect(nota.get('arr[2].x.y')).toEqual(6);
     });
 
     test('#set()', () => {
@@ -550,7 +594,7 @@ describe('Test Suite: Notation', () => {
 
     test('throw if invalid object or notation', () => {
         const nota = new Notation(_.cloneDeep(o));
-        const b = null; // undefined will NOT throw
+        const b = null;
 
         function invalidSrc() {
             return new Notation(b);
@@ -582,31 +626,6 @@ describe('Test Suite: Notation', () => {
         }
         expect(validNonExistingNota).not.toThrow();
 
-    });
-
-    test('onur', () => {
-        const data = {
-            obj: { a: { b: true } },
-            arr: [
-                { x: { y: 8 }, z: true },
-                { x: { y: 4 }, z: true },
-                { x: { y: 6 }, z: true }
-            ]
-        };
-        const nota = new Notation(data);
-        // expect(nota.get('arr[0].x')).toEqual({ y: 2 });
-        // expect(nota.get('arr[0].x.y')).toEqual(2);
-        // expect(nota.get('arr[1].x')).toEqual({ y: 4 });
-        // expect(nota.get('arr[1].x.y')).toEqual(4);
-        // expect(nota.get('arr[2].x')).toEqual({ y: 6 });
-        // expect(nota.get('arr[2].x.y')).toEqual(6);
-
-        // console.log(nota.filter(['*', '!obj']).value);
-
-        // console.log(nota.filter(['*', '!arr[1]']).value);
-
-        // console.log(nota.filter('arr[*].x').value);
-        // expect(nota.filter('arr[*].x.y')).toEqual(6);
     });
 
 });
