@@ -1,13 +1,17 @@
 
 import NotationError from './core/notation.error';
 
-const reVAR = /^[a-z$_][a-z$_\d]*$/i;
-const reBRACKETS = /^\[(.*)\]$/;
-const reQUOTES = /^(?:'(.*)'|"(.*)"|`(.*)`)$/;
-const reESCAPE = /[.\\+*?[^\]$(){}=!<>|:-]/g;
 const oPROTO = Object.prototype;
 
 const utils = {
+
+    re: {
+        VAR: /^[a-z$_][a-z$_\d]*$/i,
+        ARRAY_NOTE: /^\[(\d+)\]$/,
+        ARRAY_GLOB_NOTE: /^\[(\d+|\*)\]$/,
+        OBJECT_BRACKETS: /^\[(?:'(.*)'|"(.*)"|`(.*)`)\]$/,
+        ESCAPE: /[.\\+*?[^\]$(){}=!<>|:-]/g
+    },
 
     isObject(o) {
         return oPROTO.toString.call(o) === '[object Object]';
@@ -88,7 +92,7 @@ const utils = {
     },
 
     pregQuote(str) {
-        return String(str).replace(reESCAPE, '\\$&');
+        return String(str).replace(utils.re.ESCAPE, '\\$&');
     },
 
     stringOrArrayOf(o, value) {
@@ -103,23 +107,27 @@ const utils = {
             && (arguments.length === 2 ? arr[0] === itemValue : true);
     },
 
-    isArrayNote(note) {
-        return reBRACKETS.test(note);
+    normalizeNote(note) {
+        if (utils.re.VAR.test(note)) return note;
+        // check array index notation e.g. `[1]`
+        let m = note.match(utils.re.ARRAY_NOTE);
+        if (m) return parseInt(m[1], 10);
+        // check object bracket notation e.g. `["a-b"]`
+        m = note.match(utils.re.OBJECT_BRACKETS);
+        if (m) return m[1] || m[2] || m[3];
+        throw new NotationError(`Invalid note: "${note}"`);
     },
 
-    // all validations might not be necessary here, since the full notation is
-    // always validated via `Notation.isValid()`.
-    normalizeNote(note) {
-        if (reVAR.test(note)) return note;
-        if (utils.isArrayNote(note)) {
-            // remove surrounding brackets
-            const n = note.replace(reBRACKETS, '$1');
-            // if integer only, this is an array index
-            if ((/^\d+$/).test(n)) return parseInt(n, 10);
-            // otherwise, it has to have surrounding quotes
-            if (reQUOTES.test(n)) return n.replace(reQUOTES, '$1$2$3');
-        }
-        throw new NotationError(`Invalid note: "${note}"`);
+    joinNotes(notes) {
+        const lastIndex = notes.length - 1;
+        return notes.map((current, i) => {
+            if (!current) return '';
+            const next = lastIndex >= i + 1 ? notes[i + 1] : null;
+            const dot = next
+                ? next[0] === '[' ? '' : '.'
+                : '';
+            return current + dot;
+        }).join('');
     },
 
     getNewNotation(newNotation, notation) {
