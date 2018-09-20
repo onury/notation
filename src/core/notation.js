@@ -30,8 +30,6 @@ const reVALIDATOR = new RegExp(
     , 'i'
 );
 
-// ^(!?([^\s.!*]+|\*)(\.([^\s.!*]+|\*))*)$
-
 /**
  *  Notation.js for Node and Browser.
  *
@@ -70,7 +68,7 @@ class Notation {
     }
 
     // --------------------------------
-    // Notation Instance Properties
+    // INSTANCE PROPERTIES
     // --------------------------------
 
     /**
@@ -92,7 +90,7 @@ class Notation {
     }
 
     // --------------------------------
-    // Notation Instance Methods
+    // INSTANCE METHODS
     // --------------------------------
 
     /**
@@ -960,7 +958,7 @@ class Notation {
     }
 
     // --------------------------------
-    // Notation Static Methods
+    // STATIC MEMBERS
     // --------------------------------
 
     /**
@@ -1023,15 +1021,7 @@ class Notation {
      *  @returns {String}  Joined notation string.
      */
     static join(notes) {
-        const lastIndex = notes.length - 1;
-        return notes.map((current, i) => {
-            if (!current) return '';
-            const next = lastIndex >= i + 1 ? notes[i + 1] : null;
-            const dot = next
-                ? next[0] === '[' ? '' : '.'
-                : '';
-            return current + dot;
-        }).join('');
+        return utils.joinNotes(notes);
     }
 
     /**
