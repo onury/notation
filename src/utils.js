@@ -10,7 +10,13 @@ const utils = {
         ARRAY_NOTE: /^\[(\d+)\]$/,
         ARRAY_GLOB_NOTE: /^\[(\d+|\*)\]$/,
         OBJECT_BRACKETS: /^\[(?:'(.*)'|"(.*)"|`(.*)`)\]$/,
-        ESCAPE: /[.\\+*?[^\]$(){}=!<>|:-]/g
+        ESCAPE: /[.\\+*?[^\]$(){}=!<>|:-]/g,
+        WILDCARD: /^(\[\*\]|\*)$/,
+        // matches `*` and `[*]` if outside of quotes.
+        WILDCARDS: /(\*|\[\*\])(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g,
+        // matches trailing wildcards at the end of a non-negated glob.
+        // e.g. `x.y.*[*].*` » $1 = `x.y`, $2 = `.*[*].*`
+        NON_NEG_WILDCARD_TRAIL: /^(?!!)(.+?)(\.\*|\[\*\])+$/
     },
 
     isObject(o) {
@@ -105,6 +111,11 @@ const utils = {
     hasSingleItemOf(arr, itemValue) {
         return arr.length === 1
             && (arguments.length === 2 ? arr[0] === itemValue : true);
+    },
+
+    // remove trailing/redundant wildcards if not negated
+    normalizeGlobStr(glob) {
+        return glob.trim().replace(utils.re.NON_NEG_WILDCARD_TRAIL, '$1');
     },
 
     normalizeNote(note) {
