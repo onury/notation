@@ -50,7 +50,7 @@ const o = {
 describe('Notation.Glob', () => {
 
     const {
-        isValid, toRegExp, inspect, split, compare, sort, normalize, union, create
+        isValid, toRegExp, _inspect, split, compare, sort, normalize, union, create
     } = Notation.Glob;
 
     const reVAR = '[a-z$_][a-z$_\\d]*';
@@ -112,13 +112,13 @@ describe('Notation.Glob', () => {
         expect(toRegExp('!x.*["x.*"][1]').source).toEqual('^x\\.' + reVAR + '\\["x\\.\\*"\\]\\[1\\]' + reREST);
     });
 
-    test('.inspect()', () => {
-        let ins = inspect('![*].x.y[1].*[*]');
+    test('._inspect()', () => {
+        let ins = _inspect('![*].x.y[1].*[*]');
         expect(ins.glob).toEqual('![*].x.y[1].*[*]');
-        expect(ins.absGlob).toEqual('[*].x.y[1]');
+        expect(ins.absGlob).toEqual('[*].x.y[1].*[*]'); // 'cause original is negated
         expect(ins.isNegated).toEqual(true);
 
-        ins = inspect('*.x[*].y');
+        ins = _inspect('*.x[*].y');
         expect(ins.glob).toEqual('*.x[*].y');
         expect(ins.absGlob).toEqual('*.x[*].y');
         expect(ins.isNegated).toEqual(false);
@@ -140,7 +140,7 @@ describe('Notation.Glob', () => {
         expect(split('*.*[*]', true)).toEqual(['*']);
         expect(split('[*].*[*].*', true)).toEqual(['[*]']);
         expect(split('x.y[*]', true)).toEqual(['x', 'y']);
-        expect(split('!x.y[*]', true)).toEqual(['x', 'y']);
+        expect(split('!x.y[*]', true)).toEqual(['x', 'y', '[*]']);
         expect(split('x.y.*.z', true)).toEqual(['x', 'y', '*', 'z']);
         expect(split('x.y[*].z.*', true)).toEqual(['x', 'y', '[*]', 'z']);
     });
@@ -155,11 +155,22 @@ describe('Notation.Glob', () => {
         expect(compare('[*]', '[*]')).toEqual(0);
         expect(compare('[*]', 'a')).toEqual(-1);
         expect(compare('a', '[*]')).toEqual(1);
-        expect(compare('*.*', '*')).toEqual(1);
+        expect(compare('*.*', '*')).toEqual(-1);
         expect(compare('*.*', '*.a')).toEqual(-1);
         expect(compare('*', '!*.*')).toEqual(-1);
-        expect(compare('*.x', 'y.*')).toEqual(-1);
-        expect(compare('[*].x', 'a.*')).toEqual(-1);
+        expect(compare('*.x', 'y.*')).toEqual(1);
+        expect(compare('[*].x', 'a.*')).toEqual(1);
+        expect(compare('*.x.*', 'x.*')).toEqual(1);
+        expect(compare('*.x.y', 'x.y')).toEqual(1);
+
+        expect(compare('a.*', 'a.b[1]')).toEqual(-1);
+        expect(compare('a.b', 'a[*]')).toEqual(1);
+        expect(compare('a.b[3]', 'a.b[2]')).toEqual(1);
+        expect(compare('a.*[*]', 'a.*')).toEqual(-1);
+        expect(compare('a.*[1]', 'a.*[*]')).toEqual(1);
+        expect(compare('a.*.c[1]', 'a.*.c[*]')).toEqual(1);
+        expect(compare('a.*.c[1]', 'a.*.c')).toEqual(1);
+        expect(compare('a.*.c', 'a.*.c[*]')).toEqual(-1);
     });
 
     test('.sort()', () => {
@@ -191,20 +202,20 @@ describe('Notation.Glob', () => {
         const expectedSorted = [
             '*',
             'account.*',
+            'bill.*.*',
             'prop.*',
             'account.id',
             '!account.id',
+            'account.likes[*]',
             'account.tags',
+            'bill.account.*',
+            'foo.qux.*',
             'prop.id',
             '!prop.name',
             '*.*.credit',
             '!*.account.*',
-            'bill.*.*',
             '*.account.id',
-            'account.likes[*]',
-            'bill.account.*',
             '!foo.*.boo',
-            'foo.qux.*',
             '!prop.*.name',
             'x[*].foo',
             'bill.account.credit',
@@ -226,7 +237,6 @@ describe('Notation.Glob', () => {
             // console.log(shuffled);
             expect(shuffled).toEqual(expectedSorted);
             expect(indexOf('*')).toEqual(0);
-            expect(indexOf('!foo.*.boo')).toBeLessThan(indexOf('foo.qux.*'));
             expect(indexOf('account.*')).toBeLessThan(indexOf('account.tags'));
             expect(indexOf('account.*')).toBeLessThan(indexOf('account.id'));
             expect(indexOf('account.*')).toBeLessThan(indexOf('!account.id'));
@@ -276,9 +286,9 @@ describe('Notation.Glob', () => {
         const g1 = new NotationGlob('!*.x[1].*');
         expect(g1 instanceof NotationGlob).toEqual(true);
         expect(g1.glob).toEqual('!*.x[1].*');
-        expect(g1.absGlob).toEqual('*.x[1]');
+        expect(g1.absGlob).toEqual('*.x[1].*');
         expect(g1.isNegated).toEqual(true);
-        expect(g1.regexp.source).toEqual('^' + reVAR + '\\.x\\[1\\]' + reREST);
+        expect(g1.regexp.source).toEqual('^' + reVAR + '\\.x\\[1\\]\\.' + reVAR + reREST);
         expect(g1.regexp.flags).toEqual('i');
         expect(g1.notes).toEqual(['*', 'x', '[1]']);
         expect(g1.levels).toEqual(['*', 'x', '[1]']); // alias
@@ -383,15 +393,12 @@ describe('Notation.Glob', () => {
         expect(cov('a', 'b.*')).toEqual(false);
         expect(cov('a', 'a')).toEqual(true);
         expect(cov('a.*', 'a.b')).toEqual(true);
-        expect(cov('a.*', ['a', 'b', 'c'])).toEqual(true);
         expect(cov('a.*', 'a.b[1]')).toEqual(true);
         expect(cov('a.*', 'a.b[*].c')).toEqual(true);
         expect(cov('a.b[*].c', 'a.b[*]')).toEqual(false);
         expect(cov('a.b[*]', new NotationGlob('a.b[2].c'))).toEqual(true);
         expect(cov('[1].*.b[*].*.d', '[1].a.b[3].c.d')).toEqual(true);
         expect(cov('[1].*.b[*].*.d', '[2].a.b')).toEqual(false);
-        expect(NotationGlob.covers(['a', '*'], 'a.b[1]')).toEqual(true);
-
     });
 
     test.skip('Notation#filter()', () => {
@@ -484,29 +491,78 @@ describe('Notation.Glob', () => {
         expect(filtered.id).toEqual(data.id);
     });
 
-    test('.normalize()', () => {
-        expect(normalize(['*'])).toEqual(['*']);
-        expect(normalize(['[*]'])).toEqual(['[*]']);
-        expect(normalize(['!*'])).toEqual([]);
-        expect(normalize(['![*]'])).toEqual([]);
-        expect(normalize(['*', '!*'])).toEqual([]);
-        expect(normalize(['*', 'name', 'pwd', 'id'])).toEqual(['*']);
-        expect(normalize(['name', 'pwd', 'id'])).toEqual(['id', 'name', 'pwd']);
-        expect(normalize(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
-        expect(normalize(['user.*', '!user.pwd'])).toEqual(['user.*', '!user.pwd']);
-        expect(normalize(['*', '!*.id'])).toEqual(['*', '!*.id']);
-        expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', 'x.id']);
-        expect(normalize(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
-        expect(normalize(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
-        // console.log(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']));
-        expect(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user.*', '!user.pwd']))
-            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
-        // console.log(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']));
-        expect(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
-            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+    test.only('.normalize()', () => {
+        // expect(normalize(['*'])).toEqual(['*']);
+        // expect(normalize(['[*]'])).toEqual(['[*]']);
+        // expect(normalize(['!*'])).toEqual([]);
+        // expect(normalize(['![*]'])).toEqual([]);
+        // expect(normalize(['*', '!*'])).toEqual([]);
+        // expect(normalize(['*', 'name', 'pwd', 'id'])).toEqual(['*']);
+        // expect(normalize(['name', 'pwd', 'id'])).toEqual(['id', 'name', 'pwd']);
+        // expect(normalize(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
+        // expect(normalize(['user.*', '!user.pwd'])).toEqual(['user', '!user.pwd']);
+        // expect(normalize(['*', '!*.id'])).toEqual(['*', '!*.id']);
+        // expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', 'x.id']);
+        // expect(normalize(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        // expect(normalize(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        // // console.log(normalize(['*', '!id', 'name', 'car.model', '!car', 'id', 'name', 'user', '!user.pwd']));
+        // // console.log('covers»»»', NotationGlob.covers('*', 'name'));
+        // expect(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user', '!user.pwd']))
+        //     .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+        // // console.log(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']));
+        // expect(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
+        //     .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
 
-        // console.log(normalize(['name', 'pwd', '!id']));
-        expect(normalize(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+        // // console.log(normalize(['name', 'pwd', '!id']));
+        // expect(normalize(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+
+        // expect(normalize(['!x.*.*', '*', 'x.o', 'id'])).toEqual(['*', 'x.o', '!x.*.*']);
+
+        // expect(normalize(['*', 'a[*]', '!a[*]'])).toEqual(['*', '!a[*]']);
+        // expect(normalize(['a[*]', '!a[*]'])).toEqual([]);
+        // expect(normalize(['a[*]', '!a[0][1][2]'])).toEqual(['a', '!a[0][1][2]']);
+        // expect(normalize(['a[4]', 'a[*]'])).toEqual(['a']);
+        // expect(normalize(['a.*', 'a.*[*]'])).toEqual(['a']);
+        // expect(normalize(['a.*', 'a.*[2]'])).toEqual(['a']);
+        // expect(normalize(['a.b', 'a.*[*]', 'a.c[2].*'])).toEqual(['a']);
+
+        // expect(normalize(['!a.*', 'a'])).toEqual([]); // Notation#filter() would return {}
+        // // should be treated same as above
+        // expect(normalize(['!a[*]', 'a'])).toEqual([]); // Notation#filter() would return []
+
+        // // console.log('covers»»»', NotationGlob.covers('!c[*]', 'c[1]'));
+        // expect(normalize(['!x', 'c[1]', '!c[*]', '*', '!d.e']))
+        //     .toEqual(['*', '!x', '!c[*]', 'c[1]', '!d.e']);
+
+        // expect(normalize(['!id', 'name', 'car.model', '!car.*', 'id', '!email']))
+        //     .toEqual(['name', 'car.model']);
+
+        // expect(normalize(['!y[*]', 'x.x[1][0][*]', '*.x[*]', '!x.x[2][*]', 'a.b', 'c[*][1]']))
+        //     .toEqual(['*.x', 'a.b', 'c[*][1]', '!x.x[2][*]']);
+
+        // expect(normalize(['bar.name', '!bar.id', 'bar', 'foo.bar.baz', 'foo.qux', '!bar.id', 'bar.id', '!foo.*.baz']))
+        //     .toEqual(['bar', '!bar.id', 'foo.qux', 'foo.bar.baz']);
+
+        expect(normalize(['!*', 'a'])).toEqual([]);
+        // expect(normalize(['a.*', '!*.z'])).toEqual(['a', '!a.z']);
+        // expect(normalize(['x.*', '!*.y'])).toEqual();
+
+        // » neg covered by any pos     ['!a', '*']    keep neg
+        // » neg covered by no pos      ['!*', 'a']    keep if neg covers any pos
+        // » neg covered by any neg     ['!a', '!*']   remove '!a' if covering neg is kept
+        // » neg covered by no neg      ['!a', '!x']   check if neg covers any pos
+        // » else remove but try intersection if only one is neg
+
+        // » neg covered by any pos
+        //      » and not covered by any neg
+        // ['!a.x', 'a.*']                  '!a.x' neg is kept
+        // ['!a.x', 'a.*', '!*']            '!a.x' neg is removed
+        // ['!a.x', 'a.x', '!a.*', '!*']    '!a.x' neg is removed
+        // ['!a.*', '*.x']                  '!a.x' neg is removed. intersection '!a.x' added
+        // ['!a.*', '*.x', '*.y']           '!a.x' neg is removed. intersection ['!a.x', '!a.y'] added
+        // ['a', 'b.c', '!x', '*.y']        '!x.y' added
+        // ['a', 'b.c', '!x', '!*.y']       ['!a.y'] added
+        // ['*', 'b.c', '!x', '!*.y']
     });
 
     test('.normalize() » issue #7', () => {
@@ -526,32 +582,104 @@ describe('Notation.Glob', () => {
         ]);
     });
 
-    test.only('.union()', () => {
+    test('._intersect()', () => {
+        const intersect = NotationGlob._intersect;
+        // x.* ∩ *.y    » x.y
+        // x.*.* ∩ *.y  » x.y.*
+        // x.*.z ∩ *.y  » x.y.z
+        // x.y ∩ *.b    » (n/a)
+        // x.y ∩ a.*    » (n/a)
+        expect(intersect('x.*', '*.z')).toEqual('x.z');
+        expect(intersect('x.*.*', '*.y')).toEqual('x.y.*');
+        expect(intersect('x.*.z', '!*.y')).toEqual('!x.y.z'); // asuming y is object
+        expect(intersect('x.y', '*.b')).toEqual(null);
+        expect(intersect('x.y', 'a.*')).toEqual(null);
+        expect(intersect('x.*.*.z.*', 'x.a.*.z.b')).toEqual('x.a.*.z.b');
+        expect(intersect('!x.*.*.z.x', 'x.*.*.z.*')).toEqual('!x.*.*.z.x');
+        expect(intersect('x.*.*.z.x', 'x.*.*.z.y')).toEqual(null);
+        expect(intersect('x.a.*.z.x', 'x.b.*.z.y')).toEqual(null);
+        expect(intersect('x.*.*.z.*', 'x.*')).toEqual('x.*.*.z.*');
+        expect(intersect('x.*.*', 'x.o')).toEqual('x.o.*');
+        expect(intersect('x.*[*]', 'x.o')).toEqual('x.o[*]');
+        expect(intersect('!x.*.*', '!x.o')).toEqual('!x.o.*');
+        expect(intersect('a.*', '!*.z')).toEqual('!a.z');
+        expect(intersect('*.z', '!a.*')).toEqual('!a.z');
+        expect(intersect('*.z', 'a.*')).toEqual('a.z');
+    });
+
+    test('.union() by intersection', () => {
         let u;
+        u = union(['*', '!*.z'], ['*', '!x.*']);
+        expect(u).toEqual(['*', '!x.z']);
+        u = union(['*', '!*[2]'], ['*', '!x[*]']);
+        expect(u).toEqual(['*', '!x[2]']);
+    });
 
-        const globA = ['foo.bar.baz', 'bar.*', '!bar.id', 'bar.name', '!foo.qux.boo'];
-        const globB = ['!foo.*.baz', 'bar.id', 'bar.name', '!bar.*', 'foo.qux.*'];
+    test('.union()', () => {
+        let u;
+        // ['*', '!*.z'] ∪ ['*', '!x.*'] » ['*', '!x.z'] » intersection if both negative and both covered by a pos in the other
+        // ['*', '!*.z'] ∪ ['*', '!x.*', '!y.*'] » ['*', '!x.z', '!y.z'] » intersection if both negative and both covered by a pos in the other
+        // ['*', '!a.*', '!*.z'] ∪ ['*', '!x.*'] » ['*', '!x.z'] » intersection if both negative
+        // ['a.*', '!*.z'] ∪ ['x.*', '!*.y'] » ['a.*', 'x.*', '!a.z', '!x.y'] » intersection in same (normalize)
+        // ['*.z'] ∪ ['*', '!x.*'] » ['*', '!x.*']
+        // ['*', '!x.*', '!*.z'] ∪ ['!x.*', 'x.y'] » ['*', '!x.*', 'x.y']
+        // ['!x.*', '*.z'] ∪ ['!x.*', 'x.y'] » ['!x.*', 'x.y', '*.z']
+        // ['a.b', '*.z'] ∪ ['!x.*', 'x.y'] » ['*.z', 'a.b', '!x.*', 'x.y']
+        // ['x.z'] ∪ ['x.*', '!x.z']
 
-        // for checking mutation
-        const cloneGlobA = globA.concat();
-        const cloneGlobB = globB.concat();
+        u = union(['a.b', '*.z'], ['!x.*', 'x.y']);
+        expect(u).toEqual(['*.z', 'a.b', 'x.y']);
 
-        // expected union
-        // [ 'bar.*', 'foo.qux.*', 'foo.bar.baz' ]
+        u = union(['*', 'a', 'b', '!id', '!x.*'], ['*', '!b', 'id', '!pwd', 'x.o']);
+        expect(u).toEqual(['*']);
 
-        u = union(globA, globB);
+        u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*', 'x.o']);
+        // console.log(u);
+        expect(u).toEqual(['*', '!x.*', 'x.o']);
+
+        u = union(['*', '!x.*'], ['!x.*.*']);
+        expect(u).toEqual(['*', '!x.*']);
+
+        u = union(['*', '!x.*'], ['*', '!x.*.*']);
+        expect(u).toEqual(['*', '!x.*.*']);
+
+        u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*.*', 'x.o']);
+        expect(u).toEqual(['*', 'x.o', '!x.*.*']);
+
+        u = union(['*', '!x[*]'], ['*', '!x[4]', 'x[1]']);
+        expect(u).toEqual(['*', '!x[4]']);
+
+        u = union(['*', 'a', 'b[2]', '!id', '!x[*]'], ['*', '!b[*]', 'id', '!x[4]', 'x[1]']);
+        expect(u).toEqual(['*', '!x[4]']);
+
+        u = union(['*[*]', '!a[1]', '!x[*]'], ['*', 'a[1]', '!b[*]', '!x[*]', 'x[0]']);
+        expect(u).toEqual(['*', '!x[*]', 'x[0]']);
+
+        u = union(['*', '!a[*]', '!x[*]'], ['*', 'a[*]', '!b', '!x[*].*', 'x[1]']);
+        expect(u).toEqual(['*', 'x[1]', '!x[*].*']);
+
+        u = union(['*', 'a', 'b[2]', '!id', '!x[*]'], ['*', '!b[*]', 'id', '!x[4]', 'x[1]']);
+        expect(u).toEqual(['*', '!x[4]']);
+
+        u = union(['*[*]', '!a[1]', '!x[*]'], ['*', 'a[1]', '!b[*]', '!x[*]', 'x[0]']);
+        expect(u).toEqual(['*', '!x[*]', 'x[0]']);
+
+        u = union(['*', '!a[*]', '!x[*]'], ['*', 'a[*]', '!b', '!x[*].*', 'x[1]']);
+        expect(u).toEqual(['*', 'x[1]', '!x[*].*']);
+    });
+
+    test('.union()', () => {
+        // const globA = ['foo.bar.baz', 'bar.*', '!bar.id', 'bar.name', '!foo.qux.boo'];
+        // const globB = ['!foo.*.baz', 'bar.id', 'bar.name', '!bar.*', 'foo.qux.*'];
+
+        // // for checking mutation
+        // const cloneGlobA = globA.concat();
+        // const cloneGlobB = globB.concat();
+
+        // expect(union(globA, globB)).toEqual(['bar', 'foo.qux', 'foo.bar.baz']);
         // // should not mutate given globs arrays
         // expect(globA).toEqual(cloneGlobA);
         // expect(globB).toEqual(cloneGlobB);
-
-        // // console.log(u);
-
-        // expect(u.length).toEqual(3);
-        // expect(u).toContain('bar.*');
-        // expect(u).toContain('foo.qux.*');
-        // expect(u).toContain('foo.bar.baz');
-        // // globs with wildcard come first
-        // expect(u.indexOf('foo.qux.*')).toBeLessThan(u.indexOf('foo.bar.baz'));
 
         // // order of parameters should not matter
         // expect(union(['*'], ['!id'])).toEqual(['*']);
@@ -559,6 +687,12 @@ describe('Notation.Glob', () => {
         // expect(union(['id'], ['*'])).toEqual(['*']);
         // expect(union(['*', '!id'], ['*'])).toEqual(['*']);
         // expect(union(['*'], ['*', '!id'])).toEqual(['*']);
+        // expect(union(['*'], ['!a[*]'])).toEqual(['*']);
+        // expect(union(['!a[*]'], ['*'])).toEqual(['*']);
+        // expect(union(['a[1]'], ['*'])).toEqual(['*']);
+        // expect(union(['*'], ['a[1]'])).toEqual(['*']);
+        // expect(union(['a[*]', '!a[0]'], ['a[0][*]'])).toEqual(['a']);
+        // expect(union(['a[0][*]'], ['a[*]', '!a[0]'])).toEqual(['a']);
 
         // const a = ['*', '!id'];
         // const b = ['*', '!pwd'];
@@ -571,19 +705,17 @@ describe('Notation.Glob', () => {
         // expect(union(a, d)).toEqual(['*']);
         // expect(union(c, d)).toEqual(['*']);
 
-        // const x = ['*', 'email', '!id', '!x.*', 'o'];
-        // const y = ['*', 'id', '!pwd', 'x.name', 'o'];
+        // let x = ['*', 'a[*]', '!b[2]', '!x[*]', 'o'];
+        // let y = ['*', 'b[2]', '!pwd', 'x[5]', 'o'];
         // expect(union(x, y)).toEqual(['*']);
 
-        // u = union(['*', 'a', 'b', '!id', '!x.*'], ['*', '!b', 'id', '!pwd', 'x.o']);
-        // expect(u).toEqual(['*']);
+        // x = ['*', 'email', '!id', '!x.*', 'o'];
+        // y = ['*', 'id', '!pwd', 'x.name', 'o'];
+        // expect(union(x, y)).toEqual(['*']);
 
-        // u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*', 'x.o']);
-        // // console.log(u);
-        // expect(u).toEqual(['*', '!x.*', 'x.o']);
-
-        u = union(['*', '!id', '!x.*'], ['*', 'id', '!pwd', '!x.*.*', 'x.o']);
-        expect(u).toEqual(['*', '!x.*.*']);
+        // intersection in same (normalize)
+        // expect(union(['a.*', '!*.z'], ['x.*', '!*.y'])).toEqual(['a.*', 'x.*', '!a.z', '!x.y']);
+        expect(union(['a.*', '!*.z'], ['x.*', '!*.y'])).toEqual(['a.*', 'x.*', '!a.z', '!x.y']);
     });
 
     test.skip('Notation#filter() » wildcards', () => {
