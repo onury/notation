@@ -5,14 +5,21 @@ All notable changes to this project will be documented in this file. The format 
 ## 2.0.0 [Unreleased]
 
 ### Added
-- Bracket notation support. This brings ability to manipulate arrays with indexes and objects with non-standard property names (keys).
+- Array index notation and object bracket notation support. This brings ability to manipulate arrays with indexes and objects with non-standard property names (keys).
 - `Notation.split()` static method for splitting given notation into a notes array.
 - `Notation.join()` static method for joining given notes into a notation string.
+- `Notation.Glob.split()` static method for splitting given glob notation into a notes array.
 - 100% full test coverage (in progress).
 
 ### Changed
-- **Breaking**: Each note of a notation string, should conform to strict EcmaScript variable and dot-notation rules. e.g. `'x[y]'`, `'x.1'`, `'x.y-z'`, `'x.@` are incorrect. `'x["y"]'`, `'x['1']`, `'x["y-z"]'`, `'x["@"]'` are correct.
-- **Breaking**: Now that bracket-notation support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the array name itself.
+- **Breaking**: Improved notation and glob validation. Now we strictly validate each note of a notation against EcmaScript variable syntax, array index notation and object bracket notation. For example:
+    - `'x[y]'`, `'x.1'`, `'x.y-z'`, `'x.@` are incorrect. `'x["y"]'`, `'x['1']`, `'x["y-z"]'`, `'x["@"]'` are correct. 
+    - `x.*` is valid (object property) wildcard for glob notation but invalid as regular notation. 
+    - `[*]` is valid (array index) wildcard for glob notation but invalid as regular notation.
+    - `x['*']` just indicates a property/key (star), not a wildcard. Valid regular notation.
+- **Breaking**: Now that bracket-notation support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the key (array name) itself.
+- Note that if you remove an element from an array; that item will be emptied and indices will NOT shift. e.g. `Notation.create([0, 1, 2]).remove('[1]').value` will return `[0, (empty), 2]`. The empty item can be treated as `undefined`.
+- Improved normalization and union logic.
 - Passing `undefined` as the source object will now throw. This prevents accidental empty initialization. To initialize a `Notation` instance with a new empty object, just omit the argument. e.g. `new Notation()`.
 
 ### Removed
@@ -20,6 +27,7 @@ All notable changes to this project will be documented in this file. The format 
 
 ### Fixed
 - In some cases, when an empty string or invalid notation is passed, it would silently fail.
+- An issue with `NotatinGlob.union()` where less restrictive globA would be removed incorrectly when globB had multiple trailing wildcards and both globs were negated.
 
 ## 1.3.6 (2018-02-24)  
 
