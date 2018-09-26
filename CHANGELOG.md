@@ -4,11 +4,14 @@ All notable changes to this project will be documented in this file. The format 
 
 ## 2.0.0 [Unreleased]
 
+This is a big major release with lots of improvements and some breaking changes.
+
 ### Added
-- Array index notation and object bracket notation support. This brings ability to manipulate arrays with indexes and objects with non-standard property names (keys).
+- Array index notation and object bracket notation support. This brings ability to manipulate arrays with indexes and objects with non-standard property names (keys). See readme for more info.
 - `Notation.split()` static method for splitting given notation into a notes array.
 - `Notation.join()` static method for joining given notes into a notation string.
 - `Notation.Glob.split()` static method for splitting given glob notation into a notes array.
+- `Notation.Glob.covers()` static method for checking whether a glob covers another glob/notation.
 - 100% full test coverage (in progress).
 
 ### Changed
@@ -18,17 +21,20 @@ All notable changes to this project will be documented in this file. The format 
     - `[*]` is valid (array index) wildcard for glob notation but invalid as regular notation.
     - `x['*']` just indicates a property/key (star), not a wildcard. Valid regular notation.
 - **Breaking**: Now that bracket-notation support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the key (array name) itself.
-- Note that if you remove an element from an array; that item will be emptied and indices will NOT shift. e.g. `Notation.create([0, 1, 2]).remove('[1]').value` will return `[0, (empty), 2]`. The empty item can be treated as `undefined`.
-- Improved normalization and union logic. See readme.
-- Passing `undefined` as the source object will now throw. This prevents accidental empty initialization. To initialize a `Notation` instance with a new empty object, just omit the argument. e.g. `new Notation()`.
+- Note that if you remove an element from an array; that item will be emptied and indices will be preserved (and will NOT shift). e.g. `Notation.create([0, 1, 2]).remove('[1]').value` will return `[0, (empty), 2]`. The empty item can be treated as `undefined`.
+- **Breaking**: Changed/improved normalization and union logic. Also now, introducing (linear) intersections within normalization and (cross) intersections within union. An intersection glob is only produced when needed. For example; previously, `['!*.y', 'x']` would normalize as is but this had side-effects when union'ed with another glob list. Now it normalizes to `['x', '!x.y']`. Notice that intersection glob `'!x.y'` is added and `'!*.y'` is removed. See readme for more.
+- Passing `undefined` as the source object will now throw. This prevents accidental empty initialization. To initialize a `Notation` instance with a new empty object, just omit the argument. e.g. `new Notation()` or `Notation.create()`.
+- Updated globs comparison/sort logic.
 
 ### Removed
-- **Breaking**: Instance method `Notation#eachKey()` (alias of `#each()`) is removed. Now that bracket (and array) notation supported is added, this name is misleading.
+- **Breaking**: Instance method `Notation#eachKey()` (alias of `#each()`) is removed. Now that bracket (and array) notation support is added, this name is misleading. (Now, "each" indicates each key and/or index.)
 
 ### Fixed
 - In some cases, when an empty string or invalid notation is passed, it would silently fail.
 - An issue with `Notatin.Glob.union()` where less restrictive globA would be removed incorrectly when globB had multiple trailing wildcards and both globs were negated.
 - An issue with `Notation.Glob.normalize()` where some redundant non-negated globs were not removed.
+
+Thanks to [@marcinkumorek](https://github.com/marcinkumorek) and [@BenoitRanque](https://github.com/BenoitRanque) for their help.
 
 ## 1.3.6 (2018-02-24)  
 
