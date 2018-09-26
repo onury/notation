@@ -1,13 +1,10 @@
-/* eslint camelcase:0, consistent-return:0 */
+/* eslint camelcase:0, consistent-return:0, max-lines-per-function:0 */
 
-const { utils } = require('../lib/notation');
+import utils from '../src/utils';
 
-/**
- *  Test Suite: utils
- */
-describe('Test Suite: utils', () => {
+describe('utils', () => {
 
-    it('.isObject(), .isArray(), .ensureArray()', () => {
+    test('.isObject(), .isArray(), .ensureArray()', () => {
         expect(utils.isObject({})).toEqual(true);
         expect(utils.isObject([])).toEqual(false);
         expect(utils.isObject(null)).toEqual(false);
@@ -29,7 +26,7 @@ describe('Test Suite: utils', () => {
         expect(utils.ensureArray('str')).toEqual(['str']);
     });
 
-    it('.hasOwn(), .deepCopy()', () => {
+    test('.hasOwn(), .deepCopy()', () => {
         expect(utils.hasOwn({ a: 1 }, 'a')).toEqual(true);
         expect(utils.hasOwn({ a: 1 }, 'b')).toEqual(false);
         expect(utils.hasOwn({}, 'hasOwnProperty')).toEqual(false);
@@ -37,8 +34,8 @@ describe('Test Suite: utils', () => {
         function Obj() {} // eslint-disable-line
         Obj.prototype.hasOwnProperty = () => true;
         expect(utils.hasOwn(new Obj(), 'x')).toEqual(false);
-        expect(utils.hasOwn(['0', 'a'], 0)).toEqual(false);
-        expect(utils.hasOwn(['0', 'a'], '0')).toEqual(true);
+        expect(utils.hasOwn(['0', 'a'], 0)).toEqual(true);
+        expect(utils.hasOwn(['0', 'a'], '0')).toEqual(false);
         expect(utils.hasOwn(['2', 'a'], 2)).toEqual(false);
 
         expect(utils.deepCopy({})).toEqual({});
@@ -52,7 +49,7 @@ describe('Test Suite: utils', () => {
         expect(copy === [o]).toEqual(false);
     });
 
-    it('.each(), .eachRight()', () => {
+    test('.each(), .eachRight()', () => {
         const a = [1, 2, 3, 4];
 
         let out = [];
@@ -95,7 +92,7 @@ describe('Test Suite: utils', () => {
         expect(out.length).toEqual(2);
     });
 
-    it('.eachItem()', () => {
+    test('.eachItem()', () => {
         const c1 = [1, 'a', true, { x: [2] }, [3]];
         let out = [];
         utils.eachItem(c1, (item, index, collection) => {
@@ -119,7 +116,7 @@ describe('Test Suite: utils', () => {
         ]);
     });
 
-    it('.stringOrArrayOf(), .hasSingleItemOf()', () => {
+    test('.stringOrArrayOf(), .hasSingleItemOf()', () => {
         expect(utils.stringOrArrayOf('test', 'test')).toEqual(true);
         expect(utils.stringOrArrayOf(['test'], 'test')).toEqual(true);
         expect(utils.stringOrArrayOf(['test'], 'x')).toEqual(false);
@@ -132,7 +129,7 @@ describe('Test Suite: utils', () => {
         expect(utils.hasSingleItemOf([1], 1)).toEqual(true);
     });
 
-    it('.pregQuote()', () => {
+    test('.pregQuote()', () => {
         expect(utils.pregQuote('*')).toEqual('\\*');
         expect(utils.pregQuote('[.+]')).toEqual('\\[\\.\\+\\]');
         expect(utils.pregQuote('[a-z]')).toEqual('\\[a\\-z\\]');
@@ -140,7 +137,7 @@ describe('Test Suite: utils', () => {
         expect(utils.pregQuote('x y z 1 2 3')).toEqual('x y z 1 2 3');
     });
 
-    it('.normalizeNote()', () => {
+    test('.normalizeNote()', () => {
         expect(utils.normalizeNote('a')).toEqual('a');
         expect(() => utils.normalizeNote('a.b')).toThrow();
         expect(() => utils.normalizeNote('[a.b]')).toThrow();
@@ -161,4 +158,27 @@ describe('Test Suite: utils', () => {
         // but cannot be represented without brackets
         expect(() => utils.normalizeNote('')).toThrow();
     });
+
+    test('.normalizeGlobStr()', () => {
+        expect(utils.normalizeGlobStr(' * ')).toEqual('*');
+        expect(utils.normalizeGlobStr(' *.x ')).toEqual('*.x');
+        expect(utils.normalizeGlobStr(' [*] ')).toEqual('[*]');
+        expect(utils.normalizeGlobStr(' [*].x ')).toEqual('[*].x');
+        expect(utils.normalizeGlobStr('[*].x')).toEqual('[*].x');
+        expect(utils.normalizeGlobStr(' *[*] ')).toEqual('*');
+        expect(utils.normalizeGlobStr('*[*] ')).toEqual('*');
+        expect(utils.normalizeGlobStr(' [*].*')).toEqual('[*]');
+        expect(utils.normalizeGlobStr('[*].*')).toEqual('[*]');
+        expect(utils.normalizeGlobStr('*[*].*[*]')).toEqual('*');
+        expect(utils.normalizeGlobStr('*[*].*[*].*')).toEqual('*');
+        expect(utils.normalizeGlobStr('!*[*].*[*].*')).toEqual('!*[*].*[*].*');
+        expect(utils.normalizeGlobStr('*[*].*[*].*.x')).toEqual('*[*].*[*].*.x');
+        expect(utils.normalizeGlobStr('x.*[*].*[*].*')).toEqual('x');
+        expect(utils.normalizeGlobStr('[*].*[*].*')).toEqual('[*]');
+        expect(utils.normalizeGlobStr('[*].*[*].*[*]')).toEqual('[*]');
+        expect(utils.normalizeGlobStr('![*].*[*].*[*]')).toEqual('![*].*[*].*[*]');
+        expect(utils.normalizeGlobStr('[*].*[*].*[*].x')).toEqual('[*].*[*].*[*].x');
+        expect(utils.normalizeGlobStr('x[*].*[*].*[*]')).toEqual('x');
+    });
+
 });
