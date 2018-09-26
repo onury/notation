@@ -16,7 +16,8 @@ const utils = {
         WILDCARDS: /(\*|\[\*\])(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g,
         // matches trailing wildcards at the end of a non-negated glob.
         // e.g. `x.y.*[*].*` » $1 = `x.y`, $2 = `.*[*].*`
-        NON_NEG_WILDCARD_TRAIL: /^(?!!)(.+?)(\.\*|\[\*\])+$/
+        NON_NEG_WILDCARD_TRAIL: /^(?!!)(.+?)(\.\*|\[\*\])+$/,
+        NEGATE_ALL: /^!(\*|\[\*\])$/
     },
 
     isObject(o) {
@@ -42,10 +43,11 @@ const utils = {
 
     hasOwn(collection, keyOrIndex) {
         if (!collection) return false;
-        if (typeof keyOrIndex === 'string') {
+        const isArr = utils.isArray(collection);
+        if (!isArr && typeof keyOrIndex === 'string') {
             return keyOrIndex && oPROTO.hasOwnProperty.call(collection, keyOrIndex);
         }
-        if (utils.isArray(collection) && typeof keyOrIndex === 'number') {
+        if (typeof keyOrIndex === 'number') {
             return keyOrIndex >= 0 && keyOrIndex < collection.length;
         }
         return false;
