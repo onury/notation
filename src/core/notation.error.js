@@ -1,5 +1,6 @@
+/* eslint consistent-this:0, no-prototype-builtins:0 */
 
-// TODO: instanceof return false.
+const setProto = Object.setPrototypeOf;
 
 /**
  *  Error class specific to `Notation`.
@@ -17,7 +18,7 @@ class NotationError extends Error {
      */
     constructor(message = '') {
         super(message);
-        this.name = this.constructor.name;
+        setProto(this, NotationError.prototype);
 
         Object.defineProperty(this, 'name', {
             enumerable: false,
@@ -31,9 +32,9 @@ class NotationError extends Error {
             value: message
         });
 
-        // V8
-        if (Error.hasOwnProperty('captureStackTrace')) { // eslint-disable-line no-prototype-builtins
-            Error.captureStackTrace(this, this.constructor);
+        /* istanbul ignore else */
+        if (Error.hasOwnProperty('captureStackTrace')) { // V8
+            Error.captureStackTrace(this, NotationError);
         } else {
             Object.defineProperty(this, 'stack', {
                 enumerable: false,
