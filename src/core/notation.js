@@ -8,7 +8,9 @@ const ERR = {
     SOURCE: 'Invalid source. Expected a data object or array.',
     DEST: 'Invalid destination. Expected a data object or array.',
     NOTATION: 'Invalid notation: ',
-    NOTA_OBJ: 'Invalid notations object. '
+    NOTA_OBJ: 'Invalid notations object. ',
+    NO_INDEX: 'Implied index does not exist: ',
+    NO_PROP: 'Implied property does not exist: '
 };
 
 // created test @ https://regex101.com/r/vLE16M/2
@@ -49,27 +51,63 @@ class Notation {
 
     /**
      *  Initializes a new instance of `Notation`.
+     *
      *  @param {Object|Array} [source={}] - The source object (or array) to be
-     *  notated.
+     *  notated. Can either be an array or object. If omitted, defaults to an
+     *  empty object.
+     *  @param {Object} [options] - Notation options.
+     *      @param {Boolean} [options.strict=false] - Whether to throw when a
+     *      notation path does not exist on the source. (Note that `.inspect()`
+     *      and `.inspectRemove()` methods are exceptions). It's recommended to
+     *      set this to `true` and prevent silent failures if you're working
+     *      with sensitive data. Regardless of `strict` option, it will always
+     *      throw on invalid notation syntax or other crucial failures.
+     *      @param {Boolean} [options.preserveIndices=true] - Indicates whether to
+     *      preserve the indices of the parent array when an item is to be removed.
+     *      By default indices are preserved by emptying the item (sparse array),
+     *      instead of removing the item completely at the index. When this is
+     *      disabled; you should mind the shifted indices when you remove an
+     *      item via `.remove()`, `.inspectRemove()` or `.filter()`.
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
      *  const notation = new Notation(obj);
-     *  notation.get('car.model'); // "Charger"
+     *  notation.get('car.model')   // » "Charger"
+     *  notation.remove('car.model').set('car.color', 'red').value
+     *  // » { car: { brand: "Dodge", year: 1970, color: "red" } }
      */
-    constructor(source) {
+    constructor(source, options) {
         let src = source;
         if (arguments.length === 0) {
             src = {};
         } else if (!utils.isCollection(source)) {
             throw new NotationError(ERR.SOURCE);
         }
+
+        this.options = options;
         this._source = src;
+        this._isArray = utils.isArray(src);
     }
 
     // --------------------------------
     // INSTANCE PROPERTIES
     // --------------------------------
+
+    /**
+     *  Gets or sets notation options.
+     *  @type {Object}
+     */
+    get options() {
+        return this._options;
+    }
+
+    set options(value) {
+        this._options = {
+            strict: false,
+            preserveIndices: true,
+            ...(value || {})
+        };
+    }
 
     /**
      *  Gets the value of the source object.
@@ -272,9 +310,9 @@ class Notation {
      */
 
     /**
-     *  Inspects and removes the given notation from the source object
-     *  by checking if the source object actually has the notated property;
-     *  and getting its value if exists, before removing the property.
+     *  Inspects and removes the given notation from the source object by
+     *  checking if the source object actually has the notated property; and
+     *  getting its value if exists, before removing the property.
      *
      *  @param {String} notation - The notation string to be inspected.
      *
@@ -299,7 +337,8 @@ class Notation {
     inspectRemove(notation) {
         if (!notation) throw new Error(ERR.NOTATION + `'${notation}'`);
         const parentNotation = Notation.parent(notation);
-        const parent = parentNotation ? this.get(parentNotation) : this._source;
+        const parent = parentNotation ? this.get(parentNotation, null) : this._source;
+        const parentIsArray = utils.isArray(parent);
         const lastNote = Notation.last(notation);
         const lastNoteNormalized = utils.normalizeNote(lastNote);
 
@@ -310,12 +349,18 @@ class Notation {
                 has: true,
                 value: parent[lastNoteNormalized],
                 lastNote,
-                lastNoteNormalized
+                lastNoteNormalized,
+                parentIsArray
             };
-            // for array we also do this instead of splice. remove should
-            // not change other indexes. TODO: add an option for remove
-            // with shifting the index.
-            delete parent[lastNoteNormalized];
+
+            // if `preserveIndices` is enabled and this is an array, we'll
+            // splice the item out. otherwise, we'll use `delete` syntax to
+            // empty the item.
+            if (!this.options.preserveIndices && parentIsArray) {
+                parent.splice(lastNoteNormalized, 1);
+            } else {
+                delete parent[lastNoteNormalized];
+            }
         } else {
             result = { notation, has: false };
         }
@@ -356,14 +401,15 @@ class Notation {
     }
 
     /**
-     *  Gets the value of the corresponding property at the given
-     *  notation.
+     *  Gets the value of the corresponding property at the given notation.
      *
      *  @param {String} notation - The notation string to be processed.
-     *  @param {String} [defaultValue] - The default value to be returned if
-     *  the property is not found or enumerable.
+     *  @param {String} [defaultValue] - The default value to be returned if the
+     *  property is not found or enumerable.
      *
      *  @returns {*} - The value of the notated property.
+     *  @throws {NotationError} - If `strict` option is enabled and
+     *  `defaultValue` is not set and notation does not exist.
      *
      *  @example
      *  Notation.create({ car: { brand: "Dodge" } }).get("car.brand"); // "Dodge"
@@ -373,6 +419,12 @@ class Notation {
      */
     get(notation, defaultValue) {
         const result = this.inspect(notation);
+        // if strict and no default value is set, check if implied index or prop
+        // exists
+        if (this.options.strict && arguments.length < 2 && !result.has) {
+            const msg = result.parentIsArray ? ERR.NO_INDEX : ERR.NO_PROP;
+            throw new NotationError(msg + `'${notation}'`);
+        }
         return !result.has ? defaultValue : result.value;
     }
 
@@ -515,67 +567,75 @@ class Notation {
     }
 
     /**
-     *  Deep clones the source object while filtering its properties
-     *  by the given glob notations. Includes all matched properties
-     *  and removes the rest.
+     *  Deep clones the source object while filtering its properties by the
+     *  given <b>glob</b> notations. Includes all matched properties and removes
+     *  the rest.
      *
-     *  @param {Array|String} globNotations - The glob notation(s) to
-     *  be processed. The difference between normal notations and
-     *  glob-notations is that you can use wildcard stars (*) and
-     *  negate the notation by prepending a bang (!). A negated
-     *  notation will be excluded. Order of the globs do not matter,
-     *  they will be logically sorted. Loose globs will be processed
-     *  first and verbose globs or normal notations will be processed
-     *  last. e.g. `[ "car.model", "*", "!car.*" ]` will be sorted as
-     *  `[ "*", "!car.*", "car.model" ]`.
-     *  Passing no parameters or passing an empty string (`""` or `[""]`)
-     *  will empty the source object.
+     *  The difference between regular notations and glob-notations is that;
+     *  with the latter, you can use wildcard stars (*) and negate the notation
+     *  by prepending a bang (!). A negated notation will be excluded.
+     *
+     *  Order of the globs does not matter; they will be logically sorted. Loose
+     *  globs will be processed first and verbose globs or normal notations will
+     *  be processed last. e.g. `[ "car.model", "*", "!car.*" ]` will be
+     *  normalized and sorted as `[ "*", "!car" ]`.
+     *
+     *  Passing no parameters or passing an empty string (`""` or `[""]`) will
+     *  empty the source object. See `Notation.Glob` class for more information.
+     *
+     *  @param {Array|String} globNotations - Glob notation(s) to be processed.
      *  @chainable
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - Returns the current `Notation` instance (self). To
+     *  get the filtered value, call `.value` property on the instance.
      *
      *  @example
-     *  const obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" } };
-     *  const notation = Notation.create(obj);
-     *  notation.filter([ "*", "!car.*", "car.model" ]);
-     *  console.log(obj);       // { notebook: "Mac", car: { model: "Mustang" } }
-     *  notation.filter("*");   // re-filtering the current contents
-     *  console.log(obj);       // { notebook: "Mac", car: { model: "Mustang" } }
-     *  notation.filter();      // or notation.filter("");
-     *  console.log(obj);       // {}
+     *  const obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970 } };
+     *  const n = Notation.create(obj);
+     *  n.filter([ "*", "!car.year" ])
+     *  console.log(obj)            // { notebook: "Mac", car: { brand: "Ford", model: "Mustang" } }
+     *  n.filter("car.brand").value // { car: { brand: "Ford" } }
+     *  console.log(obj)            // { notebook: "Mac", car: { model: "Mustang" } }
+     *  n.filter().value            // {}
+     *                              // equivalent to n.filter("") or n.filter("!*")
      */
     filter(globNotations) {
         const original = this.value;
         const copy = utils.deepCopy(original);
+        const { re } = utils;
 
-        // ensure array, normalize and sort the globs in logical order. we also
-        // concat the array first (to prevent mutating the original) bec. we'll
-        // change it's content via `.shift()`
-        const globs = NotationGlob.normalize(globNotations).concat();
+        // ensure array, normalize and sort the globs in logical order. this
+        // also concats the array first (to prevent mutating the original
+        // array).
+        const globs = NotationGlob.normalize(globNotations);
+        const len = globs.length;
+        const empty = this._isArray ? [] : {};
 
-        // if globs only consist of "*"; set the "copy" as source and return.
-        if (utils.stringOrArrayOf(globs, '*')) {
-            this._source = copy;
+        // if globs is "" or [""] set source to empty and return.
+        if (len === 0 || (len === 1 && (!globs[0] || re.NEGATE_ALL.test(globs[0])))) {
+            this._source = empty;
             return this;
         }
-        // if globs is "" or [""] set source to `{}` and return.
-        if (arguments.length === 0
-                || utils.stringOrArrayOf(globs, '')
-                || utils.stringOrArrayOf(globs, '!*')) {
-            this._source = {};
+
+        const firstIsWildcard = re.WILDCARD.test(globs[0]);
+        // if globs only consist of "*" or "[*]"; set the "copy" as source and
+        // return.
+        if (len === 1 && firstIsWildcard) {
+            this._source = copy;
             return this;
         }
 
         let filtered;
-        // if the first item of sorted globs is "*" we set the source to the
-        // (full) "copy" and remove the "*" from globs (not to re-process).
-        if (globs[0] === '*') {
+        // if the first item of sorted globs is "*" or "[*]" we set the source
+        // to the (full) "copy" and remove the wildcard from globs (not to
+        // re-process).
+        if (firstIsWildcard) {
             filtered = new Notation(copy);
             globs.shift();
         } else {
-            // otherwise we set an empty object as the source so that we can
-            // add notations/properties to it.
-            filtered = new Notation({});
+            // otherwise we set an empty object or array as the source so that
+            // we can add notations/properties to it.
+            filtered = new Notation(empty);
         }
 
         let g, endStar, normalized;
@@ -653,7 +713,12 @@ class Notation {
      *  console.log(obj); // { notebook: "Mac", car: { } }
      */
     remove(notation) {
-        this.inspectRemove(notation);
+        const result = this.inspectRemove(notation);
+        // if strict, check if implied index or prop exists
+        if (this.options.strict && !result.has) {
+            const msg = result.parentIsArray ? ERR.NO_INDEX : ERR.NO_PROP;
+            throw new NotationError(msg + `'${notation}'`);
+        }
         return this;
     }
 
