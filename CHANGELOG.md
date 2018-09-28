@@ -1,4 +1,4 @@
-# Changelog
+# Notation Changelog
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
@@ -15,14 +15,15 @@ This is a big major release with lots of improvements and some breaking changes.
 - `Notation.Glob.split()` static method for splitting given glob notation into a notes array.
 - `Notation.Glob#intersect()` instance method for checking whether current glob has any intersection  with the given glob/notation.
 - `Notation.Glob#covers()` instance method for checking whether current glob covers the given glob.
-- 100% full test coverage (in progress).
+- 100% full test coverage.
 
 ### Changed
 - **Breaking**: (For browser) dropped support for IE 10 and below.
 - **Breaking**: Improved notation and glob validation. Now we strictly validate each note of a notation against EcmaScript variable syntax, array index notation and object bracket notation. For example:
-    - `'x[y]'`, `'x.1'`, `'x.y-z'`, `'x.@` are incorrect. `'x["y"]'`, `'x['1']`, `'x["y-z"]'`, `'x["@"]'` are correct. 
+    - `'x[y]'`, `'x.1'`, `'x.y-z'`, `'x.@` are incorrect and will never match. 
+    - `'x["y"]'`, `'x['1']`, `'x["y-z"]'`, `'x["@"]'` are correct. 
     - `x.*` is valid (object property) wildcard for glob notation but invalid as regular notation. 
-    - `[*]` is valid (array index) wildcard for glob notation but invalid as regular notation.
+    - `x[*]` is valid (array index) wildcard for glob notation but invalid as regular notation.
     - `x['*']` just indicates a property/key (star), not a wildcard. Valid regular notation.
 - **Breaking**: Now that bracket-notation support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the key (array name) itself.
 - Note that if you remove an element from an array; that item will be emptied and indices will be preserved (and will NOT shift). e.g. `Notation.create([0, 1, 2]).remove('[1]').value` will return `[0, (empty), 2]`. The empty item can be treated as `undefined`. Set `preserveIndices` option to `false` to change this behavior.

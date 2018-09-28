@@ -291,6 +291,7 @@ class Notation {
         });
         return result;
     }
+
     /**
      *  Notation inspection result object.
      *  @typedef Notation~InspectResult
@@ -307,6 +308,8 @@ class Notation {
      *  of the last note of the notation, if actually exists. For example, last
      *  note of `'a.b[1]` is `'[1]'` and will be normalized to number `1`; which
      *  indicates an array index.
+     *  @property {Boolean} parentIsArray - Whether the parent object of the
+     *  notation path is an array.
      */
 
     /**
@@ -408,8 +411,8 @@ class Notation {
      *  property is not found or enumerable.
      *
      *  @returns {*} - The value of the notated property.
-     *  @throws {NotationError} - If `strict` option is enabled and
-     *  `defaultValue` is not set and notation does not exist.
+     *  @throws {NotationError} - If `strict` option is enabled, `defaultValue`
+     *  is not set and notation does not exist.
      *
      *  @example
      *  Notation.create({ car: { brand: "Dodge" } }).get("car.brand"); // "Dodge"
@@ -584,6 +587,9 @@ class Notation {
      *  empty the source object. See `Notation.Glob` class for more information.
      *
      *  @param {Array|String} globNotations - Glob notation(s) to be processed.
+     *  @param {Object} [options] - Filtering options.
+     *  @param {Object} [options.normalize=true] - Whether to normalize the glob list
+     *  before filtering.
      *  @chainable
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self). To
@@ -599,7 +605,7 @@ class Notation {
      *  n.filter().value            // {}
      *                              // equivalent to n.filter("") or n.filter("!*")
      */
-    filter(globNotations) {
+    filter(globNotations, options) {
         const original = this.value;
         const copy = utils.deepCopy(original);
         const { re } = utils;
@@ -706,6 +712,8 @@ class Notation {
      *  @chainable
      *  @param {String} notation - The notation to be inspected.
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @throws {NotationError} - If `strict` option is enabled and notation
+     *  does not exist.
      *
      *  @example
      *  const obj = { notebook: "Mac", car: { model: "Mustang" } };
