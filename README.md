@@ -113,6 +113,11 @@ console.log(filtered);
 
 > _**Note**: `Notation#filter()` and `Notation.Glob.union()` methods automtically normalize the given glob list(s)._
 
+### Intersecting Globs
+
+- An intersection is a notation glob when a negated glob has common notation with a non-negated (positive) glob. This is done to reduce the verbosity of the 
+- The resulting intersection is always negated.
+
 ## Documentation
 
 You can read the full [**API reference** here][docs].
