@@ -551,6 +551,12 @@ class NotationGlob {
      *  @name Notation.Glob.normalize
      *  @function
      *  @param {Array} globList - Notation globs array to be normalized.
+     *  @param {Object} [options] - Normalize options.
+     *      @param {Boolean} [options.strict=false] - Whether to remove non-negated
+     *      items if they are covered by a negated. Note that, regardless of this
+     *      option, any item with exact negated will always be removed.
+     *      @param {Boolean} [options.sort=true] - Whether to logically sort the
+     *      glob list.
      *  @returns {Array} -
      *
      *  @throws {NotationError} - If any item in globs list is invalid.
@@ -561,8 +567,13 @@ class NotationGlob {
      *  normalize(globs)                            // ['*', '!id', '!car.model']
      *  normalize(['!*.id', 'user.*', 'company'])   // ['company', 'user', '!company.id', '!user.id']
      */
-    static normalize(globList) {
+    static normalize(globList, options) {
         const { _inspect, _covers, _intersect } = NotationGlob;
+        const opts = {
+            strict: false,
+            sort: true,
+            ...(options || {})
+        };
 
         const list = utils.ensureArray(globList)
             // prevent mutation
@@ -624,6 +635,7 @@ class NotationGlob {
             utils.eachRight(list, (b, indexB) => {
                 // don't inspect glob with itself
                 if (indexA === indexB) return; // move to next
+                // console.log(a.glob, 'vs', b.glob);
 
                 // remove if duplicate
                 if (a.glob === b.glob) {
@@ -656,7 +668,7 @@ class NotationGlob {
                         if (coveredByB) negCoveredByPos = true;
                         // try intersection if none covers the other and only
                         // one of them is negated.
-                        if (!coversB && !coveredByB) {
+                        if (opts.strict && !coversB && !coveredByB) {
                             checkAddNegIntersection(a.glob, b.glob);
                         }
                     }
@@ -665,12 +677,15 @@ class NotationGlob {
                         // if positive (a) covered by any negated (b); remove (a)!
                         if (coveredByB) {
                             posCoveredByNeg = true;
-                            list.splice(indexA, 1);
-                            return false; // break out
+                            if (opts.strict) {
+                                list.splice(indexA, 1);
+                                return false; // break out
+                            }
+                            return; // next
                         }
                         // try intersection if none covers the other and only
                         // one of them is negated.
-                        if (!coversB && !coveredByB) {
+                        if (opts.strict && !coversB && !coveredByB) {
                             checkAddNegIntersection(a.glob, b.glob);
                         }
                     } else {
@@ -678,22 +693,34 @@ class NotationGlob {
                         // if positive (a) covered by any other positive (b); remove (a)!
                         if (coveredByB) {
                             posCoveredByPos = true;
-                            list.splice(indexA, 1);
-                            return false; // break out
+                            if (opts.strict) {
+                                // list.splice(indexA, 1);
+                                return false; // break out
+                            }
                         }
                     }
                 }
 
             });
 
-            const keep = !hasExactNeg && (
-                a.isNegated
-                    ? ((negCoversPos || negCoveredByPos) && !negCoveredByNeg)
-                    : ((posCoversPos || !posCoveredByPos) && !posCoveredByNeg)
-            );
+            // const keepNeg = (negCoversPos || negCoveredByPos) && !negCoveredByNeg;
+            const keepNeg = opts.strict
+                ? (negCoversPos || negCoveredByPos) && negCoveredByNeg === false
+                : negCoveredByPos && negCoveredByNeg === false;
+            const keepPos = opts.strict
+                ? (posCoversPos || posCoveredByPos === false) && posCoveredByNeg === false
+                : posCoveredByNeg || posCoveredByPos === false;
+            const keep = duplicate === false
+                && hasExactNeg === false
+                && (a.isNegated ? keepNeg : keepPos);
+            // console.log('keep', a.glob, '=', keep);
+            // if (!a.isNegated) {
+            //     console.log('posCoveredByNeg = ', posCoveredByNeg);
+            //     console.log('posCoveredByPos = ', posCoveredByPos);
+            // }
+            // console.log('-----------------');
 
-            if (keep && !duplicate) normalized.push(a.glob);
-            // if (a.isNegated && !keep) list.splice(indexA, 1); // no need
+            if (keep) normalized.push(a.glob);
         });
 
         if (negateAll) return [];
@@ -703,10 +730,12 @@ class NotationGlob {
             // merge normalized list with intersections if any
             normalized = normalized.concat(negIntersections);
             // we have new (intersection) items, so re-normalize
-            return NotationGlob.normalize(normalized);
+            return NotationGlob.normalize(normalized, opts);
         }
 
-        return NotationGlob.sort(normalized);
+        return opts.sort
+            ? NotationGlob.sort(normalized)
+            : normalized;
     }
 
     /**
