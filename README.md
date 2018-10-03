@@ -37,18 +37,18 @@ notation.get('car.model');           // "Charger"
 notation
     .set('car.color', 'red')         // { car: { brand: "Dodge", model: "Charger", color: "red" }, dog: { breed: "Akita" } }
     .remove('car.model')             // { car: { brand: "Dodge", color: "red" }, dog: { breed: "Akita" } }
-    .filter(['*', '!car'])           // { dog: { breed: "Akita" } }
+    .filter(['*', '!car'])           // { dog: { breed: "Akita" } } // equivalent to .filter(['dog'])
     .flatten()                       // { "dog.breed": "Akita" }
     .expand()                        // { dog: { breed: "Akita" } }
     .merge({ 'dog.color': 'white' }) // { dog: { breed: "Akita", color: "white" } }
     .copyFrom(other, 'boat.name')    // { dog: { breed: "Akita", color: "white" }, boat: { name: "Mojo" } }
     .rename('boat.name', 'dog.name') // { dog: { breed: "Akita", color: "white", name: "Mojo" } }
-    .value;                          // modified source object ^
+    .value;                          // result object ^
 ```
 
 ### Glob Notation
 
-With a glob-notation, you can use wildcard stars `*` and bang `!` prefixes. A wildcard star will include all the properties at that level and a bang negates that notation for exclusion.
+With a glob-notation, you can use wildcard stars `*` and bang `!` prefixes. A wildcard star will include all the properties at that level and a bang prefix negates that notation for exclusion.
 
 - Only **`Notation#filter()`** method accepts glob notations. Regular notations (without any wildcard or `!`) should be used with all other members of the **`Notation`** class.
 - For raw Glob operations, you can use the **`Notation.Glob`** class.
@@ -58,14 +58,21 @@ With a glob-notation, you can use wildcard stars `*` and bang `!` prefixes. A wi
 Removes duplicates, redundant items and logically sorts the array:
 ```js
 const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
-console.log(Notation.Glob.normalize(globs));
+const options = { restrictive: false, sort: true }; // default options
+console.log(Notation.Glob.normalize(globs, options));
 // => ['*', '!car.*', '!id', 'car.model']
 ```
 
 In the normalized result `['*', '!car.*', '!id', 'car.model']`:
-- `id` is removed and `!id` (negated version) is kept. (In normalization, negated wins over the positive, if both are same).
+- `id` is removed and `!id` (negated version) is kept. (In normalization, negated always wins over the positive, if both are same).
 - Duplicate glob, `name` is removed. The remaining `name` is also removed bec. `*` renders it redundant; which covers all possible notations.
-- `car.model` is kept (although `*` matches it) bec. we have a negated glob that also matches it: `!car.*`.
+- (In non-restrictive mode) `car.model` is kept (although `*` matches it) bec. it's explicitly defined while we have a negated glob that also matches it: `!car.*`.
+
+```js
+console.log(Notation.Glob.normalize(globs, { restrictive: true }));
+// => ['*', '!car.*', '!id']
+```
+- In restrictive mode, negated strictly removes every match.
 
 #### Union two glob notation lists
 
@@ -79,10 +86,12 @@ console.log(union);
 ```
 In the united result `['*', '!*.age', 'user.age']`:
 - (negated) `!car.model` of `globsA` is removed because `globsB` has the exact positive version of it. (In union, positive wins over the negated, if both are same.) 
-- But then, `car.model` is redundant and removed bec. we have `*` wildcard, which covers all possible notations. 
+- But then, `car.model` is redundant and removed bec. we have `*` wildcard, which covers all possible non-negated notations. 
 - Same applies to other redundant globs except `user.age` bec. we have a `!*.age` in `globsA`, which matches `user.age`. So both are kept in the final array.
 
-Now, filter a data object with this united globs array:
+#### Filter data with glob patterns
+
+Now, filter a data object with this globs array:
 ```js
 const data = {
     car: {
@@ -95,7 +104,7 @@ const data = {
         age: 40
     }
 };
-const globs = ['*', '!*.age', 'user.age']; // our union'ed globs
+const globs = ['*', '!*.age', 'user.age'];
 const filtered = Notation.create(data).filter(globs).value;
 console.log(filtered);
 // =>
@@ -111,12 +120,26 @@ console.log(filtered);
 // }
 ```
 
+Fitler method automatically normalizes the given glob list. So you can also do restrictive filtering. Let's take the same example:
+```js
+const globs = ['*', '!*.age', 'user.age'];
+const options = { restrictive: true };
+const filtered = Notation.create(data).filter(globs, options).value;
+console.log(filtered);
+// =>
+// {
+//     car: {
+//         brand: 'Ford',
+//         model: 'Mustang'
+//     },
+//     user: {
+//         name: 'John'
+//     }
+// }
+```
+Note that this time, `!*.age` pattern removed `user.age` in restrictive mode.
+
 > _**Note**: `Notation#filter()` and `Notation.Glob.union()` methods automtically normalize the given glob list(s)._
-
-### Intersecting Globs
-
-- An intersection is a notation glob when a negated glob has common notation with a non-negated (positive) glob. This is done to reduce the verbosity of the 
-- The resulting intersection is always negated.
 
 ## Documentation
 
