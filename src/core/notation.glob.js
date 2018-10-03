@@ -227,16 +227,20 @@ class NotationGlob {
     }
 
     /**
-     *  Gets the intersection of this and the given glob notations.
-     *  If one of the globs is negated, result will be negated.
+     *  Gets the intersection of this and the given glob notations. When
+     *  restrictive, if any one of them is negated, the outcome is negated.
+     *  Otherwise, only if both of them are negated, the outcome is negated.
      *  @param {String} glob - Second glob to be used.
+     *  @param {Boolean} [restrictive=false] - Whether the intersection should
+     *  be negated when only one of the globs is negated.
      *  @returns {String} - Intersection notation if any; otherwise `null`.
      *  @example
      *  const glob = Notation.Glob.create;
-     *  glob('x.*').intersect('!*.y')   // '!x.y'
+     *  glob('x.*').intersect('!*.y')         // 'x.y'
+     *  glob('x.*').intersect('!*.y', true)   // '!x.y'
      */
-    intersect(glob) {
-        return NotationGlob._intersect(this.glob, glob);
+    intersect(glob, restrictive = false) {
+        return NotationGlob._intersect(this.glob, glob, restrictive);
     }
 
     // --------------------------------
@@ -349,22 +353,41 @@ class NotationGlob {
     }
 
     /**
-     *  Gets the intersection notation of two glob notations.
-     *  If one of the globs is negated, result will be negated.
+     *  Gets the intersection notation of two glob notations. When restrictive,
+     *  if any one of them is negated, the outcome is negated. Otherwise, only
+     *  if both of them are negated, the outcome is negated.
      *  @private
      *  @param {String} globA - First glob to be used.
      *  @param {String} globB - Second glob to be used.
+     *  @param {Boolean} [restrictive=false] - Whether the intersection should
+     *  be negated when only one of the globs is negated.
      *  @returns {String} - Intersection notation if any; otherwise `null`.
      *  @example
-     *  const { intersect } = Notation.Glob;
-     *  intersect('!*.y', 'x.*')    // '!x.y'
+     *  _intersect('!*.y', 'x.*', false)     // 'x.y'
+     *  _intersect('!*.y', 'x.*', true)      // '!x.y'
      */
-    static _intersect(globA, globB) {
-        // if any one of them is negated, intersection is negated.
-        const bang = globA[0] === '!' || globB[0] === '!' ? '!' : '';
+    static _intersect(globA, globB, restrictive = false) {
+        // const bang = restrictive
+        //     ? (globA[0] === '!' || globB[0] === '!' ? '!' : '')
+        //     : (globA[0] === '!' && globB[0] === '!' ? '!' : '');
 
-        const notesA = NotationGlob.split(globA);
-        const notesB = NotationGlob.split(globB);
+        const notesA = NotationGlob.split(globA, true);
+        const notesB = NotationGlob.split(globB, true);
+
+        let bang;
+        if (restrictive) {
+            bang = globA[0] === '!' || globB[0] === '!' ? '!' : '';
+        } else {
+            if (globA[0] === '!' && globB[0] === '!') {
+                bang = '!';
+            } else {
+                bang = ((notesA.length > notesB.length && globA[0] === '!')
+                        || (notesB.length > notesA.length && globB[0] === '!'))
+                    ? '!'
+                    : '';
+            }
+        }
+
         const len = Math.max(notesA.length, notesB.length);
         let notesI = [];
         let a, b;
@@ -539,22 +562,23 @@ class NotationGlob {
      *  <br />example: `['*', 'id', '!id']` normalizes to `['*', '!id']`.</li>
      *  <li>If a glob is covered by another, it's removed.
      *  <br />example: `['car.*', 'car.model']` normalizes to `['car']`.</li>
-     *  <li>If a glob is covered by another negated glob, it's removed.
-     *  <br />example: `['*', '!car.*', 'car.model']` normalizes to `['*', '!car']`.</li>
      *  <li>If a negated glob is covered by another glob, it's kept.
      *  <br />example: `['*', 'car', '!car.model']` normalizes as is.</li>
      *  <li>If a negated glob is not covered by another or it does not cover any other;
      *  then we check for for intersection glob. If found, adds them to list;
      *  removes the original negated.
      *  <br />example: `['car.*', '!*.model']` normalizes as to `['car', '!car.model']`.</li>
+     *  <li>In restrictive mode; if a glob is covered by another negated glob, it's removed.
+     *  Otherwise, it's kept.
+     *  <br />example: `['*', '!car.*', 'car.model']` normalizes to `['*', '!car']` if restrictive.</li>
      *  </ul>
      *  @name Notation.Glob.normalize
      *  @function
      *  @param {Array} globList - Notation globs array to be normalized.
      *  @param {Object} [options] - Normalize options.
-     *      @param {Boolean} [options.strict=false] - Whether to remove non-negated
-     *      items if they are covered by a negated. Note that, regardless of this
-     *      option, any item with exact negated will always be removed.
+     *      @param {Boolean} [options.restrictive=false] - Whether negated items strictly
+     *      remove every match. Note that, regardless of this option, if any item has an
+     *      exact negated version; non-negated is always removed.
      *      @param {Boolean} [options.sort=true] - Whether to logically sort the
      *      glob list.
      *  @returns {Array} -
@@ -570,18 +594,20 @@ class NotationGlob {
     static normalize(globList, options) {
         const { _inspect, _covers, _intersect } = NotationGlob;
         const opts = {
-            strict: false,
+            restrictive: false,
             sort: true,
             ...(options || {})
         };
 
-        const list = utils.ensureArray(globList)
+        const original = utils.ensureArray(globList);
+
+        const list = original
             // prevent mutation
             .concat()
             // move negated globs to top so that we inspect non-negated globs
             // against others first. when complete, we'll sort with our
             // .compare() function.
-            .sort(_negFirstSort)
+            .sort(opts.restrictive ? _negFirstSort : _negLastSort)
             // turning string array into inspect-obj array, so that we'll not
             // run _inspect multiple times in the inner loop. this also
             // pre-validates each glob.
@@ -596,28 +622,38 @@ class NotationGlob {
             return [g.glob];
         }
 
-        // flag to return an empty array, if true
+        // flag to return an empty array (in restrictive mode), if true.
         let negateAll = false;
+
         // we'll push keepers in this array
         let normalized = [];
-        // storage to keep negated intersections.
-        // using an object to prevent duplicates.
-        let negIntersections = {};
+        // we'll need to remember excluded globs, so that we can move to next
+        // item early.
+        const ignored = {};
 
-        const checkAddNegIntersection = (gA, gB) => {
-            const inter = _intersect(gA, gB);
-            if (!inter || list.indexOf(inter) >= 0) return;
-            negIntersections[inter] = inter;
+        // storage to keep intersections.
+        // using an object to prevent duplicates.
+        let intersections = {};
+
+        const checkAddIntersection = (gA, gB) => {
+            const inter = _intersect(gA, gB, opts.restrictive);
+            if (!inter) return;
+            // if the intersection result has an inverted version in the
+            // original list, don't add this.
+            const hasInverted = opts.restrictive ? false : original.indexOf(_invert(inter)) >= 0;
+            // also if intersection result is in the current list, don't add it.
+            if (list.indexOf(inter) >= 0 || hasInverted) return;
+            intersections[inter] = inter;
         };
 
         // iterate each glob by comparing it to remaining globs.
         utils.eachRight(list, (a, indexA) => {
 
-            // return empty if a negate-all is found (which itself is also
-            // redundant if single): '!*' or '![*]'
+            // if `strict` is enabled, return empty if a negate-all is found
+            // (which itself is also redundant if single): '!*' or '![*]'
             if (re.NEGATE_ALL.test(a.glob)) {
                 negateAll = true;
-                return false;
+                if (opts.restrictive) return false;
             }
 
             // flags
@@ -635,7 +671,7 @@ class NotationGlob {
             utils.eachRight(list, (b, indexB) => {
                 // don't inspect glob with itself
                 if (indexA === indexB) return; // move to next
-                // console.log(a.glob, 'vs', b.glob);
+                // console.log(indexA, a.glob, 'vs', b.glob);
 
                 // remove if duplicate
                 if (a.glob === b.glob) {
@@ -647,10 +683,14 @@ class NotationGlob {
                 // remove if positive has an exact negated (negated wins when
                 // normalized) e.g. ['*', 'a', '!a'] => ['*', '!a']
                 if (!a.isNegated && _isReverseOf(a, b)) {
-                    list.splice(indexA, 1);
+                    // list.splice(indexA, 1);
+                    ignored[a.glob] = true;
                     hasExactNeg = true;
                     return false; // break out
                 }
+
+                // if already excluded b, go on to next
+                if (ignored[b.glob]) return; // next
 
                 const coversB = _covers(a, b);
                 const coveredByB = coversB ? false : _covers(b, a);
@@ -659,7 +699,8 @@ class NotationGlob {
                         // if negated (a) covered by any other negated (b); remove (a)!
                         if (coveredByB) {
                             negCoveredByNeg = true;
-                            list.splice(indexA, 1);
+                            // list.splice(indexA, 1);
+                            ignored[a.glob] = true;
                             return false; // break out
                         }
                     } else {
@@ -668,8 +709,8 @@ class NotationGlob {
                         if (coveredByB) negCoveredByPos = true;
                         // try intersection if none covers the other and only
                         // one of them is negated.
-                        if (opts.strict && !coversB && !coveredByB) {
-                            checkAddNegIntersection(a.glob, b.glob);
+                        if (!coversB && !coveredByB) {
+                            checkAddIntersection(a.glob, b.glob);
                         }
                     }
                 } else {
@@ -677,23 +718,24 @@ class NotationGlob {
                         // if positive (a) covered by any negated (b); remove (a)!
                         if (coveredByB) {
                             posCoveredByNeg = true;
-                            if (opts.strict) {
-                                list.splice(indexA, 1);
+                            if (opts.restrictive) {
+                                // list.splice(indexA, 1);
+                                ignored[a.glob] = true;
                                 return false; // break out
                             }
                             return; // next
                         }
                         // try intersection if none covers the other and only
                         // one of them is negated.
-                        if (opts.strict && !coversB && !coveredByB) {
-                            checkAddNegIntersection(a.glob, b.glob);
+                        if (!coversB && !coveredByB) {
+                            checkAddIntersection(a.glob, b.glob);
                         }
                     } else {
                         if (coversB) posCoversPos = coversB;
                         // if positive (a) covered by any other positive (b); remove (a)!
                         if (coveredByB) {
                             posCoveredByPos = true;
-                            if (opts.strict) {
+                            if (opts.restrictive) {
                                 // list.splice(indexA, 1);
                                 return false; // break out
                             }
@@ -704,31 +746,31 @@ class NotationGlob {
             });
 
             // const keepNeg = (negCoversPos || negCoveredByPos) && !negCoveredByNeg;
-            const keepNeg = opts.strict
+            const keepNeg = opts.restrictive
                 ? (negCoversPos || negCoveredByPos) && negCoveredByNeg === false
                 : negCoveredByPos && negCoveredByNeg === false;
-            const keepPos = opts.strict
+            const keepPos = opts.restrictive
                 ? (posCoversPos || posCoveredByPos === false) && posCoveredByNeg === false
                 : posCoveredByNeg || posCoveredByPos === false;
             const keep = duplicate === false
                 && hasExactNeg === false
                 && (a.isNegated ? keepNeg : keepPos);
-            // console.log('keep', a.glob, '=', keep);
-            // if (!a.isNegated) {
-            //     console.log('posCoveredByNeg = ', posCoveredByNeg);
-            //     console.log('posCoveredByPos = ', posCoveredByPos);
-            // }
-            // console.log('-----------------');
 
-            if (keep) normalized.push(a.glob);
+            if (keep) {
+                normalized.push(a.glob);
+            } else {
+                // this is excluded from final (normalized) list, so mark as
+                // ignored (don't remove from "list" for now)
+                ignored[a.glob] = true;
+            }
         });
 
-        if (negateAll) return [];
+        if (opts.restrictive && negateAll) return [];
 
-        negIntersections = Object.keys(negIntersections);
-        if (negIntersections.length > 0) {
+        intersections = Object.keys(intersections);
+        if (intersections.length > 0) {
             // merge normalized list with intersections if any
-            normalized = normalized.concat(negIntersections);
+            normalized = normalized.concat(intersections);
             // we have new (intersection) items, so re-normalize
             return NotationGlob.normalize(normalized, opts);
         }
@@ -769,7 +811,7 @@ class NotationGlob {
             let posCoversPos = false;
             let negCoversPos = false;
 
-            const negIntersections = [];
+            const intersections = [];
 
             utils.eachRight(globsListB, globB => {
 
@@ -788,7 +830,7 @@ class NotationGlob {
                 if (notCovered) {
                     if (a.isNegated && b.isNegated) {
                         const inter = _intersect(a.glob, b.glob);
-                        if (inter && union.indexOf(inter) === -1) negIntersections.push(inter);
+                        if (inter && union.indexOf(inter) === -1) intersections.push(inter);
                     }
                     return; // next
                 }
@@ -819,8 +861,8 @@ class NotationGlob {
                 return;
             }
 
-            if (a.isNegated && posCoversNeg && !negCoversNeg && negIntersections.length > 0) {
-                union = union.concat(negIntersections); // eslint-disable-line no-param-reassign
+            if (a.isNegated && posCoversNeg && !negCoversNeg && intersections.length > 0) {
+                union = union.concat(intersections); // eslint-disable-line no-param-reassign
             }
 
         });
@@ -898,9 +940,16 @@ function _isReverseOf(a, b) {
         && a.absGlob === b.absGlob;
 }
 
+function _invert(glob) {
+    return glob[0] === '!' ? glob.slice(1) : '!' + glob;
+}
+
 const _rx = /^\s*!/;
 function _negFirstSort(a, b) {
     return _rx.test(a) ? -1 : (_rx.test(b) ? 1 : 0);
+}
+function _negLastSort(a, b) {
+    return _rx.test(a) ? 1 : (_rx.test(b) ? -1 : 0);
 }
 
 // --------------------------------
