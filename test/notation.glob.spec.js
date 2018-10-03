@@ -10,43 +10,6 @@ function shuffle(o) { // v1.0
     return o;
 }
 
-const o = {
-    name: 'onur',
-    age: 36,
-    account: {
-        id: 15,
-        tags: 20,
-        likes: ['movies', '3d', 'programming', 'music']
-    },
-    billing: {
-        account: {
-            id: 121,
-            credit: 300,
-            balance: -293
-        }
-    },
-    company: {
-        name: 'pilot co',
-        address: {
-            city: 'istanbul',
-            country: 'TR',
-            location: {
-                lat: 34.123123,
-                lon: 30.123123
-            }
-        },
-        account: {
-            id: 33,
-            taxNo: 12345
-        },
-        limited: true,
-        notDefined: undefined,
-        nuller: null,
-        zero: 0
-    }
-};
-
-
 describe('Notation.Glob', () => {
 
     const {
@@ -424,108 +387,291 @@ describe('Notation.Glob', () => {
         expect(_covers('!*.b', '["2"].b.c')).toEqual(true);
     });
 
-    test('.normalize()', () => {
-        expect(() => normalize(['*.[*]'])).toThrow();
-        expect(() => normalize(['*.[*]', 'x'])).toThrow();
-        expect(() => normalize(['*[*]*[*]'])).toThrow();
-        expect(() => normalize(['*[*'])).toThrow();
-        expect(() => normalize(['*', 'x-1'])).toThrow();
+    test('#intersect(), ._intersect()', () => {
+        const intersect = (globA, globB, restrictive = false) => create(globA).intersect(globB, restrictive);
+        // x.* ∩ *.y    » x.y
+        // x.*.* ∩ *.y  » x.y.*
+        // x.*.z ∩ *.y  » x.y.z
+        // x.y ∩ *.b    » (n/a)
+        // x.y ∩ a.*    » (n/a)
+        expect(_intersect('x.*', '*.z')).toEqual('x.z');
+        expect(_intersect('x.*', '*.z', true)).toEqual('x.z');
+        expect(_intersect('x.*.*', '*.y')).toEqual('x.y');
+        expect(_intersect('x.*.z', '!*.y')).toEqual('x.y.z'); // asuming y is object
+        expect(_intersect('!x.*.z', '*.y')).toEqual('!x.y.z'); // asuming y is object
+        expect(_intersect('x.*.z', '!*.y', true)).toEqual('!x.y.z'); // asuming y is object
+        expect(_intersect('x.y', '*.b')).toEqual(null);
+        expect(_intersect('x.y', 'a.*')).toEqual(null);
+        expect(_intersect('x.*.*.z.*', 'x.a.*.z.b')).toEqual('x.a.*.z.b');
+        expect(_intersect('!x.*.*.z.x', 'x.*.*.z.*')).toEqual('!x.*.*.z.x');
+        expect(_intersect('!x.*.*.z.x', 'x.*.*.z.*', true)).toEqual('!x.*.*.z.x');
+        expect(_intersect('x.*.*.z.x', 'x.*.*.z.y')).toEqual(null);
+        expect(_intersect('x.a.*.z.x', 'x.b.*.z.y')).toEqual(null);
+        expect(_intersect('x.*.*.z.*', 'x.*')).toEqual('x.*.*.z');
+        expect(_intersect('x.*.*', 'x.o')).toEqual('x.o');
+        expect(_intersect('x.*[*]', 'x.o')).toEqual('x.o');
+        expect(_intersect('!x.*.*', '!x.o')).toEqual('!x.o.*');
+        expect(_intersect('a.*', '!*.z')).toEqual('!a.z');
+        expect(_intersect('*.z', '!a.*')).toEqual('a.z');
+        expect(_intersect('*.z', '!a.*', true)).toEqual('!a.z');
+        expect(_intersect('*.z', 'a.*')).toEqual('a.z');
 
-        expect(normalize(['*'])).toEqual(['*']);
-        expect(normalize(['*.*'])).toEqual(['*']);
-        expect(normalize(['*.*.*'])).toEqual(['*']);
-        expect(normalize(['*[*].*'])).toEqual(['*']);
-        expect(normalize(['*[*].*[*]'])).toEqual(['*']);
-        expect(normalize(['*', '*'])).toEqual(['*']);
-        expect(normalize(['x', 'x'])).toEqual(['x']);
-        expect(normalize(['[*]'])).toEqual(['[*]']);
-        expect(normalize(['!*'])).toEqual([]);
-        expect(normalize(['![*]'])).toEqual([]);
-        expect(normalize(['*', '!*'])).toEqual([]);
-        expect(normalize(['!*', '*'])).toEqual([]);
-        expect(normalize(['!*', 'a'])).toEqual([]);
-        expect(normalize(['*', 'a'])).toEqual(['*']);
+        // instance method #intersect() also normalizes the glob
+        expect(intersect('x.*.*', '*.y')).toEqual('x.y');
+        expect(intersect('x.*.z', '!*.y')).toEqual('x.y.z');
+        expect(intersect('x.*.z', '!*.y', true)).toEqual('!x.y.z');
+        expect(intersect('x.y', '*.b')).toEqual(null);
+        expect(intersect('x.*[*]', 'x.o')).toEqual('x.o');
+        expect(intersect('!x.*.*', '!x.o')).toEqual('!x.o.*');
+        expect(intersect('a.*', '!*.z')).toEqual('!a.z');
+        expect(intersect('*.z', '!a.*')).toEqual('a.z');
+        expect(intersect('*.z', '!a.*', true)).toEqual('!a.z');
+        expect(intersect('*.z', 'a.*')).toEqual('a.z');
+    });
 
-        expect(normalize(['*', 'name', 'pwd', 'id'])).toEqual(['*']);
-        expect(normalize(['name', 'pwd', 'id'])).toEqual(['id', 'name', 'pwd']);
-        expect(normalize(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
-        expect(normalize(['user.*', '!user.pwd'])).toEqual(['user', '!user.pwd']);
-        expect(normalize(['*', '!*.id'])).toEqual(['*', '!*.id']);
+    test.only('.normalize() restrictive = false', () => {
+        const norm = globs => normalize(globs, { restrictive: false });
 
-        expect(normalize(['!*.id', 'x.id'])).toEqual([]);
-        expect(normalize(['name', '!*.id', 'x.id'])).toEqual(['name', '!name.id']);
+        expect(() => norm(['*.[*]'])).toThrow();
+        expect(() => norm(['*.[*]', 'x'])).toThrow();
+        expect(() => norm(['*[*]*[*]'])).toThrow();
+        expect(() => norm(['*[*'])).toThrow();
+        expect(() => norm(['*', 'x-1'])).toThrow();
 
-        expect(normalize(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
-        expect(normalize(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        expect(norm(['*'])).toEqual(['*']);
+        expect(norm(['*.*'])).toEqual(['*']);
+        expect(norm(['*.*.*'])).toEqual(['*']);
+        expect(norm(['*[*].*'])).toEqual(['*']);
+        expect(norm(['*[*].*[*]'])).toEqual(['*']);
+        expect(norm(['*', '*'])).toEqual(['*']);
+        expect(norm(['x', 'x'])).toEqual(['x']);
+        expect(norm(['[*]'])).toEqual(['[*]']);
+        expect(norm(['!*'])).toEqual([]);
+        expect(norm(['![*]'])).toEqual([]);
+        expect(norm(['*', '!*'])).toEqual([]);
+        expect(norm(['!*', '*'])).toEqual([]);
 
-        expect(normalize(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user', '!user.pwd']))
-            .toEqual(['*', '!id', '!car.*', '!user.pwd']);
+        expect(norm(['*', 'user', 'video'])).toEqual(['*']);
+        expect(norm(['!*', 'user', 'video'])).toEqual(['user', 'video']);
+        expect(norm(['user', 'video', '!*'])).toEqual(['user', 'video']); // order shouldn't matter
+        expect(norm(['!*', '!user', 'video'])).toEqual(['video']);
 
-        expect(normalize(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
-            .toEqual(['*', '!id', '!car.*', '!user.pwd']);
+        expect(norm(['user.*', '!user.id'])).toEqual(['user', '!user.id']);
+        expect(norm(['!user.*', 'user.id'])).toEqual(['user.id']); // more explicit wins
+        expect(norm(['!*.id', 'user.id'])).toEqual(['user.id']); // more explicit wins
 
-        expect(normalize(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+        expect(norm(['*', '!*.id', 'user.id'])).toEqual(['*', '!*.id', 'user.id']); // explicit remains
+        expect(norm(['user', '!*.id', 'user.id'])).toEqual(['user']); // explicit remains
 
-        expect(normalize(['!x.*.*', '*', 'x.o', 'id'])).toEqual(['*', '!x.*.*']);
+        expect(norm(['!user.id', 'user.id'])).toEqual([]); // exact negated wins
+        expect(norm(['*', '!user.*', 'user.id'])).toEqual(['*', '!user.*', 'user.id']);
+        expect(norm(['user', '!*.id'])).toEqual(['user', '!user.id']);
+        expect(norm(['*', 'user', '!*.id'])).toEqual(['*', '!*.id']);
 
-        expect(normalize(['!a.*', 'a'])).toEqual(['a', '!a.*']); // Notation#filter() would return {}
+        expect(norm(['user', '!*.id', 'car.id'])).toEqual(['user', 'car.id', '!user.id']); // explicit remains
+        expect(norm(['user', '!*.id', 'car.id', 'user.id'])).toEqual(['user', 'car.id']); // explicit remains
+
+        expect(norm(['!user.*.*', 'user.profile'])).toEqual(['user.profile', '!user.profile.*']);
+
+        expect(norm(['user', 'user.id', '!*.id', 'video.id'])).toEqual(['user', 'video.id']);
+        expect(norm(['*', 'user', 'user.id', '!*.id', 'video.id'])).toEqual(['*', '!*.id', 'user.id', 'video.id']);
+        expect(norm(['video.id', '!*.id', 'user', 'user.id', '*'])).toEqual(['*', '!*.id', 'user.id', 'video.id']); // re-ordered version of above
+        expect(norm(['*', 'user', '!*.id', 'video.id'])).toEqual(['*', '!*.id', 'video.id']);
+
+        expect(norm(['*', 'user.id', '!*.id', 'video.id'])).toEqual(['*', '!*.id', 'user.id', 'video.id']);
+
+        expect(norm(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        expect(norm(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+
+        expect(norm(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+
+        expect(norm(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', 'car.model', '!user.pwd']);
+
+        expect(norm(['*', 'car.model', '!car'])).toEqual(['*', '!car', 'car.model']);
+
+        expect(norm(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+
+        expect(norm(['!x.o.y', 'x.o'])).toEqual(['x.o', '!x.o.y']);
+        expect(norm(['!x.o.*', 'x.o'])).toEqual(['x.o', '!x.o.*']);
+        expect(norm(['!x.*.*', 'x.o'])).toEqual(['x.o', '!x.o.*']);
+        expect(norm(['!x.*.*', '*', 'x.o', 'id'])).toEqual(['*', '!x.*.*']);
+
+        expect(norm(['!a.*', 'a'])).toEqual(['a', '!a.*']); // Notation#filter() would return {}
         // should be treated same as above
-        expect(normalize(['!a[*]', 'a'])).toEqual(['a', '!a[*]']); // Notation#filter() would return []
-        expect(normalize(['*', 'a[*]', '!a[*]'])).toEqual(['*', '!a[*]']);
-        expect(normalize(['a[*]', '!a[*]'])).toEqual(['a', '!a[*]']);
-        expect(normalize(['a[*]', '!a'])).toEqual([]);
-        expect(normalize(['!a', 'a[*]'])).toEqual([]);
-        expect(normalize(['a[*]', '!a[0][1][2]'])).toEqual(['a', '!a[0][1][2]']);
-        expect(normalize(['a[4]', 'a[*]'])).toEqual(['a']);
-        expect(normalize(['a.*', 'a.*[*]'])).toEqual(['a']);
-        expect(normalize(['a.*', 'a.*[2]'])).toEqual(['a']);
+        expect(norm(['!a[*]', 'a'])).toEqual(['a', '!a[*]']); // Notation#filter() would return []
+        expect(norm(['*', 'a[*]', '!a[*]'])).toEqual(['*', '!a[*]']);
+        expect(norm(['a[*]', '!a[*]'])).toEqual(['a', '!a[*]']);
+        expect(norm(['a[*]', '!a'])).toEqual([]);
+        expect(norm(['!a', 'a[*]'])).toEqual([]);
+        expect(norm(['!a[*]', 'a[*]'])).toEqual(['a', '!a[*]']); // results in empty array
+        expect(norm(['!a[*]', 'a[1]'])).toEqual(['a[1]']);
+        expect(norm(['*', '!a[*]', 'a[1]'])).toEqual(['*', '!a[*]', 'a[1]']);
+        expect(norm(['a[*]', '!a[0][1][2]'])).toEqual(['a', '!a[0][1][2]']);
+        expect(norm(['a[4]', 'a[*]'])).toEqual(['a']);
+        expect(norm(['a.*', 'a.*[*]'])).toEqual(['a']);
+        expect(norm(['a.*', 'a.*[2]'])).toEqual(['a']);
+        expect(norm(['a.b', 'a.*[*]', 'a.c[2].*'])).toEqual(['a']);
 
-        expect(normalize(['a.b', 'a.*[*]', 'a.c[2].*'])).toEqual(['a']);
+        expect(norm(['!x', 'c[1]', '!c[*]', '*', '!d.e']))
+            .toEqual(['*', '!x', '!c[*]', 'c[1]', '!d.e']);
 
-        expect(normalize(['!x', 'c[1]', '!c[*]', '*', '!d.e']))
+        expect(norm(['!id', 'name', 'car.model', '!car.*', 'id', '!email']))
+            .toEqual(['name', 'car.model']);
+
+        expect(norm(['!y.*', 'x.x[1][0][*]', '*.x[*]', '!x.x[2][*]', 'a.b', 'c[*][1]']))
+            .toEqual(['*.x', 'a.b', 'c[*][1]', '!x.x[2][*]']);
+
+        expect(norm(['bar.name', '!bar.id', 'bar', 'foo.bar.baz', 'foo.qux', '!bar.id', 'bar.id', '!foo.*.baz']))
+            .toEqual(['bar', 'foo.qux', '!bar.id', 'foo.bar.baz', '!foo.qux.baz']);
+
+        expect(norm(['!*', 'a'])).toEqual(['a']);
+        expect(norm(['!*.b', 'a.b'])).toEqual(['a.b']);
+        expect(norm(['!a', 'a.b', 'x[*].*'])).toEqual(['x', 'a.b']);
+        expect(norm(['a.*', '!*.z'])).toEqual(['a', '!a.z']);
+        expect(norm(['a', '!a.z'])).toEqual(['a', '!a.z']);
+        expect(norm(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
+
+        expect(norm(['!a.x', 'a.x', '!a.*', '!*'])).toEqual([]);
+
+        expect(norm(['!a.*', '*.x'])).toEqual(['*.x']);
+        expect(norm(['!a.*', '*.x', '*.y'])).toEqual(['*.x', '*.y']);
+        expect(norm(['a', 'b.c', '!x', '*.y'])).toEqual(['a', '*.y', 'b.c']);
+        expect(norm(['a', 'b.c', '!x', '!*.y'])).toEqual(['a', 'b.c', '!a.y']);
+        expect(norm(['*', 'a', '!x', '!*.y'])).toEqual(['*', '!x', '!*.y']);
+        expect(norm(['!a.b.*', 'a.b.c'])).toEqual(['a.b.c']);
+        expect(norm(['!a.*', '!a.b.*', 'a.b.c'])).toEqual(['a.b.c']);
+
+        expect(norm(['!x.*', 'x.y'])).toEqual(['x.y']);
+        expect(norm(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
+        expect(norm(['a', 'x', '!a.z', '!x.y'])).toEqual(['a', 'x', '!a.z', '!x.y']);
+        expect(norm(['*', '!*.b', 'x.b', 'a'])).toEqual(['*', '!*.b', 'x.b']);
+        expect(norm(['*.x', '!*.*.b', 'x.a.b'])).toEqual(['*.x', '!*.x.b', 'x.a.b']);
+        expect(norm(['*', '*.x', '!*.*.b', 'x.a.b'])).toEqual(['*', '!*.*.b', 'x.a.b']);
+
+        expect(norm(['!*.b', 'a.b', 'x.b', 'y.b', 'z.b'])).toEqual(['a.b', 'x.b', 'y.b', 'z.b']);
+        expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c'])).toEqual(['x.b']);
+        expect(norm(['!x', 'x.y', 'x.y.z', 'o.y.z', '!*.y.z', '!a', 'a.b', 'q.b.c', '!*.b.c']))
+            .toEqual(['a.b', 'x.y', 'o.y.z', 'q.b.c', '!a.b.c']);
+        expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c', '!*.*.c', '!f', '!d'])).toEqual(['x.b']);
+        expect(norm(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b', '!x.b']);
+        expect(norm(['!x', '!x.b', '!x.b.c', '*.b', '!*.b'])).toEqual([]);
+        expect(norm(['!*.b', 'x.b', 'x.b.c', 'x'])).toEqual(['x']);
+        expect(norm(['!*.b', 'x.b', 'x.b.c', 'x', 'y.b.c'])).toEqual(['x', 'y.b.c']);
+
+        expect(norm(['*.b', '!a.b', '!x.b', '!y.b', '!z.b'])).toEqual(['*.b', '!a.b', '!x.b', '!y.b', '!z.b']);
+        expect(norm(['*.b', 'x', '!*.b', 'y'])).toEqual(['x', 'y', '!x.b', '!y.b']);
+
+    });
+
+    test.only('.normalize() restrictive = true', () => {
+        const norm = globs => normalize(globs, { restrictive: true });
+
+        expect(() => norm(['*.[*]'])).toThrow();
+        expect(() => norm(['*.[*]', 'x'])).toThrow();
+        expect(() => norm(['*[*]*[*]'])).toThrow();
+        expect(() => norm(['*[*'])).toThrow();
+        expect(() => norm(['*', 'x-1'])).toThrow();
+
+        expect(norm(['*'])).toEqual(['*']);
+        expect(norm(['*.*'])).toEqual(['*']);
+        expect(norm(['*.*.*'])).toEqual(['*']);
+        expect(norm(['*[*].*'])).toEqual(['*']);
+        expect(norm(['*[*].*[*]'])).toEqual(['*']);
+        expect(norm(['*', '*'])).toEqual(['*']);
+        expect(norm(['x', 'x'])).toEqual(['x']);
+        expect(norm(['[*]'])).toEqual(['[*]']);
+        expect(norm(['!*'])).toEqual([]);
+        expect(norm(['![*]'])).toEqual([]);
+        expect(norm(['*', '!*'])).toEqual([]);
+        expect(norm(['!*', '*'])).toEqual([]);
+
+        expect(norm(['*', 'user', 'video'])).toEqual(['*']);
+        expect(norm(['!*', 'user', 'video'])).toEqual([]);
+        expect(norm(['user', 'video', '!*'])).toEqual([]); // order shouldn't matter
+        expect(norm(['!*', '!user', 'video'])).toEqual([]);
+
+        expect(norm(['*', 'name', 'pwd', 'id'])).toEqual(['*']);
+        expect(norm(['name', 'pwd', 'id'])).toEqual(['id', 'name', 'pwd']);
+        expect(norm(['*', 'name', 'pwd', '!id'])).toEqual(['*', '!id']);
+        expect(norm(['user.*', '!user.pwd'])).toEqual(['user', '!user.pwd']);
+        expect(norm(['*', '!*.id'])).toEqual(['*', '!*.id']);
+
+        expect(norm(['!*.id', 'x.id'])).toEqual([]);
+        expect(norm(['user', '!*.id', 'x.id'])).toEqual(['user', '!user.id']);
+
+        expect(norm(['*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+        expect(norm(['*', 'user.*', '!user.pwd'])).toEqual(['*', '!user.pwd']);
+
+        expect(norm(['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'user', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', '!user.pwd']);
+
+        expect(norm(['*', '!id', 'car.model', '!car.*', '!user.pwd']))
+            .toEqual(['*', '!id', '!car.*', '!user.pwd']);
+
+        expect(norm(['name', 'pwd', '!id'])).toEqual(['name', 'pwd']);
+
+        expect(norm(['!x.*.*', '*', 'x.o', 'id'])).toEqual(['*', '!x.*.*']);
+
+        expect(norm(['!a.*', 'a'])).toEqual(['a', '!a.*']); // Notation#filter() would return {}
+        // should be treated same as above
+        expect(norm(['!a[*]', 'a'])).toEqual(['a', '!a[*]']); // Notation#filter() would return []
+        expect(norm(['*', 'a[*]', '!a[*]'])).toEqual(['*', '!a[*]']);
+        expect(norm(['a[*]', '!a[*]'])).toEqual(['a', '!a[*]']);
+        expect(norm(['a[*]', '!a'])).toEqual([]);
+        expect(norm(['!a', 'a[*]'])).toEqual([]);
+        expect(norm(['a[*]', '!a[0][1][2]'])).toEqual(['a', '!a[0][1][2]']);
+        expect(norm(['a[4]', 'a[*]'])).toEqual(['a']);
+        expect(norm(['a.*', 'a.*[*]'])).toEqual(['a']);
+        expect(norm(['a.*', 'a.*[2]'])).toEqual(['a']);
+
+        expect(norm(['a.b', 'a.*[*]', 'a.c[2].*'])).toEqual(['a']);
+
+        expect(norm(['!x', 'c[1]', '!c[*]', '*', '!d.e']))
             .toEqual(['*', '!x', '!c[*]', '!d.e']);
 
-        expect(normalize(['!id', 'name', 'car.model', '!car.*', 'id', '!email']))
+        expect(norm(['!id', 'name', 'car.model', '!car.*', 'id', '!email']))
             .toEqual(['name']);
 
-        expect(normalize(['!y.*', 'x.x[1][0][*]', '*.x[*]', '!x.x[2][*]', 'a.b', 'c[*][1]']))
+        expect(norm(['!y.*', 'x.x[1][0][*]', '*.x[*]', '!x.x[2][*]', 'a.b', 'c[*][1]']))
             .toEqual(['*.x', 'a.b', '!y.x', 'c[*][1]', '!x.x[2][*]']);
 
-        expect(normalize(['bar.name', '!bar.id', 'bar', 'foo.bar.baz', 'foo.qux', '!bar.id', 'bar.id', '!foo.*.baz']))
+        expect(norm(['bar.name', '!bar.id', 'bar', 'foo.bar.baz', 'foo.qux', '!bar.id', 'bar.id', '!foo.*.baz']))
             .toEqual(['bar', 'foo.qux', '!bar.id', '!foo.qux.baz']);
 
-        expect(normalize(['!*', 'a'])).toEqual([]);
-        expect(normalize(['!*.b', 'a.b'])).toEqual([]);
-        expect(normalize(['!a', 'a.b', 'x[*].*'])).toEqual(['x']);
-        expect(normalize(['a.*', '!*.z'])).toEqual(['a', '!a.z']);
-        expect(normalize(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
-        expect(normalize(['!a.x', 'a.x', '!a.*', '!*'])).toEqual([]);
-        expect(normalize(['!a.*', '*.x'])).toEqual(['*.x', '!a.x']);
-        expect(normalize(['!a.*', '*.x', '*.y'])).toEqual(['*.x', '*.y', '!a.x', '!a.y']);
-        expect(normalize(['a', 'b.c', '!x', '*.y'])).toEqual(['a', '*.y', 'b.c', '!x.y']);
-        expect(normalize(['a', 'b.c', '!x', '!*.y'])).toEqual(['a', 'b.c', '!a.y']);
-        expect(normalize(['*', 'a', '!x', '!*.y'])).toEqual(['*', '!x', '!*.y']);
-        expect(normalize(['!a.b.*', 'a.b.c'])).toEqual([]);
-        expect(normalize(['!a.*', '!a.b.*', 'a.b.c'])).toEqual([]);
+        expect(norm(['!*', 'a'])).toEqual([]);
+        expect(norm(['!*.b', 'a.b'])).toEqual([]);
+        expect(norm(['!a', 'a.b', 'x[*].*'])).toEqual(['x']);
+        expect(norm(['a.*', '!*.z'])).toEqual(['a', '!a.z']);
+        expect(norm(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
+        expect(norm(['!a.x', 'a.x', '!a.*', '!*'])).toEqual([]);
+        expect(norm(['!a.*', '*.x'])).toEqual(['*.x', '!a.x']);
+        expect(norm(['!a.*', '*.x', '*.y'])).toEqual(['*.x', '*.y', '!a.x', '!a.y']);
+        expect(norm(['a', 'b.c', '!x', '*.y'])).toEqual(['a', '*.y', 'b.c', '!x.y']);
+        expect(norm(['a', 'b.c', '!x', '!*.y'])).toEqual(['a', 'b.c', '!a.y']);
+        expect(norm(['*', 'a', '!x', '!*.y'])).toEqual(['*', '!x', '!*.y']);
+        expect(norm(['!a.b.*', 'a.b.c'])).toEqual([]);
+        expect(norm(['!a.*', '!a.b.*', 'a.b.c'])).toEqual([]);
 
-        expect(normalize(['!x.*', 'x.y'])).toEqual([]);
-        expect(normalize(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
-        expect(normalize(['a', 'x', '!a.z', '!x.y'])).toEqual(['a', 'x', '!a.z', '!x.y']);
-        expect(normalize(['*', '!*.b', 'x.b', 'a'])).toEqual(['*', '!*.b']);
-        expect(normalize(['*.x', '!*.*.b', 'x.a.b'])).toEqual(['*.x', '!*.x.b']);
-        expect(normalize(['*', '*.x', '!*.*.b', 'x.a.b'])).toEqual(['*', '!*.*.b']);
+        expect(norm(['!x.*', 'x.y'])).toEqual([]);
+        expect(norm(['x.*', '!*.y'])).toEqual(['x', '!x.y']);
+        expect(norm(['a', 'x', '!a.z', '!x.y'])).toEqual(['a', 'x', '!a.z', '!x.y']);
+        expect(norm(['*', '!*.b', 'x.b', 'a'])).toEqual(['*', '!*.b']);
+        expect(norm(['*.x', '!*.*.b', 'x.a.b'])).toEqual(['*.x', '!*.x.b']);
+        expect(norm(['*', '*.x', '!*.*.b', 'x.a.b'])).toEqual(['*', '!*.*.b']);
 
-        expect(normalize(['!*.b', 'a.b', 'x.b', 'y.b', 'z.b'])).toEqual([]);
-        expect(normalize(['!x', 'x.b', 'x.b.c', '!*.b.c'])).toEqual([]);
-        expect(normalize(['!x', 'x.y', 'x.y.z', 'o.y.z', '!*.y.z', '!a', 'a.b', 'q.b.c', '!*.b.c'])).toEqual([]);
-        expect(normalize(['!x', 'x.b', 'x.b.c', '!*.b.c', '!*.*.c', '!f', '!d'])).toEqual([]);
-        expect(normalize(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b', '!x.b']);
-        expect(normalize(['!x', '!x.b', '!x.b.c', '*.b', '!*.b'])).toEqual([]);
-        expect(normalize(['!*.b', 'x.b', 'x.b.c', 'x'])).toEqual(['x', '!x.b']);
-        expect(normalize(['!*.b', 'x.b', 'x.b.c', 'x', 'y.b.c'])).toEqual(['x', '!x.b']);
+        expect(norm(['!*.b', 'a.b', 'x.b', 'y.b', 'z.b'])).toEqual([]);
+        expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c'])).toEqual([]);
+        expect(norm(['!x', 'x.y', 'x.y.z', 'o.y.z', '!*.y.z', '!a', 'a.b', 'q.b.c', '!*.b.c'])).toEqual([]);
+        expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c', '!*.*.c', '!f', '!d'])).toEqual([]);
+        expect(norm(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b', '!x.b']);
+        expect(norm(['!x', '!x.b', '!x.b.c', '*.b', '!*.b'])).toEqual([]);
+        expect(norm(['!*.b', 'x.b', 'x.b.c', 'x'])).toEqual(['x', '!x.b']);
+        expect(norm(['!*.b', 'x.b', 'x.b.c', 'x', 'y.b.c'])).toEqual(['x', '!x.b']);
 
-        expect(normalize(['*.b', '!a.b', '!x.b', '!y.b', '!z.b'])).toEqual(['*.b', '!a.b', '!x.b', '!y.b', '!z.b']);
-        expect(normalize(['*.b', 'x', '!*.b', 'y'])).toEqual(['x', 'y', '!x.b', '!y.b']);
+        expect(norm(['*.b', '!a.b', '!x.b', '!y.b', '!z.b'])).toEqual(['*.b', '!a.b', '!x.b', '!y.b', '!z.b']);
+        expect(norm(['*.b', 'x', '!*.b', 'y'])).toEqual(['x', 'y', '!x.b', '!y.b']);
     });
 
     test('.normalize() » issue #7', () => {
@@ -543,41 +689,6 @@ describe('Notation.Glob', () => {
             '!password',
             '!password_reset_code'
         ]);
-    });
-
-    test('#intersect(), ._intersect()', () => {
-        const intersect = (globA, globB) => create(globA).intersect(globB);
-        // x.* ∩ *.y    » x.y
-        // x.*.* ∩ *.y  » x.y.*
-        // x.*.z ∩ *.y  » x.y.z
-        // x.y ∩ *.b    » (n/a)
-        // x.y ∩ a.*    » (n/a)
-        expect(_intersect('x.*', '*.z')).toEqual('x.z');
-        expect(_intersect('x.*.*', '*.y')).toEqual('x.y.*');
-        expect(_intersect('x.*.z', '!*.y')).toEqual('!x.y.z'); // asuming y is object
-        expect(_intersect('x.y', '*.b')).toEqual(null);
-        expect(_intersect('x.y', 'a.*')).toEqual(null);
-        expect(_intersect('x.*.*.z.*', 'x.a.*.z.b')).toEqual('x.a.*.z.b');
-        expect(_intersect('!x.*.*.z.x', 'x.*.*.z.*')).toEqual('!x.*.*.z.x');
-        expect(_intersect('x.*.*.z.x', 'x.*.*.z.y')).toEqual(null);
-        expect(_intersect('x.a.*.z.x', 'x.b.*.z.y')).toEqual(null);
-        expect(_intersect('x.*.*.z.*', 'x.*')).toEqual('x.*.*.z.*');
-        expect(_intersect('x.*.*', 'x.o')).toEqual('x.o.*');
-        expect(_intersect('x.*[*]', 'x.o')).toEqual('x.o[*]');
-        expect(_intersect('!x.*.*', '!x.o')).toEqual('!x.o.*');
-        expect(_intersect('a.*', '!*.z')).toEqual('!a.z');
-        expect(_intersect('*.z', '!a.*')).toEqual('!a.z');
-        expect(_intersect('*.z', 'a.*')).toEqual('a.z');
-
-        // instance method #intersect() also normalizes the glob
-        expect(intersect('x.*.*', '*.y')).toEqual('x.y');
-        expect(intersect('x.*.z', '!*.y')).toEqual('!x.y.z');
-        expect(intersect('x.y', '*.b')).toEqual(null);
-        expect(intersect('x.*[*]', 'x.o')).toEqual('x.o');
-        expect(intersect('!x.*.*', '!x.o')).toEqual('!x.o.*');
-        expect(intersect('a.*', '!*.z')).toEqual('!a.z');
-        expect(intersect('*.z', '!a.*')).toEqual('!a.z');
-        expect(intersect('*.z', 'a.*')).toEqual('a.z');
     });
 
     test('.union() #1', () => {
