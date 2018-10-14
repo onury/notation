@@ -32,6 +32,11 @@ const reVALIDATOR = new RegExp(
     , 'i'
 );
 
+const DEFAULT_OPTS = Object.freeze({
+    strict: false,
+    preserveIndices: false
+});
+
 /**
  *  Notation.js for Node and Browser.
  *
@@ -56,18 +61,19 @@ class Notation {
      *  notated. Can either be an array or object. If omitted, defaults to an
      *  empty object.
      *  @param {Object} [options] - Notation options.
-     *      @param {Boolean} [options.strict=false] - Whether to throw when a
-     *      notation path does not exist on the source. (Note that `.inspect()`
-     *      and `.inspectRemove()` methods are exceptions). It's recommended to
-     *      set this to `true` and prevent silent failures if you're working
-     *      with sensitive data. Regardless of `strict` option, it will always
-     *      throw on invalid notation syntax or other crucial failures.
-     *      @param {Boolean} [options.preserveIndices=true] - Indicates whether to
+     *      @param {Boolean} [options.strict=false] - Whether to throw either when
+     *      a notation path does not exist on the source (i.e. `#get()` and `#remove()`
+     *      methods); or notation path exists but overwriting is disabled (i.e.
+     *      `#set()` method). (Note that `.inspect()` and `.inspectRemove()` methods
+     *      are exceptions). It's recommended to set this to `true` and prevent silent
+     *      failures if you're working with sensitive data. Regardless of `strict` option,
+     *      it will always throw on invalid notation syntax or other crucial failures.
+     *      @param {Boolean} [options.preserveIndices=false] - Indicates whether to
      *      preserve the indices of the parent array when an item is to be removed.
-     *      By default indices are preserved by emptying the item (sparse array),
-     *      instead of removing the item completely at the index. When this is
-     *      disabled; you should mind the shifted indices when you remove an
-     *      item via `.remove()`, `.inspectRemove()` or `.filter()`.
+     *      By default, the item is removed completely at the implied index instead of
+     *      preserving indices by emptying the item (sparse array). So you should mind
+     *      the shifted indices when you remove an item via `.remove()`, `.inspectRemove()`
+     *      or `.filter()`.
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -103,8 +109,8 @@ class Notation {
 
     set options(value) {
         this._options = {
-            strict: false,
-            preserveIndices: true,
+            ...DEFAULT_OPTS,
+            ...(this._options || {}),
             ...(value || {})
         };
     }
@@ -218,7 +224,6 @@ class Notation {
         this.each((notation, key, value) => {
             o[notation] = value;
         });
-        // return o;
         this._source = o;
         return this;
     }
@@ -272,23 +277,34 @@ class Notation {
     inspect(notation) {
         let level = this._source;
         let result = { has: false, value: undefined };
+        let parent;
         Notation.eachNote(notation, (levelNotation, note) => {
-            const normalizedNote = utils.normalizeNote(note);
-            if (utils.hasOwn(level, normalizedNote)) {
-                level = level[normalizedNote];
+            const lastNoteNormalized = utils.normalizeNote(note);
+            if (utils.hasOwn(level, lastNoteNormalized)) {
+                level = level[lastNoteNormalized];
+                parent = level;
                 result = {
                     notation,
                     has: true,
                     value: level,
                     lastNote: note,
-                    lastNoteNormalized: normalizedNote
+                    lastNoteNormalized
                 };
             } else {
                 // level = undefined;
-                result = { notation, has: false };
+                result = {
+                    notation,
+                    has: false,
+                    lastNote: note,
+                    lastNoteNormalized
+                };
                 return false; // break out
             }
         });
+
+        if (parent === undefined || (result.has && parent === result.value)) parent = this._source;
+        result.parentIsArray = utils.isArray(parent);
+
         return result;
     }
 
@@ -365,7 +381,13 @@ class Notation {
                 delete parent[lastNoteNormalized];
             }
         } else {
-            result = { notation, has: false };
+            result = {
+                notation,
+                has: false,
+                lastNote,
+                lastNoteNormalized,
+                parentIsArray
+            };
         }
 
         return result;
@@ -416,9 +438,16 @@ class Notation {
      *
      *  @example
      *  Notation.create({ car: { brand: "Dodge" } }).get("car.brand"); // "Dodge"
-     *  Notation.create({ car: {} }).get("car.model"); // undefined
      *  Notation.create({ car: {} }).get("car.model", "Challenger"); // "Challenger"
      *  Notation.create({ car: { model: undefined } }).get("car.model", "Challenger"); // undefined
+     *
+     *  @example <caption>get value when strict option is enabled</caption>
+     *  // strict option defaults to false
+     *  Notation.create({ car: {} }).get("car.model"); // undefined
+     *  Notation.create({ car: {} }, { strict: false }).get("car.model"); // undefined
+     *  // below will throw bec. strict = true, car.model does not exist
+     *  // and no default value is given.
+     *  Notation.create({ car: {} }, { strict: true }).get("car.model");
      */
     get(notation, defaultValue) {
         const result = this.inspect(notation);
@@ -428,22 +457,25 @@ class Notation {
             const msg = result.parentIsArray ? ERR.NO_INDEX : ERR.NO_PROP;
             throw new NotationError(msg + `'${notation}'`);
         }
-        return !result.has ? defaultValue : result.value;
+        return result.has ? result.value : defaultValue;
     }
 
     /**
-     *  Sets the value of the corresponding property at the given
-     *  notation. If the property does not exist, it will be created
-     *  and nested at the calculated level. If it exists; its value
-     *  will be overwritten by default.
+     *  Sets the value of the corresponding property at the given notation. If
+     *  the property does not exist, it will be created and nested at the
+     *  calculated level. If it exists; its value will be overwritten by
+     *  default.
      *  @chainable
      *
      *  @param {String} notation - The notation string to be processed.
      *  @param {*} value - The value to be set for the notated property.
-     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property
-     *  if exists.
+     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property if
+     *  exists.
      *
      *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *
+     *  @throws {NotationError} - If strict notation is enabled, `overwrite`
+     *  option is set to `false` and attempted to overwrite an existing value.
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", year: 1970 } };
@@ -477,7 +509,11 @@ class Notation {
                 // check if we're at the last level
                 if (currentIsLast) {
                     // if overwrite is set, assign the value.
-                    if (overwrite) level[nCurrentNote] = value;
+                    if (overwrite) {
+                        level[nCurrentNote] = value;
+                    } else if (this.options.strict) {
+                        throw new NotationError('Cannot overwrite an existing value in strict mode.');
+                    }
                 } else {
                     // if not, just re-reference the current level.
                     level = level[nCurrentNote];
@@ -1038,18 +1074,34 @@ class Notation {
      *  Basically constructs a new `Notation` instance.
      *  @chainable
      *  @param {Object|Array} [source={}] - The source collection to be notated.
+     *  @param {Object} [options] - Notation options.
+     *      @param {Boolean} [options.strict=false] - Whether to throw when a
+     *      notation path does not exist on the source. (Note that `.inspect()`
+     *      and `.inspectRemove()` methods are exceptions). It's recommended to
+     *      set this to `true` and prevent silent failures if you're working
+     *      with sensitive data. Regardless of `strict` option, it will always
+     *      throw on invalid notation syntax or other crucial failures.
+     *      @param {Boolean} [options.preserveIndices=true] - Indicates whether to
+     *      preserve the indices of the parent array when an item is to be removed.
+     *      By default indices are preserved by emptying the item (sparse array),
+     *      instead of removing the item completely at the index. When this is
+     *      disabled; you should mind the shifted indices when you remove an
+     *      item via `.remove()`, `.inspectRemove()` or `.filter()`.
+     *
      *  @returns {Notation} - The created instance.
      *
      *  @example
-     *  const notation = Notation.create(obj);
-     *  // equivalent to:
-     *  const notation = new Notation(obj);
+     *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
+     *  const notation = Notation.create(obj); // equivalent to new Notation(obj)
+     *  notation.get('car.model')   // » "Charger"
+     *  notation.remove('car.model').set('car.color', 'red').value
+     *  // » { car: { brand: "Dodge", year: 1970, color: "red" } }
      */
-    static create(source) {
+    static create(source, options) {
         if (arguments.length === 0) {
             return new Notation({});
         }
-        return new Notation(source);
+        return new Notation(source, options);
     }
 
     /**
