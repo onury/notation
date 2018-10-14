@@ -169,6 +169,13 @@ describe('Notation', () => {
         expect(create({}).set('x', 'value').value.x).toEqual('value');
         expect(create([]).set('[0]', 'value').value[0]).toEqual('value');
 
+        let nota = create();
+        expect(nota.options.strict).toEqual(false);
+        expect(nota.options.preserveIndices).toEqual(false);
+        nota = create([], { strict: true, preserveIndices: true });
+        expect(nota.options.strict).toEqual(true);
+        expect(nota.options.preserveIndices).toEqual(true);
+
         expect(() => create(undefined)).toThrow();
         expect(() => create(null)).toThrow();
         expect(() => create(1)).toThrow();
@@ -280,7 +287,7 @@ describe('Notation', () => {
 
     test('#inspect(), #inspectRemove()', () => {
         const obj = { a: { b: [{ c: 1 }] }, d: undefined, e: null, f: [1, false, 2] };
-        const nota = create(obj);
+        let nota = create(obj);
 
         let ins = nota.inspect('a.b[0]');
         expect(ins.notation).toEqual('a.b[0]');
@@ -310,8 +317,24 @@ describe('Notation', () => {
         expect(ins.value).toEqual(false);
         expect(ins.lastNote).toEqual('[1]');
         expect(ins.lastNoteNormalized).toEqual(1);
-        expect(obj.f[1]).toBeUndefined();
-        expect(obj.f.length).toEqual(3);
+        expect(obj.f[1]).toEqual(2);
+        expect(obj.f.length).toEqual(2);
+
+        let arr = ['a', 'b', 'c'];
+        nota = create(arr, { preserveIndices: false });
+        expect(nota.options.preserveIndices).toEqual(false);
+        ins = nota.inspectRemove('[1]');
+        expect(ins.value).toEqual('b');
+        expect(arr[1]).toEqual('c');
+        expect(arr.length).toEqual(2);
+
+        arr = ['a', 'b', 'c'];
+        nota = create(arr, { preserveIndices: true });
+        expect(nota.options.preserveIndices).toEqual(true);
+        ins = nota.inspectRemove('[1]');
+        expect(ins.value).toEqual('b');
+        expect(arr[1]).toEqual(undefined);
+        expect(arr.length).toEqual(3);
     });
 
     test('#has(), #hasDefined()', () => {
@@ -360,6 +383,12 @@ describe('Notation', () => {
         expect(nota.get('arr[1].x.y')).toEqual(4);
         expect(nota.get('arr[2].x')).toEqual({ y: 6 });
         expect(nota.get('arr[2].x.y')).toEqual(6);
+
+        nota = new Notation({ x: { y: [1] } }, { strict: true });
+        expect(nota.get('x.y')).toEqual([1]);
+        expect(nota.get('x.z', 'default')).toEqual('default');
+        expect(() => nota.get('x.y[1]')).toThrow('Implied index');
+        expect(() => nota.get('x.z')).toThrow('Implied property');
     });
 
     test('#set()', () => {
@@ -408,10 +437,16 @@ describe('Notation', () => {
         // array.
         expect(() => create([]).set('x', true)).toThrow();
         expect(() => create({ x: { y: [] } }).set('x.y.z', true)).toThrow();
+
+        nota = new Notation({ x: { y: [1] } }, { strict: false });
+        expect(nota.set('x.y', 'value').value.x.y).toEqual('value');
+        expect(nota.set('x.y', 'overwrite', false).value.x.y).toEqual('value');
+        nota = new Notation({ x: { y: [1] } }, { strict: true });
+        expect(() => nota.set('x.y', 'value', false)).toThrow('existing value');
     });
 
-    test.only('#remove()', () => {
-        const nota = new Notation(_.cloneDeep(o));
+    test('#remove()', () => {
+        let nota = new Notation(_.cloneDeep(o));
         const obj = nota.value;
         // console.log('before', o);
         expect(obj.age).toBeDefined();
@@ -437,7 +472,12 @@ describe('Notation', () => {
         expect(create({ x: { y: 1 } }).remove('x').value).toEqual({});
         expect(create({ x: { y: 1 } }).remove('x.y').value).toEqual({ x: {} });
         expect(() => create({ x: { y: 1 } }).remove('x.*').value).toThrow();
-        expect(create([{ x: 1 }]).remove('[0]').value).toEqual([undefined]);
+        expect(create([{ x: 1 }]).remove('[0]').value).toEqual([]);
+
+        nota = new Notation({ x: { y: [1], z: 5 } }, { strict: true });
+        expect(nota.remove('x.z').value.z).toBeUndefined();
+        expect(() => nota.remove('x.y[2]')).toThrow('Implied index');
+        expect(() => nota.remove('x.z')).toThrow('Implied property');
     });
 
     test('#clone()', () => {
