@@ -20,7 +20,7 @@ This is a big major release with lots of **improvements** and some **breaking ch
 
 ### Changed
 - **Breaking** » (For browser) dropped support for IE 10 and below. 
-- **Breaking** » (For Node) dropped support for Node v4 (might still work). 
+- **Breaking** » (For Node) dropped support for Node v8 and below (might still work though). 
 - **Breaking** » `Notation` is a **named export** now. (Meaning require or import within curly brackets. e.g. `const { Notation } = require('notation')`) 
 - **Breaking** » Now that **bracket-notation** support is added, there will be some changed behaviour. Notation that has an array value is now also notated with a bracket-index for each item, instead of only the key (array name) itself. e.g. `prop1.prop2[3]`
 - **Breaking** » Improved notation and glob validation. Now we strictly validate each note of a notation against **EcmaScript variable syntax**, array index notation and object bracket notation. For example:
