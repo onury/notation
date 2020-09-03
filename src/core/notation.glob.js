@@ -1093,10 +1093,20 @@ function _invert(glob) {
 
 const _rx = /^\s*!/;
 function _negFirstSort(a, b) {
-    return _rx.test(a) ? -1 : (_rx.test(b) ? 1 : 0);
+    const negA = _rx.test(a);
+    const negB = _rx.test(b);
+    if (negA && negB) return a.length >= b.length ? 1 : -1;
+    if (negA) return -1;
+    if (negB) return 1;
+    return 0;
 }
 function _negLastSort(a, b) {
-    return _rx.test(a) ? 1 : (_rx.test(b) ? -1 : 0);
+    const negA = _rx.test(a);
+    const negB = _rx.test(b);
+    if (negA && negB) return a.length >= b.length ? 1 : -1;
+    if (negA) return 1;
+    if (negB) return -1;
+    return 0;
 }
 
 // --------------------------------
