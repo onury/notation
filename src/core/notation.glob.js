@@ -726,6 +726,8 @@ class Glob {
                 if (indexA === indexB) return; // move to next
                 // console.log(indexA, a.glob, 'vs', b.glob);
 
+                // e.g. ['x.y.z', '[1].x', 'c'] » impossible! the tested source
+                // object cannot be both an array and an object.
                 if (a.isArrayGlob !== b.isArrayGlob) {
                     throw new NotationError(`Integrity failed. Cannot have both object and array notations for root level: ${JSON.stringify(original)}`);
                 }
