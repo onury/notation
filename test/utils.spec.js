@@ -1,21 +1,16 @@
 /* eslint camelcase:0, consistent-return:0, max-lines-per-function:0 */
 
-import utils from '../src/utils';
+import { utils } from '../src/utils';
 
 describe('utils', () => {
 
-    test('.isObject(), .isArray(), .ensureArray()', () => {
-        expect(utils.isObject({})).toEqual(true);
-        expect(utils.isObject([])).toEqual(false);
-        expect(utils.isObject(null)).toEqual(false);
-        expect(utils.isObject(undefined)).toEqual(false);
-        expect(utils.isObject(new Error())).toEqual(false);
-        expect(utils.isObject(new Date())).toEqual(false);
-
-        expect(utils.isArray([])).toEqual(true);
-        expect(utils.isArray({})).toEqual(false);
-        expect(utils.isArray(null)).toEqual(false);
-        expect(utils.isArray(undefined)).toEqual(false);
+    test('.type(), .ensureArray()', () => {
+        expect(utils.type({})).toEqual('object');
+        expect(utils.type([])).toEqual('array');
+        expect(utils.type(null)).toEqual('null');
+        expect(utils.type(undefined)).toEqual('undefined');
+        expect(utils.type(new Error())).toEqual('error');
+        expect(utils.type(new Date())).toEqual('date');
 
         expect(utils.ensureArray(null)).toEqual([]);
         expect(utils.ensureArray(undefined)).toEqual([]);
@@ -26,7 +21,7 @@ describe('utils', () => {
         expect(utils.ensureArray('str')).toEqual(['str']);
     });
 
-    test('.hasOwn(), .deepCopy()', () => {
+    test('.hasOwn(), .cloneDeep()', () => {
         expect(utils.hasOwn({ a: 1 }, 'a')).toEqual(true);
         expect(utils.hasOwn({ a: 1 }, 'b')).toEqual(false);
         expect(utils.hasOwn({}, 'hasOwnProperty')).toEqual(false);
@@ -38,13 +33,13 @@ describe('utils', () => {
         expect(utils.hasOwn(['0', 'a'], '0')).toEqual(false);
         expect(utils.hasOwn(['2', 'a'], 2)).toEqual(false);
 
-        expect(utils.deepCopy({})).toEqual({});
-        expect(utils.deepCopy(null)).toEqual(null);
+        expect(utils.cloneDeep({})).toEqual({});
+        expect(utils.cloneDeep(null)).toEqual(null);
         const o = { a: { b: { c: [1, { o: 2 }, 3] }, x: true, y: { d: 'e', f: 4 } }, z: 5 };
-        let copy = utils.deepCopy(o);
+        let copy = utils.cloneDeep(o);
         expect(copy).toEqual(o);
         expect(copy === o).toEqual(false);
-        copy = utils.deepCopy([o]);
+        copy = utils.cloneDeep([o]);
         expect(copy).toEqual([o]);
         expect(copy === [o]).toEqual(false);
     });
@@ -159,26 +154,44 @@ describe('utils', () => {
         expect(() => utils.normalizeNote('')).toThrow();
     });
 
-    test('.normalizeGlobStr()', () => {
-        expect(utils.normalizeGlobStr(' * ')).toEqual('*');
-        expect(utils.normalizeGlobStr(' *.x ')).toEqual('*.x');
-        expect(utils.normalizeGlobStr(' [*] ')).toEqual('[*]');
-        expect(utils.normalizeGlobStr(' [*].x ')).toEqual('[*].x');
-        expect(utils.normalizeGlobStr('[*].x')).toEqual('[*].x');
-        expect(utils.normalizeGlobStr(' *[*] ')).toEqual('*');
-        expect(utils.normalizeGlobStr('*[*] ')).toEqual('*');
-        expect(utils.normalizeGlobStr(' [*].*')).toEqual('[*]');
-        expect(utils.normalizeGlobStr('[*].*')).toEqual('[*]');
-        expect(utils.normalizeGlobStr('*[*].*[*]')).toEqual('*');
-        expect(utils.normalizeGlobStr('*[*].*[*].*')).toEqual('*');
-        expect(utils.normalizeGlobStr('!*[*].*[*].*')).toEqual('!*[*].*[*].*');
-        expect(utils.normalizeGlobStr('*[*].*[*].*.x')).toEqual('*[*].*[*].*.x');
-        expect(utils.normalizeGlobStr('x.*[*].*[*].*')).toEqual('x');
-        expect(utils.normalizeGlobStr('[*].*[*].*')).toEqual('[*]');
-        expect(utils.normalizeGlobStr('[*].*[*].*[*]')).toEqual('[*]');
-        expect(utils.normalizeGlobStr('![*].*[*].*[*]')).toEqual('![*].*[*].*[*]');
-        expect(utils.normalizeGlobStr('[*].*[*].*[*].x')).toEqual('[*].*[*].*[*].x');
-        expect(utils.normalizeGlobStr('x[*].*[*].*[*]')).toEqual('x');
+    test('.removeTrailingWildcards()', () => {
+        expect(utils.removeTrailingWildcards('*[*]')).toEqual('*');
+        expect(utils.removeTrailingWildcards('[*].*')).toEqual('[*]');
+        expect(utils.removeTrailingWildcards('*[*].*[*]')).toEqual('*');
+        expect(utils.removeTrailingWildcards('*[*].*[*].*')).toEqual('*');
+        expect(utils.removeTrailingWildcards('!*[*].*[*].*')).toEqual('!*[*].*[*].*');
+        expect(utils.removeTrailingWildcards('*[*].*[*].*.x')).toEqual('*[*].*[*].*.x');
+        expect(utils.removeTrailingWildcards('x.*[*].*[*].*')).toEqual('x');
+        expect(utils.removeTrailingWildcards('[*].*[*].*')).toEqual('[*]');
+        expect(utils.removeTrailingWildcards('[*].*[*].*[*]')).toEqual('[*]');
+        expect(utils.removeTrailingWildcards('![*].*[*].*[*]')).toEqual('![*].*[*].*[*]');
+        expect(utils.removeTrailingWildcards('[*].*[*].*[*].x')).toEqual('[*].*[*].*[*].x');
+        expect(utils.removeTrailingWildcards('x[*].*[*].*[*]')).toEqual('x');
+    });
+
+    test('.cloneDeep()', () => {
+        const now = Date.now();
+        const original = {
+            str: 'string',
+            num: 1,
+            bool: true,
+            date: new Date(now),
+            regexp: /abc/i,
+            arr: [1, { a: 2, b: 3 }, [4, 5]],
+            obj: { x: 1, y: { z: true } },
+            nil: null,
+            undef: undefined
+        };
+        let cloned = utils.cloneDeep(original);
+        expect(original).toEqual(cloned);
+
+        // symbols are unique, so won't be exact but values should match
+        original.symbol = Symbol('test');
+        cloned = utils.cloneDeep(original);
+        expect(original.symbol.valueOf()).toEqual(cloned.symbol.valueOf());
+
+        original.circular = original;
+        expect(() => utils.cloneDeep(original)).toThrow();
     });
 
 });
