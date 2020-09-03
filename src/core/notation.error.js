@@ -4,15 +4,14 @@ const setProto = Object.setPrototypeOf;
 
 /**
  *  Error class specific to `Notation`.
- *  @name Notation.Error
- *  @memberof! Notation
  *  @class
- *
+ *  @name Notation.Error
  */
 class NotationError extends Error {
 
     /**
      *  Initializes a new `Notation.Error` instance.
+     *  @hideconstructor
      *  @constructs Notation.Error
      *  @param {String} message - The error message.
      */
@@ -46,4 +45,4 @@ class NotationError extends Error {
 
 }
 
-export default NotationError;
+export { NotationError };
