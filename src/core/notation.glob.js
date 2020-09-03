@@ -1,8 +1,8 @@
 /* eslint no-use-before-define:0, consistent-return:0, max-statements:0 */
 
-import Notation from './notation';
-import NotationError from './notation.error';
-import utils from '../utils';
+import { Notation } from './notation';
+import { NotationError } from './notation.error';
+import { utils } from '../utils';
 
 // http://www.linfo.org/wildcard.html
 // http://en.wikipedia.org/wiki/Glob_%28programming%29
@@ -42,8 +42,8 @@ const ERR_INVALID = 'Invalid glob notation: ';
  *  You can use {@link http://www.linfo.org/wildcard.html|wildcard} stars `*`
  *  and negate the notation by prepending a bang `!`. A star will include all
  *  the properties at that level and a negated notation will be excluded.
- *  @name Notation.Glob
- *  @memberof! Notation
+ *  @name Glob
+ *  @memberof Notation
  *  @class
  *
  *  @example
@@ -60,7 +60,7 @@ const ERR_INVALID = 'Invalid glob notation: ';
  *  var glob = new Notation.Glob('billing.account.*');
  *  glob.test('billing.account.id'); // true
  */
-class NotationGlob {
+class Glob {
 
     /**
      *  Constructs a `Notation.Glob` object with the given glob string.
@@ -70,18 +70,14 @@ class NotationGlob {
      *  @throws {NotationError} - If given notation glob is invalid.
      */
     constructor(glob) {
-        const ins = NotationGlob._inspect(glob);
-        const notes = NotationGlob.split(ins.absGlob, true);
-        const last = notes[notes.length - 1];
-        const parent = notes.length > 1
-            ? ins.absGlob.slice(0, -last.length).replace(/\.$/, '')
-            : null;
+        const ins = Glob._inspect(glob);
+        const notes = Glob.split(ins.absGlob);
         this._ = {
             ...ins,
-            regexp: NotationGlob.toRegExp(ins.absGlob),
             notes,
-            last,
-            parent
+            // below props will be set at first getter call
+            parent: undefined, // don't set to null
+            regexp: undefined
         };
     }
 
@@ -124,11 +120,14 @@ class NotationGlob {
      *  @type {RegExp}
      */
     get regexp() {
+        // setting on first call instead of in constructor, for performance
+        // optimization.
+        this._.regexp = this._.regexp || Glob.toRegExp(this.absGlob);
         return this._.regexp;
     }
 
     /**
-     *  List of notes/levels of this glob notation. Note that trailing,
+     *  List of notes (levels) of this glob notation. Note that trailing,
      *  redundant wildcards are removed from the original glob notation.
      *  @name Notation.Glob#notes
      *  @alias Notation.Glob#levels
@@ -164,7 +163,7 @@ class NotationGlob {
      *  @type {String}
      */
     get last() {
-        return this._.last;
+        return this.notes[this.notes.length - 1];
     }
 
     /**
@@ -175,11 +174,19 @@ class NotationGlob {
      *  @type {String}
      *
      *  @example
-     *  NotationGlob.create('first.second.*').parent; // "first.second"
-     *  NotationGlob.create('*.x.*').parent; // "*"
-     *  NotationGlob.create('*').parent; // null (no parent)
+     *  const glob = Notation.Glob.create;
+     *  glob('first.second.*').parent;   // "first.second"
+     *  glob('*.x.*').parent;            // "*" ("*.x.*" normalizes to "*.x")
+     *  glob('*').parent;                // null (no parent)
      */
     get parent() {
+        // setting on first call instead of in constructor, for performance
+        // optimization.
+        if (this._.parent === undefined) {
+            this._.parent = this.notes.length > 1
+                ? this.absGlob.slice(0, -this.last.length).replace(/\.$/, '')
+                : null;
+        }
         return this._.parent;
     }
 
@@ -207,14 +214,17 @@ class NotationGlob {
             throw new NotationError(`Invalid notation: '${notation}'`);
         }
         // return this.regexp.test(notation);
-        return NotationGlob._covers(this, notation);
+        return Glob._covers(this, notation);
     }
 
     /**
      *  Specifies whether this glob notation can represent (or cover) the given
      *  glob notation. Note that negation prefix is ignored, if any.
-     *  @param {String|Array|NotationGlob} glob  Glob notation string, glob
-     *  notes array or a `NotationGlob` instance.
+     *  @name Notation.Glob#covers
+     *  @function
+     *
+     *  @param {String|Array|Glob} glob  Glob notation string, glob
+     *  notes array or a `Notation.Glob` instance.
      *  @returns {Boolean} -
      *
      *  @example
@@ -223,24 +233,28 @@ class NotationGlob {
      *  glob('x[*].y').covers('x[*]')  // false
      */
     covers(glob) {
-        return NotationGlob._covers(this, glob);
+        return Glob._covers(this, glob);
     }
 
     /**
      *  Gets the intersection of this and the given glob notations. When
      *  restrictive, if any one of them is negated, the outcome is negated.
      *  Otherwise, only if both of them are negated, the outcome is negated.
+     *  @name Notation.Glob#intersect
+     *  @function
+     *
      *  @param {String} glob - Second glob to be used.
      *  @param {Boolean} [restrictive=false] - Whether the intersection should
      *  be negated when one of the globs is negated.
      *  @returns {String} - Intersection notation if any; otherwise `null`.
+     *
      *  @example
      *  const glob = Notation.Glob.create;
      *  glob('x.*').intersect('!*.y')         // 'x.y'
      *  glob('x.*').intersect('!*.y', true)   // '!x.y'
      */
     intersect(glob, restrictive = false) {
-        return NotationGlob._intersect(this.glob, glob, restrictive);
+        return Glob._intersect(this.glob, glob, restrictive);
     }
 
     // --------------------------------
@@ -248,12 +262,13 @@ class NotationGlob {
     // --------------------------------
 
     /**
-     *  Basically constructs a new `NotationGlob` instance
+     *  Basically constructs a new `Notation.Glob` instance
      *  with the given glob string.
      *  @name Notation.Glob.create
      *  @function
+     *
      *  @param {String} glob - The source notation glob.
-     *  @returns {NotationGlob} -
+     *  @returns {Glob} -
      *
      *  @example
      *  const glob = Notation.Glob.create(strGlob);
@@ -261,7 +276,7 @@ class NotationGlob {
      *  const glob = new Notation.Glob(strGlob);
      */
     static create(glob) {
-        return new NotationGlob(glob);
+        return new Glob(glob);
     }
 
     // Created test at: https://regex101.com/r/tJ7yI9/4
@@ -279,16 +294,15 @@ class NotationGlob {
 
     /**
      *  Specifies whether the given glob notation includes any valid wildcards
-     *  or negation bang prefix.
+     *  (`*`) or negation bang prefix (`!`).
+     *  @name Notation.Glob.hasMagic
+     *  @function
+     *
      *  @param {String} glob - Glob notation to be checked.
      *  @returns {Boolean} -
      */
     static hasMagic(glob) {
-        console.log('NotationGlob.isValid', glob, NotationGlob.isValid(glob));
-        console.log('re.WILDCARDS.test', glob, re.WILDCARDS.test(glob));
-        console.log('glob[0] === !', glob, glob[0] === '!');
-        return NotationGlob.isValid(glob)
-            && (re.WILDCARDS.test(glob) || glob[0] === '!');
+        return Glob.isValid(glob) && (re.WILDCARDS.test(glob) || glob[0] === '!');
     }
 
     /**
@@ -296,6 +310,7 @@ class NotationGlob {
      *  Note that the bang `!` prefix will be ignored if the given glob is negated.
      *  @name Notation.Glob.toRegExp
      *  @function
+     *
      *  @param {String} glob - Glob notation to be converted.
      *
      *  @returns {RegExp} - A `RegExp` instance from the glob.
@@ -303,7 +318,7 @@ class NotationGlob {
      *  @throws {NotationError} - If given notation glob is invalid.
      */
     static toRegExp(glob) {
-        if (!NotationGlob.isValid(glob)) {
+        if (!Glob.isValid(glob)) {
             throw new NotationError(`${ERR_INVALID} '${glob}'`);
         }
 
@@ -328,37 +343,47 @@ class NotationGlob {
     /**
      *  Specifies whether first glob notation can represent (or cover) the
      *  second.
+     *  @name Notation.Glob._covers
+     *  @function
      *  @private
-     *  @param {String|Object|NotationGlob} globA  Source glob notation string or inspection
-     *  result object or `NotationGlob` instance.
-     *  @param {String|Object|NotationGlob} globB  Glob notation string or inspection result
-     *  object or `NotationGlob` instance.
+     *
+     *  @param {String|Object|Glob} globA  Source glob notation string
+     *  or inspection result object or `Notation.Glob` instance.
+     *  @param {String|Object|Glob} globB  Glob notation string or
+     *  inspection result object or `Notation.Glob` instance.
+     *  @param {Boolean} [match=false]  Check whether notes match instead of
+     *  `globA` covers `globB`.
      *  @returns {Boolean} -
      *
      *  @example
-     *  const { covers } = NotationGlob;
-     *  covers('*.y', 'x.y')      // true
-     *  covers('x[*].y', 'x[*]')  // false
+     *  const { covers } = Notation.Glob;
+     *  covers('*.y', 'x.y')        // true
+     *  covers('x.y', '*.y')        // false
+     *  covers('x.y', '*.y', true)  // true
+     *  covers('x[*].y', 'x[*]')    // false
      */
-    static _covers(globA, globB) {
+    static _covers(globA, globB, match = false) {
         const a = typeof globA === 'string'
-            ? new NotationGlob(globA)
-            : globA; // assume (globA instanceof NotationGlob || utils.type(globA) === 'object')
+            ? new Glob(globA)
+            : globA; // assume (globA instanceof Notation.Glob || utils.type(globA) === 'object')
 
         const b = typeof globB === 'string'
-            ? new NotationGlob(globB)
+            ? new Glob(globB)
             : globB;
 
-        const notesA = a.notes || NotationGlob.split(a.absGlob);
-        const notesB = b.notes || NotationGlob.split(b.absGlob);
+        const notesA = a.notes || Glob.split(a.absGlob);
+        const notesB = b.notes || Glob.split(b.absGlob);
 
-        // !x.*.* does not cover !x.* or x.* bec. !x.*.* !== x.* !== x
-        // x.*.* covers x.* bec. x.*.* === x.* === x
-        if (a.isNegated && notesA.length > notesB.length) return false;
+        if (!match) {
+            // !x.*.* does not cover !x.* or x.* bec. !x.*.* ≠ x.* ≠ x
+            // x.*.* covers x.* bec. x.*.* = x.* = x
+            if (a.isNegated && notesA.length > notesB.length) return false;
+        }
 
         let covers = true;
+        const fn = match ? _matchesNote : _coversNote;
         for (let i = 0; i < notesA.length; i++) {
-            if (!_coversNote(notesA[i], notesB[i])) {
+            if (!fn(notesA[i], notesB[i])) {
                 covers = false;
                 break;
             }
@@ -370,7 +395,10 @@ class NotationGlob {
      *  Gets the intersection notation of two glob notations. When restrictive,
      *  if any one of them is negated, the outcome is negated. Otherwise, only
      *  if both of them are negated, the outcome is negated.
+     *  @name Notation.Glob._intersect
+     *  @function
      *  @private
+     *
      *  @param {String} globA - First glob to be used.
      *  @param {String} globB - Second glob to be used.
      *  @param {Boolean} [restrictive=false] - Whether the intersection should
@@ -385,8 +413,8 @@ class NotationGlob {
         //     ? (globA[0] === '!' || globB[0] === '!' ? '!' : '')
         //     : (globA[0] === '!' && globB[0] === '!' ? '!' : '');
 
-        const notesA = NotationGlob.split(globA, true);
-        const notesB = NotationGlob.split(globB, true);
+        const notesA = Glob.split(globA, true);
+        const notesB = Glob.split(globB, true);
 
         let bang;
         if (restrictive) {
@@ -443,40 +471,54 @@ class NotationGlob {
 
     /**
      *  Undocumented.
+     *  @name Notation.Glob._inspect
+     *  @function
      *  @private
+     *
      *  @param {String} glob -
      *  @returns {Object} -
      */
     static _inspect(glob) {
-        const g = utils.normalizeGlobStr(glob);
-        if (!NotationGlob.isValid(g)) {
+        let g = glob.trim();
+        if (!Glob.isValid(g)) {
             throw new NotationError(`${ERR_INVALID} '${glob}'`);
         }
         const isNegated = g[0] === '!';
+        // trailing wildcards are only redundant if not negated
+        if (!isNegated) g = utils.removeTrailingWildcards(g);
+        const absGlob = isNegated ? g.slice(1) : g;
         return {
             glob: g,
+            absGlob,
             isNegated,
-            absGlob: isNegated ? g.slice(1) : g
+            // e.g. [*] or [1] are array globs. ["1"] is not.
+            isArrayGlob: (/^\[[^'"]/).test(absGlob)
         };
     }
 
     /**
      *  Splits the given glob notation string into its notes (levels). Note that
      *  this will exclude the `!` negation prefix, if it exists.
+     *  @name Notation.Glob.split
+     *  @function
+     *
      *  @param {String} glob  Glob notation string to be splitted.
      *  @param {String} [normalize=false]  Whether to remove trailing, redundant
      *  wildcards.
      *  @returns {Array} - A string array of glob notes (levels).
      *  @throws {NotationError} - If given glob notation is invalid.
+     *
      *  @example
-     *  Notation.Glob.split('*.list[2].value')  // ['*', 'list', '[2]', 'value']
+     *  Notation.Glob.split('*.list[2].prop')  // ['*', 'list', '[2]', 'prop']
      *  // you can get the same result from the .notes property of a Notation.Glob instance.
      */
     static split(glob, normalize = false) {
-        if (!NotationGlob.isValid(glob)) {
+        if (!Glob.isValid(glob)) {
             throw new NotationError(`${ERR_INVALID} '${glob}'`);
         }
-        const g = normalize ? utils.normalizeGlobStr(glob) : glob;
+        const neg = glob[0] === '!';
+        // trailing wildcards are redundant only when not negated
+        const g = !neg && normalize ? utils.removeTrailingWildcards(glob) : glob;
         return g.replace(/^!/, '').match(reMATCHER);
     }
 
@@ -515,15 +557,17 @@ class NotationGlob {
         // or both are wildcard e.g. `*` or `[*]`
         if (globA === globB || (re.WILDCARD.test(globA) && re.WILDCARD.test(globB))) return 0;
 
-        const { split, _inspect } = NotationGlob;
-
-        const a = _inspect(globA);
-        const b = _inspect(globB);
-        const notesA = split(a.absGlob);
-        const notesB = split(b.absGlob);
+        const a = new Glob(globA);
+        const b = new Glob(globB);
 
         // Check depth (number of levels)
-        if (notesA.length === notesB.length) {
+        if (a.notes.length === b.notes.length) {
+            // check and compare if these are globs that represent items in the
+            // "same" array. if not, this will return 0.
+            const aIdxCompare = _compareArrayItemGlobs(a, b);
+            // we'll only continue comparing if 0 is returned
+            if (aIdxCompare !== 0) return aIdxCompare;
+
             // count wildcards
             const wildCountA = (a.absGlob.match(re.WILDCARDS) || []).length;
             const wildCountB = (b.absGlob.match(re.WILDCARDS) || []).length;
@@ -537,31 +581,30 @@ class NotationGlob {
             return wildCountA > wildCountB ? -1 : 1;
         }
 
-        return notesA.length < notesB.length ? -1 : 1;
+        return a.notes.length < b.notes.length ? -1 : 1;
     }
 
     /**
      *  Sorts the notation globs in the given array by their priorities. Loose
      *  globs (with stars especially closer to beginning of the glob string);
      *  globs representing the parent/root of the compared property glob come
-     *  first. Verbose/detailed/exact globs come last. (`* < *abc < abc`).
+     *  first. Verbose/detailed/exact globs come last. (`* < *.y < x.y`).
      *
      *  For instance; `store.address` comes before `store.address.street`. For
      *  cases such as `prop.id` vs `!prop.id` which represent the same property;
      *  the negated glob wins (comes last).
      *  @name Notation.Glob.sort
      *  @function
+     *
      *  @param {Array} globList - The notation globs array to be sorted. The
      *  passed array reference is modified.
-     *  @returns {Array} -
+     *  @returns {Array} - Logically sorted globs array.
      *
      *  @example
-     *  const { sort } = Notation.Glob;
-     *  sort(['!prop.*.name', 'prop.*', 'prop.id'])
-     *  // ['prop.*', 'prop.id', '!prop.*.name'];
+     *  Notation.Glob.sort(['!prop.*.name', 'prop.*', 'prop.id']) // ['prop.*', 'prop.id', '!prop.*.name'];
      */
     static sort(globList) {
-        return globList.sort(NotationGlob.compare);
+        return globList.sort(Glob.compare);
     }
 
     /**
@@ -588,6 +631,7 @@ class NotationGlob {
      *  </ul>
      *  @name Notation.Glob.normalize
      *  @function
+     *
      *  @param {Array} globList - Notation globs array to be normalized.
      *  @param {Boolean} [restrictive=false] - Whether negated items strictly
      *  remove every match. Note that, regardless of this option, if any item has an
@@ -598,14 +642,17 @@ class NotationGlob {
      *
      *  @example
      *  const { normalize } = Notation.Glob;
-     *  const globs = ['*', '!id', 'name', '!car.model', 'car.*', 'id', 'name'];
-     *  normalize(globs)                            // ['*', '!id', '!car.model']
-     *  normalize(['!*.id', 'user.*', 'company'])   // ['company', 'user', '!company.id', '!user.id']
+     *  normalize(['*', '!id', 'name', '!car.model', 'car.*', 'id', 'name']); // ['*', '!id', '!car.model']
+     *  normalize(['!*.id', 'user.*', 'company']); // ['company', 'user', '!company.id', '!user.id']
+     *  normalize(['*', 'car.model', '!car.*']); // ["*", "!car.*", "car.model"]
+     *  // restrictive normalize:
+     *  normalize(['*', 'car.model', '!car.*'], true); // ["*", "!car.*"]
      */
     static normalize(globList, restrictive = false) {
-        const { _inspect, _covers, _intersect } = NotationGlob;
+        const { _inspect, _covers, _intersect } = Glob;
 
         const original = utils.ensureArray(globList);
+        if (original.length === 0) return [];
 
         const list = original
             // prevent mutation
@@ -678,6 +725,10 @@ class NotationGlob {
                 // don't inspect glob with itself
                 if (indexA === indexB) return; // move to next
                 // console.log(indexA, a.glob, 'vs', b.glob);
+
+                if (a.isArrayGlob !== b.isArrayGlob) {
+                    throw new NotationError(`Integrity failed. Cannot have both object and array notations for root level: ${JSON.stringify(original)}`);
+                }
 
                 // remove if duplicate
                 if (a.glob === b.glob) {
@@ -778,24 +829,28 @@ class NotationGlob {
             // merge normalized list with intersections if any
             normalized = normalized.concat(intersections);
             // we have new (intersection) items, so re-normalize
-            return NotationGlob.normalize(normalized, restrictive);
+            return Glob.normalize(normalized, restrictive);
         }
 
-        return NotationGlob.sort(normalized);
+        return Glob.sort(normalized);
     }
 
     /**
      *  Undocumented. See `.union()`
+     *  @name Notation.Glob._compareUnion
+     *  @function
      *  @private
+     *
      *  @param {Array} globsListA -
      *  @param {Array} globsListB -
+     *  @param {Boolean} restrictive -
      *  @param {Array} union -
      *  @returns {Array} -
      */
     static _compareUnion(globsListA, globsListB, restrictive, union = []) {
-        const { _covers } = NotationGlob;
+        const { _covers } = Glob;
 
-        const { _inspect, _intersect } = NotationGlob;
+        const { _inspect, _intersect } = Glob;
 
         utils.eachRight(globsListA, globA => {
             if (union.indexOf(globA) >= 0) return; // next
@@ -866,7 +921,7 @@ class NotationGlob {
             }
 
             if (a.isNegated && posCoversNeg && !negCoversNeg && intersections.length > 0) {
-                union = union.concat(intersections); // eslint-disable-line no-param-reassign
+                union = union.concat(intersections);
             }
 
         });
@@ -912,7 +967,7 @@ class NotationGlob {
      *  union(a, b)     // ['car', 'user', '*.age', '!car.date', '!user.id']
      */
     static union(globsA, globsB, restrictive) {
-        const { normalize, _compareUnion } = NotationGlob;
+        const { normalize, _compareUnion } = Glob;
 
         const listA = normalize(globsA, restrictive);
         const listB = normalize(globsB, restrictive);
@@ -932,13 +987,94 @@ class NotationGlob {
 // HELPERS
 // --------------------------------
 
+// used by static _covers
 function _coversNote(a, b) {
-    if (a === b) return true;
-    // if (!a && re.WILDCARD.test(b)) return false;
-    const bIsArr = b ? re.ARRAY_GLOB_NOTE.test(b) : null;
-    if (a === '*' && (!b || !bIsArr)) return true;
-    if (a === '[*]' && (!b || bIsArr)) return true;
-    return false;
+    if (!a || !b) return false; // glob e.g.: [2] does not cover [2][1]
+    const bIsArr = re.ARRAY_GLOB_NOTE.test(b);
+    // obj-wildcard a will cover b if not array
+    if (a === '*') return !bIsArr;
+    // arr-wildcard a will cover b if array
+    if (a === '[*]') return bIsArr;
+    // seems, a is not wildcard so,
+    // if b is wildcard (obj or arr) won't be covered
+    if (re.WILDCARD.test(b)) return false;
+    // normalize both and check for equality
+    // e.g. x.y and x['y'] are the same
+    return utils.normalizeNote(a) === utils.normalizeNote(b);
+}
+// function _coversNote(a, b) {
+//     if (!a || !b) return false; // glob e.g.: [2] does not cover [2][1]
+//     a = utils.normalizeNote(a, true);
+//     b = utils.normalizeNote(b, true);
+//     if (a === b) return true;
+//     const bIsArr = re.ARRAY_GLOB_NOTE.test(b);
+//     return (a === '*' && !bIsArr) || (a === '[*]' && bIsArr);
+// }
+// used by static _covers
+function _matchesNote(a, b) {
+    if (!a || !b) return true; // glob e.g.: [2][1] matches [2] and vice-versa.
+    return _coversNote(a, b) || _coversNote(b, a);
+}
+
+// used by _compareArrayItemGlobs() for getting a numeric index from array note.
+// we'll use these indexes to sort higher to lower, as removing order; to
+// prevent shifted indexes.
+function _idxVal(note) {
+    // we return -1 for wildcard bec. we need it to come last
+
+    // below will never execute when called from _compareArrayItemGlobs
+    /* istanbul ignore next */
+    // if (note === '[*]') return -1;
+
+    // e.g. '[2]' » 2
+    return parseInt(note.replace(/[[\]]/, ''), 10);
+}
+
+function _compArrIdx(lastA, lastB) {
+    const iA = _idxVal(lastA);
+    const iB = _idxVal(lastB);
+
+    // below will never execute when called from _compareArrayItemGlobs
+    /* istanbul ignore next */
+    // if (iA === iB) return 0;
+
+    return iA > iB ? -1 : 1;
+}
+
+// when we remove items from an array (via e.g. filtering), we first need to
+// remove the item with the greater index so indexes of other items (that are to
+// be removed from the same array) do not shift. so below is for comparing 2
+// globs if they represent 2 items from the same array.
+
+// example items from same array: ![*][2] ![0][*] ![0][1] ![0][3]
+// should be sorted as ![0][3] ![*][2] ![0][1] ![0][*]
+function _compareArrayItemGlobs(a, b) {
+    const reANote = re.ARRAY_GLOB_NOTE;
+    // both should be negated
+    if (!a.isNegated
+            || !b.isNegated
+            // should be same length (since we're comparing for items in same
+            // array)
+            || a.notes.length !== b.notes.length
+            // last notes should be array brackets
+            || !reANote.test(a.last)
+            || !reANote.test(b.last)
+            // last notes should be different to compare
+            || a.last === b.last
+    ) return 0;
+
+    // negated !..[*] should come last
+    if (a.last === '[*]') return 1; // b is first
+    if (b.last === '[*]') return -1; // a is first
+
+    if (a.parent && b.parent) {
+        const { _covers } = Glob;
+        if (_covers(a.parent, b.parent, true)) {
+            return _compArrIdx(a.last, b.last);
+        }
+        return 0;
+    }
+    return _compArrIdx(a.last, b.last);
 }
 
 // x vs !x.*.*      » false
@@ -967,4 +1103,4 @@ function _negLastSort(a, b) {
 // EXPORT
 // --------------------------------
 
-export default NotationGlob;
+export { Glob };
