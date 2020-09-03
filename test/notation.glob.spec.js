@@ -1,8 +1,6 @@
 /* eslint camelcase:0, max-lines-per-function:0, consistent-return:0, max-statements:0, max-lines:0, max-len:0 */
 
-import Notation from '../src/core/notation';
-import NotationGlob from '../src/core/notation.glob';
-const _ = require('lodash');
+import { Notation } from '../src/core/notation';
 
 // shuffle array
 function shuffle(o) { // v1.0
@@ -69,9 +67,9 @@ describe('Notation.Glob', () => {
     });
 
     test('.hasMagic()', () => {
-        // expect(hasMagic('x.y.z')).toEqual(false);
-        // expect(hasMagic('!x.y.z')).toEqual(true);
-        // expect(hasMagic('x.y.!z')).toEqual(false); // invalid
+        expect(hasMagic('x.y.z')).toEqual(false);
+        expect(hasMagic('!x.y.z')).toEqual(true);
+        expect(hasMagic('x.y.!z')).toEqual(false); // invalid
         expect(hasMagic('[*]')).toEqual(true);
         expect(hasMagic('x.*')).toEqual(true);
         expect(hasMagic('[*].x.y.*')).toEqual(true);
@@ -154,6 +152,20 @@ describe('Notation.Glob', () => {
         expect(compare('a.*.c[1]', 'a.*.c[*]')).toEqual(1);
         expect(compare('a.*.c[1]', 'a.*.c')).toEqual(1);
         expect(compare('a.*.c', 'a.*.c[*]')).toEqual(0);
+
+        expect(compare('[0]', '[0]')).toEqual(0);
+        expect(compare('[1][0]', '[2][0]')).toEqual(-1);
+        expect(compare('[1]', '[0]')).toEqual(1);
+        expect(compare('![1]', '[0]')).toEqual(1);
+        // higher (last item) index should come first both if negeated. ![*]
+        // should come last.
+        expect(compare('![*]', '![0]')).toEqual(1);
+        expect(compare('![1]', '![0]')).toEqual(-1);
+        expect(compare('![1][*]', '![1][1]')).toEqual(1);
+        expect(compare('![*][1]', '![0][2]')).toEqual(1);
+        expect(compare('![*][1]', '![1][1]')).toEqual(-1);
+        // not same array items, regular sorting
+        expect(compare('![1][0]', '![2][0]')).toEqual(-1);
     });
 
     test('.sort()', () => {
@@ -196,9 +208,9 @@ describe('Notation.Glob', () => {
             '!account.id',
             '!prop.name',
             '*.*.credit',
-            '!*.account.*',
             '*.account.id',
             'x[*].foo',
+            '!*.account.*',
             '!foo.*.boo',
             '!prop.*.name',
             'bill.account.credit',
@@ -228,7 +240,7 @@ describe('Notation.Glob', () => {
             expect(indexOf('bill.account.*')).toBeLessThan(indexOf('bill.account.credit'));
             expect(indexOf('bill.*.*')).toBeLessThan(indexOf('bill.account.*'));
             expect(indexOf('*.account.*')).toBeLessThan(indexOf('*.account.id'));
-            expect(indexOf('!*.account.*')).toBeLessThan(indexOf('*.account.id'));
+            expect(indexOf('*.account.id')).toBeLessThan(indexOf('!*.account.*'));
             expect(indexOf('*.account.id')).toBeLessThan(indexOf('!*.account.*.name'));
             expect(indexOf('*.*.credit')).toBeLessThan(indexOf('!*.account.*.name'));
             expect(indexOf('*.*.credit')).toBeLessThan(indexOf('bill.account.credit'));
@@ -266,22 +278,22 @@ describe('Notation.Glob', () => {
     });
 
     test('constructor, .create()', () => {
-        const g1 = new NotationGlob('!*.x[1].*');
-        expect(g1 instanceof NotationGlob).toEqual(true);
+        const g1 = new Notation.Glob('!*.x[1].*');
+        expect(g1 instanceof Notation.Glob).toEqual(true);
         expect(g1.glob).toEqual('!*.x[1].*');
         expect(g1.absGlob).toEqual('*.x[1].*');
         expect(g1.isNegated).toEqual(true);
         expect(g1.regexp.source).toEqual('^' + reVAR + '\\.x\\[1\\]\\.' + reVAR + reREST);
         expect(g1.regexp.flags).toEqual('i');
-        expect(g1.notes).toEqual(['*', 'x', '[1]']);
-        expect(g1.levels).toEqual(['*', 'x', '[1]']); // alias
+        expect(g1.notes).toEqual(['*', 'x', '[1]', '*']);
+        expect(g1.levels).toEqual(['*', 'x', '[1]', '*']); // alias
         expect(g1.test('y')).toEqual(false);
-        expect(g1.test('y.x[1]')).toEqual(true);
+        expect(g1.test('y.x[1]')).toEqual(false);
         expect(g1.test('y.x[1].z')).toEqual(true);
         expect(g1.test('y.z')).toEqual(false);
 
         const g2 = create('[*].x');
-        expect(g2 instanceof NotationGlob).toEqual(true);
+        expect(g2 instanceof Notation.Glob).toEqual(true);
         expect(g2.glob).toEqual('[*].x');
         expect(g2.absGlob).toEqual('[*].x');
         expect(g2.isNegated).toEqual(false);
@@ -296,9 +308,9 @@ describe('Notation.Glob', () => {
         expect(() => g2.test('*')).toThrow();
         expect(() => g2.test('[1].*')).toThrow();
 
-        expect(() => new NotationGlob()).toThrow();
-        expect(() => new NotationGlob('')).toThrow();
-        expect(() => new NotationGlob('%.s')).toThrow();
+        expect(() => new Notation.Glob()).toThrow();
+        expect(() => new Notation.Glob('')).toThrow();
+        expect(() => new Notation.Glob('%.s')).toThrow();
         expect(() => create()).toThrow();
         expect(() => create('')).toThrow();
         expect(() => create('s .')).toThrow();
@@ -381,7 +393,7 @@ describe('Notation.Glob', () => {
         expect(cov('a.*', 'a.b[1]')).toEqual(true);
         expect(cov('a.*', 'a.b[*].c')).toEqual(true);
         expect(cov('a.b[*].c', 'a.b[*]')).toEqual(false);
-        expect(cov('a.b[*]', new NotationGlob('a.b[2].c'))).toEqual(true);
+        expect(cov('a.b[*]', new Notation.Glob('a.b[2].c'))).toEqual(true);
         expect(cov('[1].*.b[*].*.d', '[1].a.b[3].c.d')).toEqual(true);
         expect(cov('[1].*.b[*].*.d', '[2].a.b')).toEqual(false);
 
@@ -391,7 +403,7 @@ describe('Notation.Glob', () => {
         expect(_covers('a.b.c', 'a.b.c')).toEqual(true);
         expect(_covers('*', '*.b')).toEqual(true);
         expect(_covers('a.b[*].c', 'a.b[*]')).toEqual(false);
-        expect(_covers('a.b[*]', new NotationGlob('a.b[2].c'))).toEqual(true);
+        expect(_covers('a.b[*]', new Notation.Glob('a.b[2].c'))).toEqual(true);
         expect(_covers('!*', 'b')).toEqual(true);
         expect(_covers('b', '!*')).toEqual(false);
         expect(_covers('!*.b', 'a.b')).toEqual(true);
@@ -399,6 +411,31 @@ describe('Notation.Glob', () => {
         expect(_covers('!*.b', 'y.b.c')).toEqual(true);
         expect(_covers('![*].b', '[2].b.c')).toEqual(true);
         expect(_covers('!*.b', '["2"].b.c')).toEqual(true);
+
+        // check for 'match' instead of 'covers' (3rd arg set to `true`)
+        expect(_covers('[*]', '[0]', true)).toEqual(true);
+        expect(_covers('[0]', '[*]', true)).toEqual(true);
+        expect(_covers('[*]', '[1]', true)).toEqual(true);
+        expect(_covers('[1]', '[*]', true)).toEqual(true);
+        expect(_covers('[0][*]', '[*][1]', true)).toEqual(true);
+        expect(_covers('[*][1]', '[0][*]', true)).toEqual(true);
+        expect(_covers('[*][*]', '[*][*]', true)).toEqual(true);
+        expect(_covers('[4][*]', '[*][*][1]', true)).toEqual(true);
+
+        // object key bracket notation
+        expect(_covers("*['x']", 'a.x')).toEqual(true);
+        expect(_covers('*["x"]', 'a.x')).toEqual(true);
+        expect(_covers('*["x"]', 'a["x"]')).toEqual(true);
+        expect(_covers("*['x']", "a['x']")).toEqual(true);
+        expect(_covers('*', "['x']")).toEqual(true);
+        expect(_covers('*', '["x.y"]')).toEqual(true);
+        expect(_covers('[*]', "['x']")).toEqual(false);
+        expect(_covers('*', "['*']")).toEqual(true);
+        expect(_covers('*', "['[*]']")).toEqual(true);
+        expect(_covers('[*]', "['[*]']")).toEqual(false);
+        expect(_covers('x.y', "['x.y']")).toEqual(false);
+        expect(_covers('x.y', "x['y']")).toEqual(true);
+        expect(_covers('x.y', 'x[\'y\']')).toEqual(true);
     });
 
     test('#intersect(), ._intersect()', () => {
@@ -468,6 +505,13 @@ describe('Notation.Glob', () => {
         expect(norm(['![*]'])).toEqual([]);
         expect(norm(['*', '!*'])).toEqual([]);
         expect(norm(['!*', '*'])).toEqual([]);
+
+        // higher arr index item globs should come first, if negated bec. they
+        // should be removed first to prevent shifted indexes.
+        expect(norm(['[*]', '![*][1]', '![0][1]', '![0][2]', '![1][2][0]']))
+            .toEqual(['[*]', '![0][2]', '![*][1]', '![1][2][0]']);
+        expect(norm(['![1][0][3]', '[*]', '![1][*][5]', '![*][0][4]', '![0][3]', '![1][2][3]']))
+            .toEqual(['[*]', '![0][3]', '![1][*][5]', '![*][0][4]', '![1][0][3]', '![1][2][3]']);
 
         expect(norm(['*', 'user', 'video'])).toEqual(['*']);
         expect(norm(['!*', 'user', 'video'])).toEqual(['user', 'video']);
@@ -581,6 +625,8 @@ describe('Notation.Glob', () => {
         expect(norm(['*.b', '!a.b', '!x.b', '!y.b', '!z.b'])).toEqual(['*.b', '!a.b', '!x.b', '!y.b', '!z.b']);
         expect(norm(['*.b', 'x', '!*.b', 'y'])).toEqual(['x', 'y', '!x.b', '!y.b']);
 
+        // cannot have both object and array notations for root level
+        expect(() => norm(['a.b', '[1].b'])).toThrow();
     });
 
     test('.normalize() restrictive = true', () => {
@@ -770,6 +816,9 @@ describe('Notation.Glob', () => {
         expect(uni(['a.*', '!*.z'], ['x.*', '!*.y'])).toEqual(['a', 'x', '!a.z', '!x.y']);
         expect(uni(['*', 'a.*', '!*.z'], ['x.*', '!*.y'])).toEqual(['*', '!*.z']);
         expect(uni(['*', 'a.*', '!*.z'], ['*', 'x.*', '!*.y'])).toEqual(['*']);
+
+        // cannot union an obj-glob with an arr-glob
+        expect(() => union(['*'], ['[*]'])).toThrow();
     });
 
     test('.union() restrictive = true', () => {
@@ -846,7 +895,8 @@ describe('Notation.Glob', () => {
         const cloneGlobA = globA.concat();
         const cloneGlobB = globB.concat();
 
-        expect(union(globA, globB, true)).toEqual(['bar', 'foo.qux', '!bar.id', 'foo.bar.baz', '!foo.qux.baz']);
+        expect(union(globA, globB, true))
+            .toEqual(['bar', 'foo.qux', '!bar.id', 'foo.bar.baz', '!foo.qux.baz']);
 
         // should not mutate given globs arrays
         expect(globA).toEqual(cloneGlobA);
