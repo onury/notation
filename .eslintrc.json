@@ -1,5 +1,9 @@
 {
-    "parser": "babel-eslint",
+    "parserOptions": {
+        "parser": "babel-eslint",
+        "ecmaVersion": 2018,
+        "sourceType": "module"
+    },
     "env": {
         "es6": true,
         "commonjs": true,
@@ -12,8 +16,7 @@
     "globals": {
         "document": false,
         "navigator": false,
-        "window": false,
-        "jest": true
+        "window": false
     },
     "rules": {
 
