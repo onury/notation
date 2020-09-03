@@ -1,8 +1,8 @@
-/* eslint no-use-before-define:0, consistent-return:0 */
+/* eslint no-use-before-define:0, consistent-return:0, max-statements:0 */
 
-import NotationError from './notation.error';
-import NotationGlob from './notation.glob';
-import utils from '../utils';
+import { Glob } from './notation.glob';
+import { NotationError } from './notation.error';
+import { utils } from '../utils';
 
 const ERR = {
     SOURCE: 'Invalid source. Expected a data object or array.',
@@ -64,16 +64,10 @@ class Notation {
      *      @param {Boolean} [options.strict=false] - Whether to throw either when
      *      a notation path does not exist on the source (i.e. `#get()` and `#remove()`
      *      methods); or notation path exists but overwriting is disabled (i.e.
-     *      `#set()` method). (Note that `.inspect()` and `.inspectRemove()` methods
+     *      `#set()` method). (Note that `.inspectGet()` and `.inspectRemove()` methods
      *      are exceptions). It's recommended to set this to `true` and prevent silent
      *      failures if you're working with sensitive data. Regardless of `strict` option,
      *      it will always throw on invalid notation syntax or other crucial failures.
-     *      @param {Boolean} [options.preserveIndices=false] - Indicates whether to
-     *      preserve the indices of the parent array when an item is to be removed.
-     *      By default, the item is removed completely at the implied index instead of
-     *      preserving indices by emptying the item (sparse array). So you should mind
-     *      the shifted indices when you remove an item via `.remove()`, `.inspectRemove()`
-     *      or `.filter()`.
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -83,16 +77,16 @@ class Notation {
      *  // » { car: { brand: "Dodge", year: 1970, color: "red" } }
      */
     constructor(source, options) {
-        let src = source;
         if (arguments.length === 0) {
-            src = {};
+            this._source = {};
         } else if (!utils.isCollection(source)) {
             throw new NotationError(ERR.SOURCE);
+        } else {
+            this._source = source;
         }
 
+        this._isArray = utils.type(this._source) === 'array';
         this.options = options;
-        this._source = src;
-        this._isArray = utils.isArray(src);
     }
 
     // --------------------------------
@@ -146,7 +140,7 @@ class Notation {
      *  from within the callback.
      *  Callback signature: `callback(notation, key, value, object) { ... }`
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -171,7 +165,7 @@ class Notation {
      *  each iteration. To break out of the loop, return `false` from within
      *  the callback. Signature: `callback(levelValue, note, index, list)`
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
@@ -209,15 +203,52 @@ class Notation {
     }
 
     /**
+     *  Deeply clones the source object. This is also useful if you want to
+     *  prevent mutating the original source object.
+     *
+     *  <blockquote>
+     *  Note that `Notation` expects a data object (or array) with enumerable
+     *  properties. In addition to plain objects and arrays; supported cloneable
+     *  property/value types are primitives (such as `String`, `Number`,
+     *  `Boolean`, `Symbol`, `null` and `undefined`) and built-in types (such as
+     *  `Date` and `RegExp`).
+     *
+     *  Enumerable properties with types other than these (such as methods,
+     *  special objects, custom class instances, etc) will be copied by reference.
+     *  Non-enumerable properties will not be cloned.
+     *
+     *  If you still need full clone support, you can use a library like lodash.
+     *  e.g. `Notation.create(_.cloneDeep(source))`
+     *  </blockquote>
+     *
+     *  @returns {Notation} - The current `Notation` instance (self).
+     *
+     *  @example
+     *  const mutated = Notation.create(source1).set('newProp', true).value;
+     *  console.log(source1.newProp); // ——» true
+     *
+     *  const cloned = Notation.create(source2).clone().set('newProp', true).value;
+     *  console.log('newProp' in source2); // ——» false
+     *  console.log(cloned.newProp); // ——» true
+     */
+    clone() {
+        this._source = utils.cloneDeep(this._source);
+        return this;
+    }
+
+    /**
      *  Flattens the source object to a single-level object with notated keys.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", model: "Charger", year: 1970 } };
-     *  const flat = Notation.create(obj).flatten().value;
-     *  console.log(flat);
-     *  // { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
+     *  console.log(Notation.create(obj).flatten().value);
+     *  // {
+     *  //     "car.brand": "Dodge",
+     *  //     "car.model": "Charger",
+     *  //     "car.year": 1970
+     *  // }
      */
     flatten() {
         const o = {};
@@ -236,7 +267,7 @@ class Notation {
      *  @alias Notation#aggregate
      *  @chainable
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @example
      *  const obj = { "car.brand": "Dodge", "car.model": "Charger", "car.year": 1970 }
@@ -265,20 +296,20 @@ class Notation {
      *  @returns {InspectResult} - The result object.
      *
      *  @example
-     *  Notation.create({ car: { year: 1970 } }).inspect("car.year");
+     *  Notation.create({ car: { year: 1970 } }).inspectGet("car.year");
      *  // { has: true, value: 1970, lastNote: 'year', lastNoteNormalized: 'year' }
-     *  Notation.create({ car: { year: 1970 } }).inspect("car.color");
+     *  Notation.create({ car: { year: 1970 } }).inspectGet("car.color");
      *  // { has: false }
-     *  Notation.create({ car: { color: undefined } }).inspect("car.color");
+     *  Notation.create({ car: { color: undefined } }).inspectGet("car.color");
      *  // { has: true, value: undefined, lastNote: 'color', lastNoteNormalized: 'color' }
-     *  Notation.create({ car: { brands: ['Ford', 'Dodge'] } }).inspect("car.brands[1]");
+     *  Notation.create({ car: { brands: ['Ford', 'Dodge'] } }).inspectGet("car.brands[1]");
      *  // { has: true, value: 'Dodge', lastNote: '[1]', lastNoteNormalized: 1 }
      */
-    inspect(notation) {
+    inspectGet(notation) {
         let level = this._source;
         let result = { has: false, value: undefined };
         let parent;
-        Notation.eachNote(notation, (levelNotation, note) => {
+        Notation.eachNote(notation, (levelNotation, note, index) => {
             const lastNoteNormalized = utils.normalizeNote(note);
             if (utils.hasOwn(level, lastNoteNormalized)) {
                 level = level[lastNoteNormalized];
@@ -287,6 +318,8 @@ class Notation {
                     notation,
                     has: true,
                     value: level,
+                    type: utils.type(level),
+                    level: index + 1,
                     lastNote: note,
                     lastNoteNormalized
                 };
@@ -295,6 +328,8 @@ class Notation {
                 result = {
                     notation,
                     has: false,
+                    type: 'undefined',
+                    level: index + 1,
                     lastNote: note,
                     lastNoteNormalized
                 };
@@ -303,7 +338,7 @@ class Notation {
         });
 
         if (parent === undefined || (result.has && parent === result.value)) parent = this._source;
-        result.parentIsArray = utils.isArray(parent);
+        result.parentIsArray = utils.type(parent) === 'array';
 
         return result;
     }
@@ -318,6 +353,8 @@ class Notation {
      *  exists but has a value of `undefined`, this will still return `true`.
      *  @property {*} value - The value of the notated property. If the source
      *  object does not have the notation, the value will be `undefined`.
+     *  @property {String} type - The type of the notated property. If the source
+     *  object does not have the notation, the type will be `"undefined"`.
      *  @property {String} lastNote - Last note of the notation, if actually
      *  exists. For example, last note of `'a.b.c'` is `'c'`.
      *  @property {String|Number} lastNoteNormalized - Normalized representation
@@ -338,7 +375,7 @@ class Notation {
      *  @returns {InspectResult} - The result object.
      *
      *  @example
-     *  let obj = { name: "John", car: { year: 1970 } };
+     *  const obj = { name: "John", car: { year: 1970 } };
      *  let result = Notation.create(obj).inspectRemove("car.year");
      *  // result » { notation: "car.year", has: true, value: 1970, lastNote: "year", lastNoteNormalized: "year" }
      *  // obj » { name: "John", car: {} }
@@ -348,8 +385,8 @@ class Notation {
      *  Notation.create({ car: { color: undefined } }).inspectRemove("car['color']");
      *  // { notation: "car.color", has: true, value: undefined, lastNote: "['color']", lastNoteNormalized: "color" }
      *
-     *  let obj = { car: { colors: ["black", "white"] } };
-     *  let result = Notation.create().inspectRemove("car.colors[0]");
+     *  const obj = { car: { colors: ["black", "white"] } };
+     *  const result = Notation.create().inspectRemove("car.colors[0]");
      *  // result » { notation: "car.colors[0]", has: true, value: "black", lastNote: "[0]", lastNoteNormalized: 0 }
      *  // obj » { car: { colors: [(empty), "white"] } }
      */
@@ -357,16 +394,20 @@ class Notation {
         if (!notation) throw new Error(ERR.NOTATION + `'${notation}'`);
         const parentNotation = Notation.parent(notation);
         const parent = parentNotation ? this.get(parentNotation, null) : this._source;
-        const parentIsArray = utils.isArray(parent);
-        const lastNote = Notation.last(notation);
+        const parentIsArray = utils.type(parent) === 'array';
+        const notes = Notation.split(notation);
+        const lastNote = notes[notes.length - 1];
         const lastNoteNormalized = utils.normalizeNote(lastNote);
 
-        let result;
+        let result, value;
         if (utils.hasOwn(parent, lastNoteNormalized)) {
+            value = parent[lastNoteNormalized];
             result = {
                 notation,
                 has: true,
-                value: parent[lastNoteNormalized],
+                value,
+                type: utils.type(value),
+                level: notes.length,
                 lastNote,
                 lastNoteNormalized,
                 parentIsArray
@@ -384,6 +425,8 @@ class Notation {
             result = {
                 notation,
                 has: false,
+                type: 'undefined',
+                level: notes.length,
                 lastNote,
                 lastNoteNormalized,
                 parentIsArray
@@ -406,7 +449,7 @@ class Notation {
      *  Notation.create({}).has("car.color"); // false
      */
     has(notation) {
-        return this.inspect(notation).has;
+        return this.inspectGet(notation).has;
     }
 
     /**
@@ -422,7 +465,7 @@ class Notation {
      *  Notation.create({}).hasDefined("car.color"); // false
      */
     hasDefined(notation) {
-        return this.inspect(notation).value !== undefined;
+        return this.inspectGet(notation).value !== undefined;
     }
 
     /**
@@ -450,7 +493,7 @@ class Notation {
      *  Notation.create({ car: {} }, { strict: true }).get("car.model");
      */
     get(notation, defaultValue) {
-        const result = this.inspect(notation);
+        const result = this.inspectGet(notation);
         // if strict and no default value is set, check if implied index or prop
         // exists
         if (this.options.strict && arguments.length < 2 && !result.has) {
@@ -469,10 +512,13 @@ class Notation {
      *
      *  @param {String} notation - The notation string to be processed.
      *  @param {*} value - The value to be set for the notated property.
-     *  @param {Boolean} [overwrite=true] - Whether to overwrite the property if
-     *  exists.
+     *  @param {String|Boolean} [mode="overwrite"] - Write mode. By default,
+     *  this is set to `"overwrite"` which sets the value by overwriting the
+     *  target object property or array item at index. To insert an array item
+     *  (by shifting the index, instead of overwriting); set to `"insert"`. To
+     *  prevent overwriting the value if exists, explicitly set to `false`.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If strict notation is enabled, `overwrite`
      *  option is set to `false` and attempted to overwrite an existing value.
@@ -488,37 +534,48 @@ class Notation {
      *  console.log(obj);
      *  // { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
-    set(notation, value, overwrite = true) {
+    set(notation, value, mode = 'overwrite') {
         if (!notation.trim()) throw new NotationError(ERR.NOTATION + `'${notation}'`);
-
+        if (mode === true) mode = 'overwrite';
         let level = this._source;
-        let currentIsLast, nCurrentNote, nNextNote, nextIsArrayNote;
+        let currentIsLast, nCurrentNote, nNextNote, nextIsArrayNote, type;
+        const insertErrMsg = 'Cannot set value by inserting at index, on an object';
 
         Notation.eachNote(notation, (levelNotation, note, index, list) => {
             currentIsLast = index === list.length - 1;
             nCurrentNote = nNextNote || utils.normalizeNote(note);
             nNextNote = currentIsLast ? null : utils.normalizeNote(list[index + 1]);
+            type = utils.type(level);
 
-            if (utils.isArray(level) && typeof nCurrentNote !== 'number') {
+            if (type === 'array' && typeof nCurrentNote !== 'number') {
                 const parent = Notation.parent(levelNotation) || 'source';
                 throw new NotationError(`Cannot set string key '${note}' on array ${parent}`);
             }
 
             // check if the property is at this level
-            if (utils.hasOwn(level, nCurrentNote)) {
+            if (utils.hasOwn(level, nCurrentNote, type)) {
                 // check if we're at the last level
                 if (currentIsLast) {
-                    // if overwrite is set, assign the value.
-                    if (overwrite) {
+                    // if mode is "overwrite", assign the value.
+                    if (mode === 'overwrite') {
                         level[nCurrentNote] = value;
-                    } else if (this.options.strict) {
-                        throw new NotationError('Cannot overwrite an existing value in strict mode.');
+                    } else if (mode === 'insert') {
+                        if (type === 'array') {
+                            level.splice(nCurrentNote, 0, value);
+                        } else {
+                            throw new NotationError(insertErrMsg);
+                        }
                     }
+                    // otherwise, will not overwrite
                 } else {
-                    // if not, just re-reference the current level.
+                    // if not last level; just re-reference the current level.
                     level = level[nCurrentNote];
                 }
             } else {
+                if (currentIsLast && type !== 'array' && mode === 'insert') {
+                    throw new NotationError(insertErrMsg);
+                }
+
                 // if next normalized note is a number, it indicates that the
                 // current note is actually an array.
                 nextIsArrayNote = typeof nNextNote === 'number';
@@ -549,7 +606,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite a property if
      *  exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @example
      *  const obj = { car: { brand: "Dodge", year: 1970 } };
@@ -564,7 +621,7 @@ class Notation {
      *  // { car: { brand: "Ford", model: "Mustang", year: 1970, color: "red" }, boat: "none" };
      */
     merge(notationsObject, overwrite = true) {
-        if (!utils.isObject(notationsObject)) {
+        if (utils.type(notationsObject) !== 'object') {
             throw new NotationError(ERR.NOTA_OBJ + 'Expected an object.');
         }
         let value;
@@ -593,7 +650,7 @@ class Notation {
      *  // { car: { year: 1970 } };
      */
     separate(notations) {
-        if (!utils.isArray(notations)) {
+        if (utils.type(notations) !== 'array') {
             throw new NotationError(ERR.NOTA_OBJ + 'Expected an array.');
         }
         const o = new Notation({});
@@ -619,51 +676,51 @@ class Notation {
      *  be processed last. e.g. `[ "car.model", "*", "!car.*" ]` will be
      *  normalized and sorted as `[ "*", "!car" ]`.
      *
-     *  Passing no parameters or passing an empty string (`""` or `[""]`) will
-     *  empty the source object. See `Notation.Glob` class for more information.
-     *
-     *  @param {Array|String} globNotations - Glob notation(s) to be processed.
-     *  @param {Object} [options] - Filtering options.
-     *  @param {Object} [options.normalize=true] - Whether to normalize the glob list
-     *  before filtering.
+     *  Passing no parameters or passing a glob of `"!*"` or `["!*"]` will empty
+     *  the source object. See `Notation.Glob` class for more information.
      *  @chainable
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self). To
-     *  get the filtered value, call `.value` property on the instance.
+     *  @param {Array|String} globList - Glob notation list to be processed.
+     *  @param {Object} [options] - Filter options.
+     *  @param {Boolean} [options.restrictive=false] - Whether negated items
+     *  strictly remove every match. Note that, regardless of this option, if
+     *  any item has an exact negated version; non-negated is always removed.
+     *
+     *  @returns {Notation} - The current `Notation` instance (self). To get the
+     *  filtered value, call `.value` property on the instance.
      *
      *  @example
-     *  const obj = { notebook: "Mac", car: { brand: "Ford", model: "Mustang", year: 1970 } };
-     *  const n = Notation.create(obj);
-     *  n.filter([ "*", "!car.year" ])
-     *  console.log(obj)            // { notebook: "Mac", car: { brand: "Ford", model: "Mustang" } }
-     *  n.filter("car.brand").value // { car: { brand: "Ford" } }
-     *  console.log(obj)            // { notebook: "Mac", car: { model: "Mustang" } }
-     *  n.filter().value            // {}
-     *                              // equivalent to n.filter("") or n.filter("!*")
+     *  const car = { brand: "Ford", model: { name: "Mustang", year: 1970 } };
+     *  const n = Notation.create(car);
+     *
+     *  console.log(n.filter([ "*", "!model.year" ]).value);  // { brand: "Ford", model: { name: "Mustang" } }
+     *  console.log(n.filter("model.name").value);            // { model: { name: "Mustang" } }
+     *  console.log(car);                                     // { brand: "Ford", model: { name: "Mustang", year: 1970 } }
+     *  console.log(n.filter().value);                        // {} // —» equivalent to n.filter("") or n.filter("!*")
      */
-    filter(globNotations, options) {
-        const original = this.value;
-        const copy = utils.deepCopy(original);
+    filter(globList, options = {}) {
         const { re } = utils;
 
         // ensure array, normalize and sort the globs in logical order. this
         // also concats the array first (to prevent mutating the original
         // array).
-        const globs = NotationGlob.normalize(globNotations);
+        const globs = Glob.normalize(globList, options.restrictive);
         const len = globs.length;
         const empty = this._isArray ? [] : {};
 
-        // if globs is "" or [""] set source to empty and return.
+        // if globs is "" or [""] or ["!*"] or ["![*]"] set source to empty and return.
         if (len === 0 || (len === 1 && (!globs[0] || re.NEGATE_ALL.test(globs[0])))) {
             this._source = empty;
             return this;
         }
 
+        const cloned = utils.cloneDeep(this.value);
+
         const firstIsWildcard = re.WILDCARD.test(globs[0]);
-        // if globs only consist of "*" or "[*]"; set the "copy" as source and
+        // if globs only consist of "*" or "[*]"; set the "clone" as source and
         // return.
         if (len === 1 && firstIsWildcard) {
-            this._source = copy;
+            this._source = cloned;
             return this;
         }
 
@@ -672,7 +729,7 @@ class Notation {
         // to the (full) "copy" and remove the wildcard from globs (not to
         // re-process).
         if (firstIsWildcard) {
-            filtered = new Notation(copy);
+            filtered = new Notation(cloned);
             globs.shift();
         } else {
             // otherwise we set an empty object or array as the source so that
@@ -680,61 +737,131 @@ class Notation {
             filtered = new Notation(empty);
         }
 
-        let g, endStar, normalized;
         // iterate through globs
         utils.each(globs, globNotation => {
-            g = new NotationGlob(globNotation);
-            // set flag that indicates whether the glob ends with `.*`
-            endStar = g.absGlob.slice(-2) === '.*';
-            // get the remaining part as the (extra) normalized glob
-            normalized = endStar ? g.absGlob.slice(0, -2) : g.absGlob;
-            // normalized = endStar ? g.absGlob.replace(/(\.\*)+$/, '') : g.absGlob;
-            // check if normalized glob has no wildcard stars e.g. "a.b" or
-            // "!a.b.c" etc..
-            if (normalized.indexOf('*') < 0) {
-                if (g.isNegated) {
-                    // directly remove the notation if negated
-                    filtered.remove(normalized);
+            // console.log('globNotation', globNotation);
+            const g = new Glob(globNotation);
+            const { glob, absGlob, isNegated, levels } = g;
+            let normalized, emptyValue, eType;
+            // check whether the glob ends with `.*` or `[*]` then remove
+            // trailing glob note and decide for empty value (if negated). for
+            // non-negated, trailing wildcards are already removed by
+            // normalization.
+            if (absGlob.slice(-2) === '.*') {
+                normalized = absGlob.slice(0, -2);
+                /* istanbul ignore else */
+                if (isNegated) emptyValue = {};
+                eType = 'object';
+            } else if (absGlob.slice(-3) === '[*]') {
+                normalized = absGlob.slice(0, -3);
+                /* istanbul ignore else */
+                if (isNegated) emptyValue = [];
+                eType = 'array';
+            } else {
+                normalized = absGlob;
+            }
+
+            // we'll check glob vs value integrity if emptyValue is set; and throw if needed.
+            const errGlobIntegrity = `Integrity failed for glob '${glob}'. Cannot set empty ${eType} for '${normalized}' which has a type of `; // ...
+
+            // check if remaining normalized glob has no wildcard stars e.g.
+            // "a.b" or "!a.b.c" etc..
+            if (re.WILDCARDS.test(normalized) === false) {
+                if (isNegated) {
+                    // inspect and directly remove the notation if negated.
+                    // we need the inspection for the detailed error below.
+                    const insRemove = filtered.inspectRemove(normalized);
+                    // console.log('insRemove', insRemove);
+
                     // if original glob had `.*` at the end, it means remove
                     // contents (not itself). so we'll set an empty object.
                     // meaning `some.prop` (prop) is removed completely but
-                    // `some.prop.*` (prop) results in `{}`.
-                    if (endStar) filtered.set(normalized, {}, true);
+                    // `some.prop.*` (prop) results in `{}`. For array notation
+                    // (`[*]`), we'll set an empty array.
+                    if (emptyValue) {
+                        // e.g. for glob `![0].x.*` we expect to set `[0].x = {}`
+                        // but if `.x` is not an object (or array), we should fail.
+                        const vType = insRemove.type;
+                        const errMsg = errGlobIntegrity + `'${vType}'.`;
+                        // in non-strict mode, only exceptions are `null` and
+                        // `undefined`, for which we won't throw but we'll not
+                        // set an empty obj/arr either.
+
+                        const isValSet = utils.isset(insRemove.value);
+                        // on critical type mismatch we throw
+                        // or if original value is undefined or null in strict mode we throw
+                        if ((isValSet && vType !== eType) || (!isValSet && this.options.strict)) {
+                            throw new NotationError(errMsg);
+                        }
+                        // if parent is an array, we'll insert the value at
+                        // index bec. we've removed the item and indexes are
+                        // shifted. Otherwise, we'll simply overwrite the
+                        // object property value.
+                        const setMode = insRemove.parentIsArray ? 'insert' : 'overwrite';
+                        // console.log('setting', normalized, emptyValue, setMode);
+                        filtered.set(normalized, emptyValue, setMode);
+                    }
                 } else {
-                    // directly copy the same notation from the original
-                    filtered.copyFrom(original, normalized, null, true);
+                    // directly set the same notation from the original
+                    const insGet = this.inspectGet(normalized); // Notation.create(original).inspectGet ...
+                    /* istanbul ignore else */
+                    if (insGet.has) filtered.set(normalized, insGet.value, 'overwrite');
                 }
                 // move to the next
                 return true;
             }
-            // if glob has wildcard star(s), we'll iterate through keys of the
-            // source object and see if (full) notation of each key matches
-            // the current glob.
 
-            // TODO: Optimize the loop below. Instead of checking each key's
-            // notation, get the non-star left part of the glob and iterate
-            // that property of the source object.
-            this.each((originalNotation, key, value) => {
-                // console.log('>>', originalNotation);
+            // if glob has wildcard(s), we'll iterate through keys of the source
+            // object and see if (full) notation of each key matches the current
+            // glob.
+
+            // important! we will iterate with eachRight to prevent shifted
+            // indexes when removing items from arrays.
+            const reverseIterateIfArray = true;
+
+            _each(this._source, (originalNotation, key, value) => {
+                const originalIsCovered = Glob.create(normalized).covers(originalNotation);
+                // console.log('» normalized:', normalized, 'covers', originalNotation, '»', originalIsCovered);
+                if (!originalIsCovered) return true; // break
+
+                if (this.options.strict && emptyValue) {
+                    // since original is covered and we have emptyValue set (due
+                    // to trailing wildcard), here we'll check value vs glob
+                    // integrity; (only if we're in strict mode).
+
+                    const vType = utils.type(value);
+                    // types and number of levels are the same?
+                    if (vType !== eType
+                            // we subtract 1 from number of levels bec. the last
+                            // note is removed since we have emptyValue set.
+                            && Notation.split(originalNotation).length === levels.length - 1) {
+                        throw new NotationError(errGlobIntegrity + `'${vType}'.`);
+                    }
+                }
 
                 // iterating each note of original notation. i.e.:
                 // note1.note2.note3 is iterated from left to right, as:
                 // 'note1', 'note1.note2', 'note1.note2.note3' — in order.
                 Notation.eachNote(originalNotation, levelNotation => {
+                    // console.log('  level »', glob, 'covers', levelNotation, '»', g.test(levelNotation));
+
                     if (g.test(levelNotation)) {
-                        if (g.isNegated) {
-                            // console.log('removing', levelNotation, 'of', originalNotation);
+                        const levelLen = Notation.split(levelNotation).length;
+                        /* istanbul ignore else */
+                        if (isNegated && levels.length <= levelLen) {
+                            // console.log('  » removing', levelNotation, 'of', originalNotation);
                             filtered.remove(levelNotation);
-                            // we break and return early if removed bec. deeper
-                            // level props are also removed with this parent.
-                            // e.g. when 'note1.note2' of 'note1.note2.note3' is
-                            // removed, we no more have 'note3'.
+                            // we break and return early if removed bec. e.g.
+                            // when 'note1.note2' (parent) of
+                            // 'note1.note2.note3' is also removed, we no more
+                            // have 'note3'.
                             return false;
                         }
-                        filtered.set(levelNotation, value, true);
+                        // console.log('  » setting', levelNotation, '=', value);
+                        filtered.set(levelNotation, value, 'overwrite');
                     }
                 });
-            });
+            }, reverseIterateIfArray);
         });
         // finally set the filtered's value as the source of our instance and
         // return.
@@ -747,7 +874,7 @@ class Notation {
      *  @alias Notation#delete
      *  @chainable
      *  @param {String} notation - The notation to be inspected.
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *  @throws {NotationError} - If `strict` option is enabled and notation
      *  does not exist.
      *
@@ -778,14 +905,6 @@ class Notation {
     }
 
     /**
-     *  Clones the `Notation` instance to a new one.
-     *  @returns {Notation} - A new copy of the instance.
-     */
-    clone() {
-        return new Notation(utils.deepCopy(this.value));
-    }
-
-    /**
      *  Copies the notated property from the source collection and adds it to the
      *  destination — only if the source object actually has that property.
      *  This is different than a property with a value of `undefined`.
@@ -802,7 +921,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
      *  the destination object if it exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If `destination` is not a valid collection.
      *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
@@ -817,10 +936,10 @@ class Notation {
      */
     copyTo(destination, notation, newNotation = null, overwrite = true) {
         if (!utils.isCollection(destination)) throw new NotationError(ERR.DEST);
-        const result = this.inspect(notation);
+        const result = this.inspectGet(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
-            new Notation(destination).set(newN, result.value, overwrite);
+            Notation.create(destination).set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -842,7 +961,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
      *  our collection if it exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If `target` is not a valid collection.
      *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
@@ -857,7 +976,7 @@ class Notation {
      */
     copyFrom(target, notation, newNotation = null, overwrite = true) {
         if (!utils.isCollection(target)) throw new NotationError(ERR.DEST);
-        const result = new Notation(target).inspect(notation);
+        const result = Notation.create(target).inspectGet(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
             this.set(newN, result.value, overwrite);
@@ -882,7 +1001,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
      *  the destination object if it exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If `destination` is not a valid collection.
      *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
@@ -901,7 +1020,7 @@ class Notation {
         const result = this.inspectRemove(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
-            new Notation(destination).set(newN, result.value, overwrite);
+            Notation.create(destination).set(newN, result.value, overwrite);
         }
         return this;
     }
@@ -923,7 +1042,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property on
      *  the source object if it exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If `target` is not a valid collection.
      *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
@@ -939,7 +1058,7 @@ class Notation {
      */
     moveFrom(target, notation, newNotation = null, overwrite = true) {
         if (!utils.isCollection(target)) throw new NotationError(ERR.DEST);
-        const result = new Notation(target).inspectRemove(notation);
+        const result = Notation.create(target).inspectRemove(notation);
         if (result.has) {
             const newN = utils.getNewNotation(newNotation, notation);
             this.set(newN, result.value, overwrite);
@@ -959,7 +1078,7 @@ class Notation {
      *  @param {Boolean} [overwrite=true] - Whether to overwrite the property at
      *  the new notation, if it exists.
      *
-     *  @returns {Notation} - Returns the current `Notation` instance (self).
+     *  @returns {Notation} - The current `Notation` instance (self).
      *
      *  @throws {NotationError} - If `notation` or `newNotation` is invalid.
      *
@@ -1076,17 +1195,11 @@ class Notation {
      *  @param {Object|Array} [source={}] - The source collection to be notated.
      *  @param {Object} [options] - Notation options.
      *      @param {Boolean} [options.strict=false] - Whether to throw when a
-     *      notation path does not exist on the source. (Note that `.inspect()`
+     *      notation path does not exist on the source. (Note that `.inspectGet()`
      *      and `.inspectRemove()` methods are exceptions). It's recommended to
      *      set this to `true` and prevent silent failures if you're working
      *      with sensitive data. Regardless of `strict` option, it will always
      *      throw on invalid notation syntax or other crucial failures.
-     *      @param {Boolean} [options.preserveIndices=true] - Indicates whether to
-     *      preserve the indices of the parent array when an item is to be removed.
-     *      By default indices are preserved by emptying the item (sparse array),
-     *      instead of removing the item completely at the index. When this is
-     *      disabled; you should mind the shifted indices when you remove an
-     *      item via `.remove()`, `.inspectRemove()` or `.filter()`.
      *
      *  @returns {Notation} - The created instance.
      *
@@ -1274,7 +1387,7 @@ Notation.Error = NotationError;
  *  @class
  *  @see `{@link #Notation.Glob}`
  */
-Notation.Glob = NotationGlob;
+Notation.Glob = Glob;
 
 /**
  *  Undocumented
@@ -1293,16 +1406,18 @@ Notation.utils = utils;
  *  @param {Object|Array} collection  A data object or an array, as the source.
  *  @param {Function} callback  A function to be executed on each iteration,
  *  with the following arguments: `(levelNotation, note, value, collection)`
- *  @param {String} parentNotation  Storage for parent (previous) notation.
- *  @param {Collection} topSource  Storage for initial/main collection.
+ *  @param {Boolean} [reverseIfArray=false]  Set to `true` to iterate with
+ *  `eachRight` to prevent shifted indexes when removing items from arrays.
  *  @param {Boolean} [byLevel=false]  Indicates whether to iterate notations by
  *  each level or by the end value.  For example, if we have a collection of
  *  `{a: { b: true } }`, and `byLevel` is set; the callback will be invoked on
  *  the following notations: `a`, `a.b`. Otherwise, it will be invoked only on
  *  `a.b`.
+ *  @param {String} [parentNotation]  Storage for parent (previous) notation.
+ *  @param {Collection} [topSource]  Storage for initial/main collection.
  *  @returns {void}
  */
-function _each(collection, callback, parentNotation, topSource, byLevel = false) { // eslint-disable-line max-params
+function _each(collection, callback, reverseIfArray = false, byLevel = false, parentNotation = null, topSource = null) { // eslint-disable-line max-params
     const source = topSource || collection;
     // if (!utils.isCollection(collection)) throw ... // no need
     utils.eachItem(collection, (value, keyOrIndex) => {
@@ -1317,12 +1432,12 @@ function _each(collection, callback, parentNotation, topSource, byLevel = false)
             if (callback(currentNotation, note, value, source) === false) return false;
         }
         // deep iterating if collection
-        if (isCollection) _each(value, callback, currentNotation, source, byLevel);
-    });
+        if (isCollection) _each(value, callback, reverseIfArray, byLevel, currentNotation, source);
+    }, null, reverseIfArray);
 }
 
 // --------------------------------
 // EXPORT
 // --------------------------------
 
-export default Notation;
+export { Notation };
