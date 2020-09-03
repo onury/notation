@@ -118,14 +118,14 @@ const utils = {
         const len = array.length;
         let index = -1;
         while (++index < len) {
-            if (callback.apply(thisArg, [array[index], index, array]) === false) break;
+            if (callback.apply(thisArg, [array[index], index, array]) === false) return;
         }
     },
 
     eachRight(array, callback, thisArg) {
         let index = array.length;
         while (index--) {
-            if (callback.apply(thisArg, [array[index], index, array]) === false) break;
+            if (callback.apply(thisArg, [array[index], index, array]) === false) return;
         }
     },
 
@@ -134,7 +134,7 @@ const utils = {
         let index = -1;
         while (++index < keys.length) {
             const key = keys[index];
-            if (callback.apply(thisArg, [object[key], key, object]) === false) break;
+            if (callback.apply(thisArg, [object[key], key, object]) === false) return;
         }
     },
 
