@@ -1,35 +1,48 @@
 
-import NotationError from './core/notation.error';
+import { NotationError } from './core/notation.error';
 
-const oPROTO = Object.prototype;
+const objProto = Object.prototype;
+const symValueOf = typeof Symbol === 'function'
+    ? Symbol.prototype.valueOf
+    /* istanbul ignore next */
+    : null;
+
+// never use 'g' (global) flag in regexps below
+const VAR = /^[a-z$_][a-z$_\d]*$/i;
+const ARRAY_NOTE = /^\[(\d+)\]$/;
+const ARRAY_GLOB_NOTE = /^\[(\d+|\*)\]$/;
+const OBJECT_BRACKETS = /^\[(?:'(.*)'|"(.*)"|`(.*)`)\]$/;
+const WILDCARD = /^(\[\*\]|\*)$/;
+// matches `*` and `[*]` if outside of quotes.
+const WILDCARDS = /(\*|\[\*\])(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/;
+// matches trailing wildcards at the end of a non-negated glob.
+// e.g. `x.y.*[*].*` » $1 = `x.y`, $2 = `.*[*].*`
+const NON_NEG_WILDCARD_TRAIL = /^(?!!)(.+?)(\.\*|\[\*\])+$/;
+const NEGATE_ALL = /^!(\*|\[\*\])$/;
+// ending with '.*' or '[*]'
+
+const _reFlags = /\w*$/;
 
 const utils = {
 
     re: {
-        VAR: /^[a-z$_][a-z$_\d]*$/i,
-        ARRAY_NOTE: /^\[(\d+)\]$/,
-        ARRAY_GLOB_NOTE: /^\[(\d+|\*)\]$/,
-        OBJECT_BRACKETS: /^\[(?:'(.*)'|"(.*)"|`(.*)`)\]$/,
-        ESCAPE: /[.\\+*?[^\]$(){}=!<>|:-]/g,
-        WILDCARD: /^(\[\*\]|\*)$/,
-        // matches `*` and `[*]` if outside of quotes.
-        WILDCARDS: /(\*|\[\*\])(?=(?:[^"]|"[^"]*")*$)(?=(?:[^']|'[^']*')*$)/g,
-        // matches trailing wildcards at the end of a non-negated glob.
-        // e.g. `x.y.*[*].*` » $1 = `x.y`, $2 = `.*[*].*`
-        NON_NEG_WILDCARD_TRAIL: /^(?!!)(.+?)(\.\*|\[\*\])+$/,
-        NEGATE_ALL: /^!(\*|\[\*\])$/
+        VAR,
+        ARRAY_NOTE,
+        ARRAY_GLOB_NOTE,
+        OBJECT_BRACKETS,
+        WILDCARD,
+        WILDCARDS,
+        NON_NEG_WILDCARD_TRAIL,
+        NEGATE_ALL
     },
 
-    isObject(o) {
-        return oPROTO.toString.call(o) === '[object Object]';
-    },
-
-    isArray(o) {
-        return oPROTO.toString.call(o) === '[object Array]';
+    type(o) {
+        return objProto.toString.call(o).match(/\s(\w+)/i)[1].toLowerCase();
     },
 
     isCollection(o) {
-        return utils.isObject(o) || utils.isArray(o);
+        const t = utils.type(o);
+        return t === 'object' || t === 'array';
     },
 
     isset(o) {
@@ -37,15 +50,24 @@ const utils = {
     },
 
     ensureArray(o) {
-        if (utils.isArray(o)) return o;
+        if (utils.type(o) === 'array') return o;
         return o === null || o === undefined ? [] : [o];
     },
 
-    hasOwn(collection, keyOrIndex) {
+    // simply returning true will get rid of the "holes" in the array.
+    // e.g. [0, , 1, , undefined, , , 2, , , null].filter(() => true);
+    // ——» [0, 1, undefined, 2, null]
+
+    // cleanSparseArray(a) {
+    //     return a.filter(() => true);
+    // },
+
+    // added _collectionType for optimization (in loops)
+    hasOwn(collection, keyOrIndex, _collectionType) {
         if (!collection) return false;
-        const isArr = utils.isArray(collection);
+        const isArr = (_collectionType || utils.type(collection)) === 'array';
         if (!isArr && typeof keyOrIndex === 'string') {
-            return keyOrIndex && oPROTO.hasOwnProperty.call(collection, keyOrIndex);
+            return keyOrIndex && objProto.hasOwnProperty.call(collection, keyOrIndex);
         }
         if (typeof keyOrIndex === 'number') {
             return keyOrIndex >= 0 && keyOrIndex < collection.length;
@@ -53,17 +75,41 @@ const utils = {
         return false;
     },
 
-    deepCopy(collection) {
-        if (utils.isObject(collection)) {
-            const copy = {};
-            Object.keys(collection).forEach(k => {
-                copy[k] = utils.deepCopy(collection[k]);
-            });
-            return copy;
+    cloneDeep(collection) {
+        const t = utils.type(collection);
+        switch (t) {
+            case 'date':
+                return new Date(collection.valueOf());
+            case 'regexp': {
+                const flags = _reFlags.exec(collection).toString();
+                const copy = new collection.constructor(collection.source, flags);
+                copy.lastIndex = collection.lastIndex;
+                return copy;
+            }
+            case 'symbol':
+                return symValueOf
+                    ? Object(symValueOf.call(collection))
+                    /* istanbul ignore next */
+                    : collection;
+            case 'array':
+                return collection.map(utils.cloneDeep);
+            case 'object': {
+                const copy = {};
+                // only enumerable string keys
+                Object.keys(collection).forEach(k => {
+                    copy[k] = utils.cloneDeep(collection[k]);
+                });
+                return copy;
+            }
+            // primitives copied over by value
+            // case 'string':
+            // case 'number':
+            // case 'boolean':
+            // case 'null':
+            // case 'undefined':
+            default: // others will be referenced
+                return collection;
         }
-        if (utils.isArray(collection)) return collection.map(utils.deepCopy);
-        // not object or array
-        return collection;
     },
 
     // iterates over elements of an array, executing the callback for each
@@ -92,21 +138,26 @@ const utils = {
         }
     },
 
-    eachItem(collection, callback, thisArg) {
-        if (utils.isArray(collection)) {
-            return utils.each(collection, callback, thisArg);
+    eachItem(collection, callback, thisArg, reverseIfArray = false) {
+        if (utils.type(collection) === 'array') {
+            // important! we should iterate with eachRight to prevent shifted
+            // indexes when removing items from arrays.
+            return reverseIfArray
+                ? utils.eachRight(collection, callback, thisArg)
+                : utils.each(collection, callback, thisArg);
         }
         return utils.eachProp(collection, callback, thisArg);
     },
 
     pregQuote(str) {
-        return String(str).replace(utils.re.ESCAPE, '\\$&');
+        const re = /[.\\+*?[^\]$(){}=!<>|:-]/g;
+        return String(str).replace(re, '\\$&');
     },
 
     stringOrArrayOf(o, value) {
         return typeof value === 'string'
             && (o === value
-                || (utils.isArray(o) && o.length === 1 && o[0] === value)
+                || (utils.type(o) === 'array' && o.length === 1 && o[0] === value)
             );
     },
 
@@ -116,19 +167,20 @@ const utils = {
     },
 
     // remove trailing/redundant wildcards if not negated
-    normalizeGlobStr(glob) {
-        return glob.trim().replace(utils.re.NON_NEG_WILDCARD_TRAIL, '$1');
+    removeTrailingWildcards(glob) {
+        // return glob.replace(/(.+?)(\.\*|\[\*\])*$/, '$1');
+        return glob.replace(NON_NEG_WILDCARD_TRAIL, '$1');
     },
 
     normalizeNote(note) {
-        if (utils.re.VAR.test(note)) return note;
+        if (VAR.test(note)) return note;
         // check array index notation e.g. `[1]`
-        let m = note.match(utils.re.ARRAY_NOTE);
+        let m = note.match(ARRAY_NOTE);
         if (m) return parseInt(m[1], 10);
         // check object bracket notation e.g. `["a-b"]`
-        m = note.match(utils.re.OBJECT_BRACKETS);
-        if (m) return m[1] || m[2] || m[3];
-        throw new NotationError(`Invalid note: "${note}"`);
+        m = note.match(OBJECT_BRACKETS);
+        if (m) return (m[1] || m[2] || m[3]);
+        throw new NotationError(`Invalid note: '${note}'`);
     },
 
     joinNotes(notes) {
@@ -159,4 +211,4 @@ const utils = {
 
 };
 
-export default utils;
+export { utils };
