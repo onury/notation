@@ -1,8 +1,9 @@
 /* eslint camelcase:0, max-lines-per-function:0, consistent-return:0, max-statements:0, max-lines:0 */
 
-import Notation from '../src/core/notation';
-import NotationError from '../src/core/notation.error';
-const _ = require('lodash');
+import * as _ from 'lodash';
+
+import { Notation } from '../src/core/notation';
+import { NotationError } from '../src/core/notation.error';
 
 const o = {
     name: 'onur',
@@ -285,18 +286,18 @@ describe('Notation', () => {
         expect(notations).toEqual(['a.b.c[0].x', 'a.b.d', 'a.e', 'a.f', 'g[0]', 'g[1][0]']);
     });
 
-    test('#inspect(), #inspectRemove()', () => {
+    test('#inspectGet(), #inspectRemove()', () => {
         const obj = { a: { b: [{ c: 1 }] }, d: undefined, e: null, f: [1, false, 2] };
-        let nota = create(obj);
+        let nota = create(obj).clone();
 
-        let ins = nota.inspect('a.b[0]');
+        let ins = nota.inspectGet('a.b[0]');
         expect(ins.notation).toEqual('a.b[0]');
         expect(ins.has).toEqual(true);
         expect(ins.value).toEqual({ c: 1 });
         expect(ins.lastNote).toEqual('[0]');
         expect(ins.lastNoteNormalized).toEqual(0);
 
-        ins = nota.inspect('d');
+        ins = nota.inspectGet('d');
         expect(ins.notation).toEqual('d');
         expect(ins.has).toEqual(true);
         expect(ins.value).toEqual(undefined);
@@ -309,7 +310,8 @@ describe('Notation', () => {
         expect(ins.value).toEqual(null);
         expect(ins.lastNote).toEqual('e');
         expect(ins.lastNoteNormalized).toEqual('e');
-        expect(obj.e).toBeUndefined();
+        // original should not be mutated
+        expect(obj.e).toEqual(null);
 
         ins = nota.inspectRemove('f[1]');
         expect(ins.notation).toEqual('f[1]');
@@ -317,8 +319,11 @@ describe('Notation', () => {
         expect(ins.value).toEqual(false);
         expect(ins.lastNote).toEqual('[1]');
         expect(ins.lastNoteNormalized).toEqual(1);
-        expect(obj.f[1]).toEqual(2);
-        expect(obj.f.length).toEqual(2);
+        expect(nota.value.f[1]).toEqual(2);
+        expect(nota.value.f.length).toEqual(2);
+        // original should not be mutated
+        expect(obj.f[1]).toEqual(false);
+        expect(obj.f.length).toEqual(3);
 
         let arr = ['a', 'b', 'c'];
         nota = create(arr, { preserveIndices: false });
@@ -436,13 +441,16 @@ describe('Notation', () => {
         // should throw if attempted to set anything other than an index on an
         // array.
         expect(() => create([]).set('x', true)).toThrow();
+        expect(() => create([]).set(new Number(1), true)).toThrow(); // eslint-disable-line no-new-wrappers
         expect(() => create({ x: { y: [] } }).set('x.y.z', true)).toThrow();
 
-        nota = new Notation({ x: { y: [1] } }, { strict: false });
+        nota = new Notation({ x: { y: [1] } });
         expect(nota.set('x.y', 'value').value.x.y).toEqual('value');
         expect(nota.set('x.y', 'overwrite', false).value.x.y).toEqual('value');
-        nota = new Notation({ x: { y: [1] } }, { strict: true });
-        expect(() => nota.set('x.y', 'value', false)).toThrow('existing value');
+
+        // Cannot set value by inserting at index, on an object
+        expect(() => create().set('x', 1, 'insert')).toThrow();
+        expect(() => create({ x: true }).set('x', 1, 'insert')).toThrow();
     });
 
     test('#remove()', () => {
