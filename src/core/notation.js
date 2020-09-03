@@ -1,4 +1,4 @@
-/* eslint no-use-before-define:0, consistent-return:0, max-statements:0 */
+/* eslint no-use-before-define:0, consistent-return:0, max-statements:0, max-len:0 */
 
 import { Glob } from './notation.glob';
 import { NotationError } from './notation.error';
