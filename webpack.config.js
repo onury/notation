@@ -1,50 +1,25 @@
-'use strict';
-
 const path = require('path');
-const webpack = require('webpack');
+const UglifyJsPlugin = require('uglifyjs-webpack-plugin');
 
-const UglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
-const plugins = [];
-
-const libraryName = 'Notation';
-const libraryFileName = 'notation.js';
-const libraryMinFileName = 'notation.min.js';
-
-let outputFile = libraryFileName;
+const libraryName = 'notation';
+const libPath = path.resolve(__dirname, 'lib');
+const srcPath = path.resolve(__dirname, 'src');
+const publicPath = 'lib/';
 
 module.exports = env => {
 
-    if (env.WEBPACK_OUT === 'minified') {
-        // https://github.com/webpack-contrib/uglifyjs-webpack-plugin
-        plugins.push(new UglifyJsPlugin({
-            test: /\.js$/,
-            sourceMap: true,
-            uglifyOptions: {
-                ie8: false,
-                ecma: 5,
-                output: {
-                    comments: false,
-                    beautify: false
-                },
-                compress: true,
-                warnings: true
-            }
-        }));
-        outputFile = libraryMinFileName;
-    }
+    const config = {
+        // turn off NodeStuffPlugin and NodeSourcePlugin plugins. Otherwise
+        // objects like `process` are mocked or polyfilled.
+        node: false, // !!! IMPORTANT
 
-    return {
+        context: __dirname,
         cache: false,
-        entry: path.resolve(__dirname, 'src', 'index.js'),
+        entry: path.join(srcPath, 'index.js'),
         devtool: 'source-map',
-        target: 'web',
         output: {
-            path: path.resolve(__dirname, 'lib'),
-            filename: outputFile,
             library: libraryName,
-            libraryTarget: 'umd',
-            umdNamedDefine: true,
-            publicPath: 'lib/'
+            filename: libraryName.toLowerCase() + '.js'
         },
         module: {
             rules: [
@@ -52,7 +27,7 @@ module.exports = env => {
                     test: /(\.jsx?)$/,
                     loader: 'babel-loader',
                     query: {
-                        presets: ['es2015']
+                        presets: ['@babel/preset-env']
                     },
                     exclude: /(node_modules|bower_components)/
                 },
@@ -63,15 +38,63 @@ module.exports = env => {
             ]
         },
         resolve: {
-            modules: [path.resolve(__dirname, 'src')],
+            modules: [srcPath],
             extensions: ['.js']
         },
         // Configure the console output.
         stats: {
             colors: true,
             modules: false,
-            reasons: true
+            reasons: true,
+            // suppress "export not found" warnings about re-exported types
+            warningsFilter: /export .* was not found in/
         },
-        plugins
+        plugins: [],
+        optimization: {
+            minimizer: []
+        }
     };
+
+    if (env.WEBPACK_OUT === 'coverage') {
+        Object.assign(config.output, {
+            filename: '.' + libraryName + '.cov.js',
+            path: libPath,
+            libraryTarget: 'commonjs2',
+            umdNamedDefine: false
+        });
+    } else {
+
+        // production & development
+        Object.assign(config.output, {
+            path: libPath,
+            // filename: libraryName.toLowerCase() + '.js',
+            publicPath,
+            libraryTarget: 'umd',
+            umdNamedDefine: true,
+            // this is to get rid of 'window is not defined' error.
+            // https://stackoverflow.com/a/49119917/112731
+            globalObject: 'this'
+        });
+
+        if (env.WEBPACK_OUT === 'production') {
+            config.devtool = 'source-map';
+            config.output.filename = libraryName.toLowerCase() + '.min.js';
+            config.optimization.minimizer.push(new UglifyJsPlugin({
+                test: /\.js$/,
+                sourceMap: true,
+                uglifyOptions: {
+                    ie8: false,
+                    ecma: 5,
+                    output: {
+                        comments: false,
+                        beautify: false
+                    },
+                    compress: true,
+                    warnings: true
+                }
+            }));
+        }
+    }
+
+    return config;
 };
