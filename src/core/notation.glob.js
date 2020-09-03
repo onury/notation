@@ -688,7 +688,7 @@ class Glob {
         // using an object to prevent duplicates.
         let intersections = {};
 
-        const checkAddIntersection = (gA, gB) => {
+        function checkAddIntersection(gA, gB) {
             const inter = _intersect(gA, gB, restrictive);
             if (!inter) return;
             // if the intersection result has an inverted version in the
@@ -697,7 +697,7 @@ class Glob {
             // also if intersection result is in the current list, don't add it.
             if (list.indexOf(inter) >= 0 || hasInverted) return;
             intersections[inter] = inter;
-        };
+        }
 
         // iterate each glob by comparing it to remaining globs.
         utils.eachRight(list, (a, indexA) => {
