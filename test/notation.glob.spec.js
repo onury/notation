@@ -617,7 +617,9 @@ describe('Notation.Glob', () => {
         expect(norm(['!x', 'x.y', 'x.y.z', 'o.y.z', '!*.y.z', '!a', 'a.b', 'q.b.c', '!*.b.c']))
             .toEqual(['a.b', 'x.y', 'o.y.z', 'q.b.c', '!a.b.c']);
         expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c', '!*.*.c', '!f', '!d'])).toEqual(['x.b']);
-        expect(norm(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b', '!x.b']);
+
+        expect(norm(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b']);
+
         expect(norm(['!x', '!x.b', '!x.b.c', '*.b', '!*.b'])).toEqual([]);
         expect(norm(['!*.b', 'x.b', 'x.b.c', 'x'])).toEqual(['x']);
         expect(norm(['!*.b', 'x.b', 'x.b.c', 'x', 'y.b.c'])).toEqual(['x', 'y.b.c']);
@@ -729,7 +731,9 @@ describe('Notation.Glob', () => {
         expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c'])).toEqual([]);
         expect(norm(['!x', 'x.y', 'x.y.z', 'o.y.z', '!*.y.z', '!a', 'a.b', 'q.b.c', '!*.b.c'])).toEqual([]);
         expect(norm(['!x', 'x.b', 'x.b.c', '!*.b.c', '!*.*.c', '!f', '!d'])).toEqual([]);
+
         expect(norm(['!x', '!x.b', '!x.b.c', '*.b'])).toEqual(['*.b', '!x.b']);
+
         expect(norm(['!x', '!x.b', '!x.b.c', '*.b', '!*.b'])).toEqual([]);
         expect(norm(['!*.b', 'x.b', 'x.b.c', 'x'])).toEqual(['x', '!x.b']);
         expect(norm(['!*.b', 'x.b', 'x.b.c', 'x', 'y.b.c'])).toEqual(['x', '!x.b']);
