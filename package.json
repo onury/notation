@@ -92,19 +92,19 @@
     "build"
   ],
   "devDependencies": {
-    "@babel/core": "^7.2.2",
-    "@babel/preset-env": "^7.3.1",
-    "babel-eslint": "^10.0.1",
-    "babel-jest": "^24.0.0",
-    "babel-loader": "^8.0.5",
-    "babel-plugin-istanbul": "^5.1.0",
-    "eslint": "^5.13.0",
-    "jest-cli": "^24.0.0",
-    "lodash": "^4.17.11",
-    "snyk": "^1.124.0",
-    "uglifyjs-webpack-plugin": "^2.1.1",
-    "webpack": "^4.29.0",
-    "webpack-cli": "^3.2.1"
+    "@babel/core": "^7.11.6",
+    "@babel/preset-env": "^7.11.5",
+    "babel-eslint": "^10.1.0",
+    "babel-jest": "^26.3.0",
+    "babel-loader": "^8.1.0",
+    "babel-plugin-istanbul": "^6.0.0",
+    "eslint": "^7.8.1",
+    "jest-cli": "^26.4.2",
+    "lodash": "^4.17.20",
+    "snyk": "^1.388.0",
+    "uglifyjs-webpack-plugin": "^2.2.0",
+    "webpack": "^4.44.1",
+    "webpack-cli": "^3.3.12"
   },
   "dependencies": {}
 }
