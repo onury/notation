@@ -1,8 +1,12 @@
 {
+    "parser": "babel-eslint",
     "parserOptions": {
-        "parser": "babel-eslint",
-        "ecmaVersion": 2018,
-        "sourceType": "module"
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "modules": true,
+            "experimentalObjectRestSpread": true
+        }
     },
     "env": {
         "es6": true,
