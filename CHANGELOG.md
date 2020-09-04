@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
-## 2.0.0 [Unreleased]
+## 2.0.0 (2020-09-04)
 
 This is a big major release with lots of **improvements** and some **breaking changes**. Please read the changes below and re-run your application tests after you upgrade to v2.
 
