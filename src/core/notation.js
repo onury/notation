@@ -626,6 +626,9 @@ class Notation {
         }
         let value;
         utils.each(Object.keys(notationsObject), notation => {
+            if (notation.includes('__proto__') || notation.includes('prototype') || notation.includes('constructor')){
+                return this;
+            }
             value = notationsObject[notation];
             this.set(notation, value, overwrite);
         });
