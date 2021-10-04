@@ -669,7 +669,17 @@ describe('Notation', () => {
         expect(() => nota.remove({})).toThrow();
         expect(() => nota.rename('account', {})).toThrow();
         expect(() => nota.get('prop2')).not.toThrow();
+    });
 
+    test('property names', () => {
+        const a = {
+            'x': 1,
+            'y': { c: 2 },
+            '@test': true
+        };
+        const notation = new Notation(a);
+        expect(notation.set('y.c', 5).value.y.c).toEqual(5);
+        expect(notation.set('["@test"]', false).value['@test']).toEqual(false);
     });
 
 });
