@@ -4,13 +4,11 @@
 [![coverage-status](https://img.shields.io/coveralls/github/onury/notation/master.svg?&style=flat-square)](https://coveralls.io/github/onury/notation?branch=master)
 [![npm](http://img.shields.io/npm/v/notation.svg?style=flat-square)](https://www.npmjs.com/package/notation)
 [![release](https://img.shields.io/github/release/onury/notation.svg?style=flat-square)](https://github.com/onury/notation)
-[![dependencies](https://david-dm.org/onury/notation.svg?style=flat-square)](https://david-dm.org/onury/notation)
 [![vulnerabilities](https://snyk.io/test/github/onury/notation/badge.svg?style=flat-square)](https://snyk.io/test/github/onury/notation)
 [![license](http://img.shields.io/npm/l/notation.svg?style=flat-square)](https://github.com/onury/notation/blob/master/LICENSE)
-[![maintained](https://img.shields.io/maintenance/yes/2020.svg?style=flat-square)](https://github.com/onury/notation/graphs/commit-activity)
 [![documentation](https://img.shields.io/badge/docs-click_to_read-c27cf4.svg?docs=click_to_read&style=flat-square)](https://onury.io/notation/api)
 
-> © 2020, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
+> © 2021, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
 
 Utility for modifying / processing the contents of JavaScript objects and arrays, via object or bracket notation strings or globs. (Node and Browser)
 
