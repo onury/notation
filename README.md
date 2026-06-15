@@ -1,22 +1,26 @@
 # Notation.js
 
-[![build-status](https://img.shields.io/travis/onury/notation.svg?branch=master&style=flat-square)](https://travis-ci.org/onury/notation)
-[![coverage-status](https://img.shields.io/coveralls/github/onury/notation/master.svg?&style=flat-square)](https://coveralls.io/github/onury/notation?branch=master)
-[![npm](http://img.shields.io/npm/v/notation.svg?style=flat-square)](https://www.npmjs.com/package/notation)
-[![release](https://img.shields.io/github/release/onury/notation.svg?style=flat-square)](https://github.com/onury/notation)
-[![vulnerabilities](https://snyk.io/test/github/onury/notation/badge.svg?style=flat-square)](https://snyk.io/test/github/onury/notation)
-[![license](http://img.shields.io/npm/l/notation.svg?style=flat-square)](https://github.com/onury/notation/blob/master/LICENSE)
-[![documentation](https://img.shields.io/badge/docs-click_to_read-c27cf4.svg?docs=click_to_read&style=flat-square)](https://onury.io/notation/api)
+<p align="center">
+  <a href="https://github.com/onury/notation/actions/workflows/ci.yml"><img src="https://github.com/onury/notation/actions/workflows/ci.yml/badge.svg" alt="build" /></a>
+  <a href="#quality"><img src="https://img.shields.io/badge/coverage-100%25-2BB150?logo=vitest&logoColor=%23FDC72B&style=flat" alt="coverage" /></a>
+  <a href="https://stryker-mutator.io/docs/"><img src="https://img.shields.io/badge/mutation-84%25-2BB150?style=flat" alt="mutation score" /></a>
+  <a href="https://www.npmjs.com/package/notation"><img src="https://img.shields.io/npm/v/notation.svg?style=flat&label=&color=%23C6234B&logo=npm" alt="version" /></a>
+  <a href="https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7"><img src="https://img.shields.io/badge/ESM-F7DF1E?style=flat" alt="ESM" /></a>
+  <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TS-3260C7?style=flat" alt="TS" /></a>
+  <a href="https://github.com/onury/notation/blob/master/LICENSE"><img src="https://img.shields.io/npm/l/notation.svg?style=flat&color=blue" alt="license" /></a>
+</p>
 
-> © 2021, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
+**Important**: This module is **ESM** 🔆. Please [**read this**](https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7).
 
-Utility for modifying / processing the contents of JavaScript objects and arrays, via object or bracket notation strings or globs. (Node and Browser)
+> © 2026, Onur Yıldırım ([@onury](https://github.com/onury)). MIT License.
+
+A utility for reading, modifying, and filtering the contents of JavaScript objects and arrays — using object/bracket **notation** strings or **glob** patterns.
 
 ```js
 Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value // { some: { prop: true } }
 ```
 
-> _Note that this library should be used to manipulate **data objects** with enumerable properties. It will NOT deal with preserving the prototype-chain of the given object or objects with circular references._
+> _This library is intended for **data objects** with enumerable properties. It does **not** preserve an object's prototype chain, and does not support objects with circular references._
 
 ## Table of Contents
 - [Usage](#usage)
@@ -26,7 +30,8 @@ Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value // { s
 - [Object and Bracket Notation Syntax](#object-and-bracket-notation-syntax)
 - [Globs and Data Integrity](#globs-and-data-integrity)
 - [Source Object Mutation](#source-object-mutation)
-- [API Reference][docs]
+- [API Reference](#documentation)
+- [Quality](#quality)
 
 ## Usage
 
@@ -35,21 +40,11 @@ Install via **NPM**:
 ```sh
 npm i notation
 ```
-In Node/CommonJS environments:
-```js
-const { Notation } = require('notation');
-```
-With transpilers (TypeScript, Babel):
+
 ```js
 import { Notation } from 'notation';
 ```
-In (Modern) Browsers:
-```html
-<script src="js/notation.min.js"></script>
-<script>
-    const { Notation } = notation;
-</script>
-```
+
 
 ## Notation
 `Notation` is a class for modifying or inspecting the contents (property keys and values) of a data object or array.
@@ -64,7 +59,7 @@ if (obj
     return obj.very.deep.prop === undefined ? defaultValue : obj.very.deep.prop;
 }
 ```
-With `Notation`, you could do this:
+With `Notation`, you can do this:
 ```js
 const notate = Notation.create;
 return notate(obj).get('very.deep.prop', defaultValue);
@@ -105,16 +100,16 @@ See [API Reference][docs] for more...
 With a glob-notation, you can use wildcard stars `*` and bang `!` prefix. A wildcard star will include all the properties at that level and a bang prefix negates that notation for exclusion.
 
 - Only **`Notation#filter()`** method accepts glob notations. Regular notations (without any wildcard `*` or `!` prefix) should be used with all other members of the **`Notation`** class.
-- For raw Glob operations, you can use the **`Notation.Glob`** class.
+- For raw Glob operations, you can use the **`NotationGlob`** class.
 
 ### Normalizing a glob notation list
 
 Removes duplicates, redundant items and logically sorts the array:
 ```js
-const { Notation } = require('notation');
+import { NotationGlob } from 'notation';
 
 const globs = ['*', '!id', 'name', 'car.model', '!car.*', 'id', 'name', 'age'];
-console.log(Notation.Glob.normalize(globs));
+console.log(NotationGlob.normalize(globs));
 // ——» ['*', '!car.*', '!id', 'car.model']
 ```
 
@@ -124,12 +119,12 @@ In the normalized result `['*', '!car.*', '!id', 'car.model']`:
 - (In non-restrictive mode) `car.model` is kept (although `*` matches it) bec. it's explicitly defined while we have a negated glob that also matches it: `!car.*`.
 
 ```js
-console.log(Notation.Glob.normalize(globs, { restrictive: true }));
+console.log(NotationGlob.normalize(globs, { restrictive: true }));
 // ——» ['*', '!car.*', '!id']
 ```
 - In restrictive mode, negated removes every match.
 
-> _**Note**: `Notation#filter()` and `Notation.Glob.union()` methods automtically pre-normalize the given glob list(s)._
+> _**Note**: `Notation#filter()` and `NotationGlob.union()` methods automatically pre-normalize the given glob list(s)._
 
 ### Union of two glob notation lists
 
@@ -137,7 +132,7 @@ Unites two glob arrays optimistically and sorts the result array logically:
 ```js
 const globsA = ['*', '!car.model', 'car.brand', '!*.age'];
 const globsB = ['car.model', 'user.age', 'user.name'];
-const union = Notation.Glob.union(globsA, globsB); 
+const union = NotationGlob.union(globsA, globsB); 
 console.log(union);
 // ——» ['*', '!*.age', 'user.age']
 ```
@@ -298,11 +293,30 @@ console.log(cloned.newProp); // ——» true
 
 ## Documentation
 
-You can read the full [**API reference** here][docs].
+Read the full [**API reference**][docs] (currently documents v2). For what changed in v3, see the [change log](#change-log).
 
 ## Change-Log
 
-Read the [CHANGELOG][changelog] especially if you're migrating from version `1.x.x` to version `2.0.0` and above.
+Read the [CHANGELOG][changelog].
+
+## Quality
+
+- **100% test coverage** (statements, branches, functions, lines) — enforced via
+  Vitest thresholds. Run `npm run cover`.
+- **~84% mutation score** via [StrykerJS](https://stryker-mutator.io/). Run
+  `npm run mutation`.
+
+[Mutation testing](https://stryker-mutator.io/docs/) goes beyond coverage: it
+makes hundreds of small edits ("mutants") to the source — flipping `>` to `>=`,
+`&&` to `||`, returning `undefined`, etc. — and checks that a test **fails** for
+each. It catches tests that *execute* code without actually *asserting* its
+behavior (the trap where `function getPositive(x){ return x }` reaches 100%
+coverage but verifies nothing). Most of the surviving mutants here are
+[equivalent mutants](https://stryker-mutator.io/docs/mutation-testing-elements/equivalent-mutants/)
+in the glob normalization/cover/union logic — redundant-but-harmless branches
+that produce identical results — plus environment-defensive guards. These can't
+be killed by definition, so the realistic, healthy target is a high score, not
+100%.
 
 ## License
 
