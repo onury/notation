@@ -17,7 +17,8 @@
 A utility for reading, modifying, and filtering the contents of JavaScript objects and arrays — using object/bracket **notation** strings or **glob** patterns.
 
 ```js
-Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value // { some: { prop: true } }
+Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value
+// { some: { prop: true } }
 ```
 
 > _This library is intended for **data objects** with enumerable properties. It does **not** preserve an object's prototype chain, and does not support objects with circular references._
