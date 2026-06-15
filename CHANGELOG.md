@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## 3.0.0 (2026-06-15)
+
+### Changed
+- **Breaking**: ESM now.
+- **Breaking**: Requires Node v20 and above.
+- **Breaking**: `Notation.Error` is removed, use `NotationError` instead.
+- **Breaking**: `Notation.Glob` is removed, use `NotationGlob` instead.
+- **Breaking**: `NotationGlob#levels` is removed, use `NotationGlob#notes` instead.
+- **Breaking**: `Notation#eachLevel()` is removed, use `Notation#eachNote()` instead.
+- **Breaking**: `Notation#aggregate()` is removed, use `Notation#expand()` instead.
+- **Breaking**: `Notation#delete()` is removed, use `Notation#remove()` instead.
+- **Breaking**: `Notation#renote()` is removed, use `Notation#rename()` instead.
+- **Breaking**: `Notation#copyToNew()` is removed, use `Notation#extract()` instead.
+- **Breaking**: `Notation#moveToNew()` is removed, use `Notation#extrude()` instead.
+- **Breaking**: `Notation.countLevels()` is removed, use `Notation.countNotes()` instead.
+- **Breaking**: Now ships an `exports` map; only the package root (`notation`) and `package.json` are importable (no deep imports into `lib/`).
+- Re-written in TypeScript.
+- Modernized the toolchain: **TypeScript 6**, ESM-only build via `tsc` (no bundler).
+- Switched testing + coverage to **Vitest** (from Jest/ts-jest + c8); coverage uses the istanbul provider.
+- Switched linting + formatting to **Biome** (from ESLint).
+- Switched CI to **GitHub Actions** (from Travis).
+- Dropped dev dependencies no longer needed: `jest`, `ts-jest`, `c8`, `eslint`, `lodash`, `pkgroll`.
+- Shared config via `tsconfig-oy` and `biome-config-oy`.
+
+### Fixed
+- An issue with `Notation#eachValue()` method where bracket notation was ignored.
+- An issue with `Notation#set()` method where we get i.e. `TypeError: Cannot set x of undefined` when working with sparse arrays.
+- An issue with `Notation#filter()` method where in some cases, value was set for the level notation instead of given notation.
+- An issue with `Notation#normalize()` method where in some cases, intersections were ignored.
+
+
 ## 2.0.0 (2020-09-04)
 
 This is a big major release with lots of **improvements** and some **breaking changes**. Please read the changes below and re-run your application tests after you upgrade to v2.
