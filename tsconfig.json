@@ -1,0 +1,19 @@
+{
+  "extends": "tsconfig-oy",
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "incremental": false,
+    "outDir": "lib",
+    "declarationDir": "lib",
+    "declarationMap": true,
+    "rootDir": ".",
+    "typeRoots": ["node_modules/@types"],
+    "types": ["node", "vitest/globals"]
+  },
+  "include": [
+    "src/**/*.ts",
+    "test/**/*.ts"
+  ]
+}
