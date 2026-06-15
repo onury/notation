@@ -1,6 +1,6 @@
 {
   "name": "notation",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.",
   "repository": "onury/notation",
   "license": "MIT",
@@ -8,71 +8,35 @@
     "name": "Onur Yıldırım",
     "email": "onur@cutepilot.com"
   },
-  "main": "lib/notation.min.js",
+  "type": "module",
+  "main": "./lib/index.js",
+  "module": "./lib/index.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "default": "./lib/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "sideEffects": false,
   "files": [
     "lib",
     "LICENSE"
   ],
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
-    "lint": "eslint ./src",
-    "snyk": "snyk test",
-    "prebuild": "npm run snyk && npm run lint",
-    "build:dev": "webpack --mode=development --env.WEBPACK_OUT=development --progress --colors",
-    "build:prod": "webpack --mode=production --env.WEBPACK_OUT=production --progress --colors",
-    "build": "npm run build:prod && npm run build:dev",
-    "watch": "webpack --env.WEBPACK_OUT=nomin --progress --colors --watch",
+    "lint": "biome check src test",
+    "format": "biome check --write src test",
+    "build": "tsc --project tsconfig.build.json",
     "pretest": "npm run lint",
-    "test": "jest --testPathPattern='test/.+$' --verbose --no-cache --runInBand",
-    "cover": "jest --testPathPattern='test/.+$' --verbose --no-cache --runInBand --coverage",
-    "docs": "docma",
-    "docs:serve": "docma && docma serve",
-    "release": "npm run build && npm test && npm run docs"
-  },
-  "babel": {
-    "presets": [
-      "@babel/preset-env"
-    ]
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "collectCoverageFrom": [
-      "src/**/*.js",
-      "!src/index.js"
-    ],
-    "testRegex": "test/.+(test|spec)\\.js$",
-    "transform": {
-      "^.+\\.jsx?$": "babel-jest"
-    },
-    "testPathIgnorePatterns": [
-      "/backup/",
-      "/node_modules/",
-      "/test/tmp/",
-      "/test/coverage/",
-      "/test/config/",
-      "/test/data/",
-      "/test/helpers/",
-      "<rootDir>/lib/"
-    ],
-    "transformIgnorePatterns": [
-      "/node_modules/",
-      "/test/(coverage|helpers|tmp|config|data)/"
-    ],
-    "coverageDirectory": "<rootDir>/test/coverage",
-    "coveragePathIgnorePatterns": [
-      "/backup/",
-      "/coverage/",
-      "/node_modules/",
-      "/test/(helpers|tmp|config|data)/"
-    ],
-    "modulePathIgnorePatterns": [
-      "/backup/",
-      "/coverage/",
-      "/test/helpers/",
-      "/test/tmp/",
-      "/test/config/",
-      "/test/data/",
-      "<rootDir>/lib/"
-    ]
+    "test": "vitest run",
+    "cover": "vitest run --coverage",
+    "mutation": "stryker run",
+    "prepublishOnly": "npm run build"
   },
   "keywords": [
     "object",
@@ -92,19 +56,13 @@
     "build"
   ],
   "devDependencies": {
-    "@babel/core": "^7.11.6",
-    "@babel/preset-env": "^7.11.5",
-    "babel-eslint": "^10.1.0",
-    "babel-jest": "^26.3.0",
-    "babel-loader": "^8.1.0",
-    "babel-plugin-istanbul": "^6.0.0",
-    "eslint": "^7.8.1",
-    "jest-cli": "^26.4.2",
-    "lodash": "^4.17.20",
-    "snyk": "^1.388.0",
-    "uglifyjs-webpack-plugin": "^2.2.0",
-    "webpack": "^4.44.1",
-    "webpack-cli": "^3.3.12"
-  },
-  "dependencies": {}
+    "@biomejs/biome": "^2.5.0",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/node": "^25.9.3",
+    "@vitest/coverage-istanbul": "^4.1.8",
+    "tsconfig-oy": "^1.1.0",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  }
 }
