@@ -1,6 +1,6 @@
 {
   "name": "notation",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.",
   "repository": "onury/notation",
   "license": "MIT",

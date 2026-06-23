@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## 3.0.1 (2026-06-23)
+
+### Added
+- Now exports the public type interfaces: `INotationOptions`, `INotationFilterOptions`, `INotationInspection` and `INotationGlobInspection`. These were already part of the public method signatures; exporting them makes the types directly importable and documents them in the API reference.
+
 ## 3.0.0 (2026-06-15)
 
 ### Changed
