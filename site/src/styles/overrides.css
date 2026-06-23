@@ -18,3 +18,32 @@
   --sl-color-text-accent: var(--sl-color-accent-high);
 }
 */
+
+/* ===========================================================================
+ * Home hero: center everything.
+ * Starlight switches the hero to a two-column grid with start-aligned copy at
+ * ≥50rem (logo right, text left). Force a single centered column so the logo
+ * stacks on top of a centered tagline + actions at every width.
+ *
+ * NB: Starlight scopes its hero rules with :where() (zero specificity), so a
+ * bare `.hero` would only TIE and lose on source order. The `body` prefix
+ * raises specificity just enough to win deterministically.
+ * =========================================================================== */
+body .hero {
+  grid-template-columns: 100%;
+  justify-items: center;
+}
+body .hero > .hero-html,
+body .hero > img {
+  order: 0;            /* keep the logo above the copy (Starlight sends it right) */
+  margin-inline: auto;
+}
+body .hero .stack {
+  text-align: center;
+}
+body .hero .copy {
+  align-items: center;
+}
+body .hero .actions {
+  justify-content: center;
+}
