@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://github.com/onury/notation"><img src="https://raw.githubusercontent.com/onury/notation/master/notation-logo.svg" width="420" alt="Notation.js" /></a>
+  <a href="https://onury.io/notation"><img src="https://raw.githubusercontent.com/onury/notation/master/notation-logo.svg" width="420" alt="Notation.js" /></a>
 </p>
 
 <p align="center">
