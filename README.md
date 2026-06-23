@@ -8,6 +8,7 @@
   <a href="https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7"><img src="https://img.shields.io/badge/ESM-F7DF1E?style=flat" alt="ESM" /></a>
   <a href="https://www.typescriptlang.org/"><img src="https://img.shields.io/badge/TS-3260C7?style=flat" alt="TS" /></a>
   <a href="https://github.com/onury/notation/blob/master/LICENSE"><img src="https://img.shields.io/npm/l/notation.svg?style=flat&color=blue" alt="license" /></a>
+  <a href="https://onury.io/notation"><img src="https://img.shields.io/badge/docs-read-c27cf4?style=flat" alt="documentation" /></a>
 </p>
 
 **Important**: This module is **ESM** 🔆. Please [**read this**](https://gist.github.com/onury/d3f3d765d7db2e8b2d050d14315f2ac7).
@@ -31,7 +32,7 @@ Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value
 - [Object and Bracket Notation Syntax](#object-and-bracket-notation-syntax)
 - [Globs and Data Integrity](#globs-and-data-integrity)
 - [Source Object Mutation](#source-object-mutation)
-- [API Reference](#documentation)
+- [Documentation](#documentation)
 - [Quality](#quality)
 
 ## Usage
@@ -94,7 +95,7 @@ notate(obj)                          // initialize. equivalent to `new Notation(
     .rename('boat.name', 'dog.name') // { dog: { breed: "Akita", color: "white", name: "Mojo" } }
     .value;                          // result object ^
 ```
-See [API Reference][docs] for more...
+See the [documentation][docs] for more...
 
 ## Glob Notation
 
@@ -294,7 +295,7 @@ console.log(cloned.newProp); // ——» true
 
 ## Documentation
 
-Read the full [**API reference**][docs] (currently documents v2). For what changed in v3, see the [change log](#change-log).
+Read the full [**documentation**][docs] — guides, concepts and the API reference. For what changed in v3, see the [change log](#change-log).
 
 ## Change-Log
 
@@ -323,5 +324,5 @@ be killed by definition, so the realistic, healthy target is a high score, not
 
 [**MIT**](https://github.com/onury/notation/blob/master/LICENSE).
 
-[docs]:https://onury.io/notation/api
+[docs]:https://onury.io/notation
 [changelog]:https://github.com/onury/notation/blob/master/CHANGELOG.md
