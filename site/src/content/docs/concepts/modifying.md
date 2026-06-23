@@ -6,7 +6,7 @@ description: Set, remove, merge, and separate properties by notation.
 Every method here **mutates** the source and returns the instance for chaining.
 Read the result from `.value`. To avoid mutation, [`clone()`](/notation/concepts/mutation/) first.
 
-## set
+## `set`
 
 `set(notation, value, mode?)` writes a value, creating the nested path if needed:
 
@@ -38,7 +38,7 @@ Notation.create({ tags: ['a', 'c'] }).set('tags[1]', 'b', 'insert').value;
 `'insert'` only applies to arrays — using it on an object throws a
 [`NotationError`](/notation/concepts/options/).
 
-## remove
+## `remove`
 
 ```js
 const obj = { notebook: 'Mac', car: { model: 'Mustang' } };
@@ -49,7 +49,7 @@ Notation.create(obj).remove('car.model').value;
 Removing from an array splices by default (indices shift). Set
 [`preserveIndices`](/notation/concepts/options/) to leave a sparse hole instead.
 
-## merge
+## `merge`
 
 `merge()` is `set()` for many notations at once. Keys may be plain (merged at the
 root) or dotted (written at depth):
@@ -63,7 +63,7 @@ Notation.create({ car: { brand: 'Dodge' } }).merge({
 // » { car: { brand: "Dodge", model: "Mustang", year: 1965 }, boat: "none" }
 ```
 
-## separate
+## `separate`
 
 The inverse of `merge()`: removes the listed notations from the source and
 returns them as a new object.

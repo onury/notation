@@ -18,7 +18,7 @@ import { Notation } from 'notation';
 `Notation.create(source)` is shorthand for `new Notation(source)`. With no
 argument it starts from an empty object.
 
-### Other runtimes
+### Other Runtimes
 
 v3 is pure ESM with no Node-only dependencies, so it runs beyond Node.js (≥ 20):
 
@@ -28,7 +28,7 @@ v3 is pure ESM with no Node-only dependencies, so it runs beyond Node.js (≥ 20
 
 The API is identical across runtimes — only the install/import line differs.
 
-## Read a value
+## Read a Value
 
 Reach into a nested property without manual guard chains. A default value is
 returned when the path doesn't exist:
@@ -40,7 +40,7 @@ Notation.create(obj).get('car.model');              // » "Charger"
 Notation.create(obj).get('car.color', 'red');       // » "red" (not present)
 ```
 
-## Build & modify
+## Build & Modify
 
 Methods that change the source are chainable; read the result from `.value`:
 
@@ -55,7 +55,7 @@ Notation.create(obj)
 // » { car: { model: "Charger", year: 1970 } }
 ```
 
-## Filter with globs
+## Filter with Globs
 
 `filter()` is the one method that takes **glob** patterns — `*` to include,
 `!` to exclude — and returns a new object without mutating the source:
@@ -73,7 +73,7 @@ The source is **mutated** by every method except `filter()`. Call
 [Mutation & Cloning](/notation/concepts/mutation/).
 :::
 
-## Where next
+## Where Next
 
 - [Notations & Notes](/notation/concepts/notations/) — what a notation string is.
 - [Glob Notation](/notation/concepts/globs/) and [Filtering Data](/notation/concepts/filtering/) — wildcards, negation, normalization.

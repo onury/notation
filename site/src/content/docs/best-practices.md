@@ -3,7 +3,7 @@ title: Best Practices
 description: Habits that keep Notation code correct and predictable.
 ---
 
-## Clone before mutating shared data
+## Clone Before Mutating Shared Data
 
 Every method except `filter()` mutates the source. If the object is shared (a
 cache entry, a request body, app state), [`clone()`](/notation/concepts/mutation/)
@@ -13,7 +13,7 @@ first:
 const safe = Notation.create(shared).clone().set('seen', true).value;
 ```
 
-## Enable strict for sensitive data
+## Enable Strict for Sensitive Data
 
 Silent `undefined` is convenient until it hides a typo in a path that gates
 access or billing. Turn on [`strict`](/notation/concepts/options/) so missing
@@ -23,7 +23,7 @@ paths and blocked writes throw:
 const n = Notation.create(record, { strict: true });
 ```
 
-## Filter untrusted output with allow-lists
+## Filter Untrusted Output with Allow-Lists
 
 When shaping data you send to a client, prefer an explicit allow-list over a
 deny-list — a new sensitive field added later stays hidden by default:
@@ -45,7 +45,7 @@ so negations can't be re-included.
 throws an [integrity error](/notation/concepts/integrity/). Pick the one that
 matches the value's type.
 
-## Combine permission lists with union
+## Combine Permission Lists with Union
 
 Don't concatenate glob arrays by hand — let
 [`NotationGlob.union()`](/notation/concepts/globs/#union) merge and normalize
@@ -55,7 +55,7 @@ them so redundant and contradictory patterns resolve correctly:
 const globs = NotationGlob.union(roleA, roleB);
 ```
 
-## Validate notations from user input
+## Validate Notations from User Input
 
 If a notation comes from outside, check it before use — and pick the right
 validator for the context:

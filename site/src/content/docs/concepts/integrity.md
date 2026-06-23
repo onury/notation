@@ -7,7 +7,7 @@ Notation prefers a loud failure over a silently wrong result. Two integrity
 checks guard [filtering](/notation/concepts/filtering/) and
 [glob normalization](/notation/concepts/globs/).
 
-## Glob list integrity
+## Glob List Integrity
 
 A single glob list can't mix **object** and **array** notations at the root —
 the root implies one source type, never both.
@@ -20,7 +20,7 @@ NotationGlob.normalize(['[*]', '!x.y']);
 `[*]` says the source is an array, while `!x.y` says `x` is an object property
 of the root — only one can be true.
 
-## Glob vs. value integrity
+## Glob vs. Value Integrity
 
 A negated glob with a trailing wildcard (`!x.*`) means *empty `x`'s contents but
 keep `x`*. That only makes sense if `x` is actually a container. When the value's

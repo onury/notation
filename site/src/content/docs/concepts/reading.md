@@ -3,7 +3,7 @@ title: Reading & Inspecting
 description: Get values, test existence, and inspect notations for rich detail.
 ---
 
-## Get a value
+## Get a Value
 
 `get(notation, defaultValue?)` returns the value at a path, or the default when
 it's missing:
@@ -20,7 +20,7 @@ That last line is deliberate: an existing property whose value is `undefined`
 In [strict mode](/notation/concepts/options/), a missing path with no default
 throws instead of returning `undefined`.
 
-## Test existence
+## Test Existence
 
 ```js
 const n = Notation.create({ car: { year: undefined } });

@@ -16,7 +16,7 @@ arrays. It does not preserve prototype chains and does not handle circular
 references — it's for data, not class instances. See
 [Mutation & Cloning](/notation/concepts/mutation/) for the supported value types.
 
-## Creating an instance
+## Creating an Instance
 
 `new Notation(source)` and the static `Notation.create(source)` are equivalent.
 With no argument, the source is a new empty object.
@@ -48,7 +48,7 @@ Notation.isValid('x.*');                 // » false (glob-only)
 Notation.isValid('@1');                  // » false (use "['@1']")
 ```
 
-## Static helpers
+## Static Helpers
 
 These work on notation strings directly — no instance needed. All throw a
 [`NotationError`](/notation/concepts/options/) on invalid input.
@@ -75,7 +75,7 @@ Notation.eachNote('first.prop2.last', (levelNotation, note, index, list) => {
 // 2  "first.prop2.last"  "last"
 ```
 
-## Listing notations from data
+## Listing Notations from Data
 
 `getNotations()` returns the leaf notation of every value in the source:
 

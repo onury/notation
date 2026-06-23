@@ -24,7 +24,7 @@ n.filter().value;                      // » {}  (same as filter("") or filter("
 car;                                   // » unchanged
 ```
 
-## Restrictive mode
+## Restrictive Mode
 
 By default an explicitly-listed field survives even if a negated glob also
 matches it. In **restrictive** mode, negation wins:
@@ -43,7 +43,7 @@ Notation.create(data).filter(globs, { restrictive: true }).value;
 // » car: { brand, model }, user: { name }            (user.age removed)
 ```
 
-## Worked example: field access by role
+## Worked Example: Field Access by Role
 
 A common use is trimming an API record down to what a given role may see. Take
 this record:

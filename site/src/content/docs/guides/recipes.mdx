@@ -8,7 +8,7 @@ import fieldGlobs from '../../../cases/api/field-globs.json?raw';
 
 These build on the case data from [Filtering Data](/notation/concepts/filtering/).
 
-## Project a record for a role
+## Project a Record for a Role
 
 Turn a per-role glob map into a reusable projection helper. Each role's list is a
 [glob](/notation/concepts/globs/) list:
@@ -33,7 +33,7 @@ project(user, 'nope');   // falls back to guest
 `filter()` returns a fresh object, so the original `record` is safe to reuse
 across requests.
 
-## Combine two roles' access
+## Combine Two Roles' Access
 
 When a user holds multiple roles, merge their glob lists with
 [`union()`](/notation/concepts/globs/#union) — it normalizes away redundant and
@@ -46,7 +46,7 @@ const globs = NotationGlob.union(fieldGlobs.guest, fieldGlobs.editor);
 Notation.create(user).filter(globs).value;
 ```
 
-## Expand a flat database row
+## Expand a Flat Database Row
 
 Columns like `account.billing.card.last4` rehydrate into a nested object with
 [`expand()`](/notation/concepts/restructuring/):
@@ -61,7 +61,7 @@ Notation.create(row).expand().value;
 // » { id: 42, account: { plan: "pro", billing: { card: { last4: "4242" } } } }
 ```
 
-## Build an object from flat form data
+## Build an Object from Flat Form Data
 
 Form fields named with notation (`user.name`, `user.roles[0]`) assemble directly
 via [`merge()`](/notation/concepts/modifying/#merge):
@@ -76,7 +76,7 @@ Notation.create({}).merge(form).value;
 // » { user: { name: "Jane", email: "jane@example.com", roles: ["editor"] } }
 ```
 
-## Strip fields before persisting
+## Strip Fields Before Persisting
 
 The inverse of projection — pull sensitive fields out with
 [`separate()`](/notation/concepts/modifying/#separate), keeping both halves:

@@ -16,7 +16,7 @@ n.options = { preserveIndices: true };   // merged onto existing options
 | `strict` | `false` | throw on missing paths / blocked overwrites instead of failing quietly |
 | `preserveIndices` | `false` | keep array indices when removing items (produces sparse arrays) |
 
-## strict
+## `strict`
 
 With `strict` off (the default), missing paths resolve to `undefined` and blocked
 writes are skipped silently. With `strict` on, they throw — recommended when
@@ -42,7 +42,7 @@ exempt; they report `has: false` rather than throwing.
 > _Regardless of `strict`, invalid notation syntax and other critical failures
 > always throw._
 
-## preserveIndices
+## `preserveIndices`
 
 Removing an array item splices by default, so later indices shift down. Enable
 `preserveIndices` to leave a sparse hole instead:
@@ -55,7 +55,7 @@ Notation.create([0, 1, 2], { preserveIndices: true }).remove('[1]').value;
 // » [0, <empty>, 2]
 ```
 
-## NotationError
+## `NotationError`
 
 All thrown errors are instances of `NotationError` (a subclass of `Error`), so
 you can target them specifically:

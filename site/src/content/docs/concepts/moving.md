@@ -11,7 +11,7 @@ between the source and another object. **Copy** leaves the origin intact;
 All take an optional `newNotation` (rename on arrival; defaults to the original
 notation) and `overwrite` (default `true`).
 
-## Across objects
+## Across Objects
 
 `copyTo` / `moveTo` write to a **destination**; `copyFrom` / `moveFrom` read
 from a **target** into the source.
@@ -39,7 +39,7 @@ Notation.create(obj).copyFrom({ dodge: 'Charger' }, 'dodge', 'car.model');
 // obj » { car: { brand: "Ford", model: "Charger" } }
 ```
 
-## Within the source
+## Within the Source
 
 `rename(notation, newNotation)` moves a property to a new notation on the same
 object:
@@ -52,7 +52,7 @@ Notation.create(obj)
 // » { carBrand: "Ford", carModel: "Mustang" }
 ```
 
-## Into a new object
+## Into a New Object
 
 `extract` copies, `extrude` moves — both return a brand-new object. They're
 shorthands for `copyTo({}, …)` and `moveTo({}, …)`.

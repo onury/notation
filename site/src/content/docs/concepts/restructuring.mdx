@@ -9,7 +9,7 @@ import flatRow from '../../../cases/api/flat-row.json?raw';
 `flatten()` and `expand()` are inverses. They convert between a nested object and
 a single-level object whose keys are notations.
 
-## flatten
+## Flatten
 
 ```js
 const obj = { car: { brand: 'Dodge', model: 'Charger', year: 1970 } };
@@ -21,7 +21,7 @@ Notation.create(obj).flatten().value;
 //   }
 ```
 
-## expand
+## Expand
 
 The opposite — nest dotted keys back under their parents. This is handy for flat
 rows coming out of a database or a form.
@@ -45,7 +45,7 @@ Notation.create(row).expand().value;
 //   }
 ```
 
-## Round-trip
+## Round-Trip
 
 `flatten()` then `expand()` returns the original shape — useful for diffing,
 patching, or storing nested data in a flat column:

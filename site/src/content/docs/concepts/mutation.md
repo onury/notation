@@ -15,7 +15,7 @@ source;          // » { a: 1, b: 2 }   (mutated)
 result === source; // » true
 ```
 
-## Opt out with clone()
+## Opt Out with clone()
 
 Call `clone()` before any mutating method to work on a deep copy and leave the
 original untouched:
@@ -29,7 +29,7 @@ result;            // » { a: 1, b: 2 }
 'b' in source;     // » false
 ```
 
-## What clone() supports
+## What clone() Supports
 
 `Notation` is for **data** objects with enumerable properties. `clone()` deeply
 copies:

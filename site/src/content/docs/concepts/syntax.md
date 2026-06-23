@@ -8,7 +8,7 @@ array-index notation, and object-bracket notation. Invalid notes never match —
 and most methods throw a [`NotationError`](/notation/concepts/options/) rather
 than fail silently.
 
-## Property keys
+## Property Keys
 
 Standard identifiers use dot notation. Non-standard keys (digits, dashes,
 symbols, reserved characters) must use **bracket** notation with quotes:
@@ -25,7 +25,7 @@ Notation.isValid('x.y-z');     // » false
 Notation.isValid('x["y-z"]');  // » true
 ```
 
-## Array indices
+## Array Indices
 
 Brackets with a number address array items:
 
@@ -56,7 +56,7 @@ Notation.isValid('x.*');    // » false (glob only)
 NotationGlob.isValid('x.*'); // » true
 ```
 
-## Wildcard equivalence
+## Wildcard Equivalence
 
 For **non-negated** globs, trailing wildcards are redundant — they all normalize
 to the bare notation:

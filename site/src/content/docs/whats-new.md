@@ -7,7 +7,7 @@ v3 is a TypeScript rewrite. The behavior of the API is unchanged from v2 — the
 breaking changes are about **packaging** (ESM) and a set of **renames** that
 started as v2 deprecations.
 
-## Breaking changes
+## Breaking Changes
 
 - **ESM only.** Notation is now an ES module. Import it with
   `import { Notation } from 'notation'` — CommonJS `require()` is no longer

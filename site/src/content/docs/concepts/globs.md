@@ -24,7 +24,7 @@ const g = new NotationGlob('billing.account.*');
 g.test('billing.account.id');   // » true
 ```
 
-## Instance shape
+## Instance Shape
 
 A `NotationGlob` exposes its parsed form. Trailing redundant wildcards are
 stripped on construction:
@@ -67,7 +67,7 @@ What happened:
 - `car.model` survives: it's explicitly listed *and* a negated glob (`!car.*`)
   also matches it, so it's not redundant.
 
-### Restrictive mode
+### Restrictive Mode
 
 By default a negated glob doesn't remove an explicitly-listed positive. In
 **restrictive** mode, negation wins every match:
@@ -100,7 +100,7 @@ NotationGlob.union(a, b);
 `!car.model` drops because `b` has the exact positive; `car.model` is then
 redundant under `*`; `user.age` stays because `!*.age` still matches it.
 
-## Compare, sort, intersect
+## Compare, Sort, Intersect
 
 `compare`/`sort` order globs from loose to specific (`* < *.y < x.y`), with a
 negated glob sorting after its positive twin:
@@ -118,7 +118,7 @@ NotationGlob.create('x.*').intersect('!*.y');        // » "x.y"
 NotationGlob.create('x.*').intersect('!*.y', true);  // » "!x.y"  (restrictive)
 ```
 
-## Detection helpers
+## Detection Helpers
 
 ```js
 NotationGlob.isValid('!a.*');   // » true
