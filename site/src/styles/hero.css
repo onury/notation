@@ -25,38 +25,23 @@
   border: 0;
 }
 
-/* ── Confetti hero: full-bleed dark stage + background light blooms ──────────
- * The paper confetti itself is a <canvas> injected by HeroConfetti.astro. The
- * dark backdrop and the pale green/violet light blooms behind it live here in
- * CSS (crisp, free, no JS). The hero stays dark in light & dark themes alike. */
+/* ── Confetti hero stage ─────────────────────────────────────────────────────
+ * The paper confetti, the dark backdrop and the pale green/violet blooms are all
+ * painted on a single <canvas> injected by HeroConfetti.astro. The canvas spans
+ * from the top of the page (behind the header) down to the bottom of the hero,
+ * then fades out — its `top`/`height` are set in JS; styling lives here. The
+ * stage stays dark in light & dark themes alike. */
 .hero {
   position: relative;
   isolation: isolate;
   overflow: visible;
 }
-/* Full-bleed dark backdrop + soft on-brand green + violet blooms (behind papers). */
-.hero::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  left: 50%;
-  width: 100vw;
-  transform: translateX(-50%);
-  z-index: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(58% 55% at 20% 30%, rgba(18, 190, 16, 0.16), transparent 70%),
-    radial-gradient(52% 58% at 84% 72%, rgba(139, 92, 246, 0.16), transparent 72%),
-    radial-gradient(130% 120% at 50% -10%, #14161c 0%, #0a0b0f 58%, #07080a 100%);
-}
-/* The injected confetti canvas: full-bleed, between the blooms and the content. */
 .hero canvas.confetti-hero {
   position: absolute;
-  inset: 0;
   left: 50%;
   width: 100vw;
   transform: translateX(-50%);
-  z-index: 1;
+  z-index: 1;          /* above the hero bg, below the logo + copy */
   display: block;
   pointer-events: none;
 }
@@ -66,7 +51,7 @@
 /* Keep the hero copy legible on the dark stage regardless of theme. */
 .hero .tagline { color: #d9dbe0; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); }
 .hero .actions a.minimal { color: #e6e8ec; }
-/* Contain the full-bleed layers to the viewport (no horizontal scrollbar). */
+/* Contain the full-bleed canvas to the viewport (no horizontal scrollbar). */
 html:not([data-has-sidebar]) :where(main, .content-panel) { overflow-x: clip; }
 
 .hero .actions a.primary {
