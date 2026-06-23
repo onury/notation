@@ -1,4 +1,6 @@
-# Notation.js
+<p align="center">
+  <a href="https://github.com/onury/notation"><img src="https://raw.githubusercontent.com/onury/notation/master/backup/notation-logo.svg" width="420" alt="Notation.js" /></a>
+</p>
 
 <p align="center">
   <a href="https://github.com/onury/notation/actions/workflows/ci.yml"><img src="https://github.com/onury/notation/actions/workflows/ci.yml/badge.svg" alt="build" /></a>
