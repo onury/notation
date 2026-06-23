@@ -1,0 +1,87 @@
+---
+title: Recipes
+description: Practical patterns — role-based field projection, combining permissions, flat ⇄ nested.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import fieldGlobs from '../../../cases/api/field-globs.json?raw';
+
+These build on the case data from [Filtering Data](/notation/concepts/filtering/).
+
+## Project a record for a role
+
+Turn a per-role glob map into a reusable projection helper. Each role's list is a
+[glob](/notation/concepts/globs/) list:
+
+<Code code={fieldGlobs} lang="json" title="cases/api/field-globs.json" />
+
+```js
+import { Notation } from 'notation';
+import fieldGlobs from './field-globs.json' with { type: 'json' };
+
+/** Return a copy of `record` containing only what `role` may see. */
+function project(record, role) {
+  const globs = fieldGlobs[role] ?? fieldGlobs.guest;   // default to least access
+  return Notation.create(record).filter(globs).value;   // filter() never mutates
+}
+
+project(user, 'editor'); // billing, passwordHash, post secrets stripped
+project(user, 'guest');  // only id, name, profile.bio, profile.avatar
+project(user, 'nope');   // falls back to guest
+```
+
+`filter()` returns a fresh object, so the original `record` is safe to reuse
+across requests.
+
+## Combine two roles' access
+
+When a user holds multiple roles, merge their glob lists with
+[`union()`](/notation/concepts/globs/#union) — it normalizes away redundant and
+contradictory patterns:
+
+```js
+import { NotationGlob } from 'notation';
+
+const globs = NotationGlob.union(fieldGlobs.guest, fieldGlobs.editor);
+Notation.create(user).filter(globs).value;
+```
+
+## Expand a flat database row
+
+Columns like `account.billing.card.last4` rehydrate into a nested object with
+[`expand()`](/notation/concepts/restructuring/):
+
+```js
+const row = {
+  id: 42,
+  'account.plan': 'pro',
+  'account.billing.card.last4': '4242'
+};
+Notation.create(row).expand().value;
+// » { id: 42, account: { plan: "pro", billing: { card: { last4: "4242" } } } }
+```
+
+## Build an object from flat form data
+
+Form fields named with notation (`user.name`, `user.roles[0]`) assemble directly
+via [`merge()`](/notation/concepts/modifying/#merge):
+
+```js
+const form = {
+  'user.name': 'Jane',
+  'user.email': 'jane@example.com',
+  'user.roles[0]': 'editor'
+};
+Notation.create({}).merge(form).value;
+// » { user: { name: "Jane", email: "jane@example.com", roles: ["editor"] } }
+```
+
+## Strip fields before persisting
+
+The inverse of projection — pull sensitive fields out with
+[`separate()`](/notation/concepts/modifying/#separate), keeping both halves:
+
+```js
+const secrets = Notation.create(user).separate(['passwordHash', 'account.billing']);
+// `user` no longer has those; `secrets` holds them
+```

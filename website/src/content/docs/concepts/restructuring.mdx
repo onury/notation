@@ -1,0 +1,65 @@
+---
+title: Flatten & Expand
+description: Round-trip between nested objects and flat, dotted-key maps.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import flatRow from '../../../cases/api/flat-row.json?raw';
+
+`flatten()` and `expand()` are inverses. They convert between a nested object and
+a single-level object whose keys are notations.
+
+## flatten
+
+```js
+const obj = { car: { brand: 'Dodge', model: 'Charger', year: 1970 } };
+Notation.create(obj).flatten().value;
+// » {
+//     "car.brand": "Dodge",
+//     "car.model": "Charger",
+//     "car.year": 1970
+//   }
+```
+
+## expand
+
+The opposite — nest dotted keys back under their parents. This is handy for flat
+rows coming out of a database or a form.
+
+Take this flat row:
+
+<Code code={flatRow} lang="json" title="cases/api/flat-row.json" />
+
+```js
+import row from './flat-row.json' with { type: 'json' };
+
+Notation.create(row).expand().value;
+// » {
+//     id: 42,
+//     name: "Jane Doe",
+//     account: {
+//       plan: "pro",
+//       billing: { card: { brand: "visa", last4: "4242" } }
+//     },
+//     profile: { social: { github: "jane" } }
+//   }
+```
+
+## Round-trip
+
+`flatten()` then `expand()` returns the original shape — useful for diffing,
+patching, or storing nested data in a flat column:
+
+```js
+const data = { user: { name: 'Jane', roles: ['editor'] } };
+const flat = Notation.create(data).flatten().value;
+// » { "user.name": "Jane", "user.roles[0]": "editor" }
+
+Notation.create(flat).expand().value;
+// » { user: { name: "Jane", roles: ["editor"] } }
+```
+
+:::note
+Array items flatten with bracket notes (`user.roles[0]`), and `expand()`
+restores them as arrays. See [Object, Bracket & Array Syntax](/notation/concepts/syntax/).
+:::

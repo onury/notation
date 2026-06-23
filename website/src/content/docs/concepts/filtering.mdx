@@ -1,0 +1,92 @@
+---
+title: Filtering Data
+description: Include and exclude fields with glob patterns — order-independent, non-mutating.
+---
+
+import { Code } from '@astrojs/starlight/components';
+import user from '../../../cases/api/user.json?raw';
+import fieldGlobs from '../../../cases/api/field-globs.json?raw';
+
+`filter(globList, options?)` is the one method that takes [glob](/notation/concepts/globs/)
+patterns. Properties matched by a glob (explicitly or via `*`) are kept; anything
+matched by a negated `!` glob is removed. The result is built from scratch — the
+**source is not mutated**.
+
+Order doesn't matter; the list is normalized and sorted first.
+
+```js
+const car = { brand: 'Ford', model: { name: 'Mustang', year: 1970 } };
+const n = Notation.create(car);
+
+n.filter(['*', '!model.year']).value;  // » { brand: "Ford", model: { name: "Mustang" } }
+n.filter('model.name').value;          // » { model: { name: "Mustang" } }
+n.filter().value;                      // » {}  (same as filter("") or filter("!*"))
+car;                                   // » unchanged
+```
+
+## Restrictive mode
+
+By default an explicitly-listed field survives even if a negated glob also
+matches it. In **restrictive** mode, negation wins:
+
+```js
+const data = {
+  car: { brand: 'Ford', model: 'Mustang', age: 52 },
+  user: { name: 'John', age: 40 }
+};
+const globs = ['*', '!*.age', 'user.age'];
+
+Notation.create(data).filter(globs).value;
+// » car: { brand, model }, user: { name, age: 40 }   (user.age kept — explicit)
+
+Notation.create(data).filter(globs, { restrictive: true }).value;
+// » car: { brand, model }, user: { name }            (user.age removed)
+```
+
+## Worked example: field access by role
+
+A common use is trimming an API record down to what a given role may see. Take
+this record:
+
+<Code code={user} lang="json" title="cases/api/user.json" />
+
+…and a glob list per role:
+
+<Code code={fieldGlobs} lang="json" title="cases/api/field-globs.json" />
+
+Filter the record with a role's globs:
+
+```js
+import user from './user.json' with { type: 'json' };
+import fieldGlobs from './field-globs.json' with { type: 'json' };
+
+Notation.create(user).filter(fieldGlobs.editor).value;
+// » {
+//     id: 42,
+//     name: "Jane Doe",
+//     email: "jane@example.com",
+//     roles: ["editor"],
+//     profile: { bio, avatar, social: { x, github } },
+//     account: { plan: "pro", since: "2021-03-09" },   // billing removed
+//     posts: [ { id, title, draft }, { id, title, draft } ] // secret removed
+//   }
+```
+
+The `editor` list (`['*', '!passwordHash', '!account.billing', '!posts[*].secret']`)
+keeps everything, then drops the password hash, the whole billing object, and the
+`secret` of **every** post via the array wildcard `posts[*].secret`.
+
+The `guest` list is the opposite approach — an allow-list of just four fields:
+
+```js
+Notation.create(user).filter(fieldGlobs.guest).value;
+// » { id: 42, name: "Jane Doe", profile: { bio, avatar } }
+```
+
+:::caution
+A negated glob that empties a container (`!x.*`) must match the data's actual
+shape, or `filter()` throws. See [Data Integrity](/notation/concepts/integrity/).
+:::
+
+This pattern is fleshed out into a reusable helper in
+[Recipes](/notation/guides/recipes/).

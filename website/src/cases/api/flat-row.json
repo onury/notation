@@ -1,0 +1,8 @@
+{
+  "id": 42,
+  "name": "Jane Doe",
+  "account.plan": "pro",
+  "account.billing.card.brand": "visa",
+  "account.billing.card.last4": "4242",
+  "profile.social.github": "jane"
+}

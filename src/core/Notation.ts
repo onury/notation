@@ -490,12 +490,11 @@ export class Notation<
    * Notation.create({ car: {} }).get("car.model", "Challenger"); // "Challenger"
    * Notation.create({ car: { model: undefined } }).get("car.model", "Challenger"); // undefined
    *
-   * @example <caption>get value when strict option is enabled</caption> //
-   * strict option defaults to false Notation.create({ car: {}
-   * }).get("car.model"); // undefined Notation.create({ car: {} }, { strict:
-   * false }).get("car.model"); // undefined // below will throw bec. strict
-   * = true, car.model does not exist // and no default value is given.
-   * Notation.create({ car: {} }, { strict: true }).get("car.model");
+   * @example
+   * // `strict` defaults to false — a missing path returns undefined:
+   * Notation.create({ car: {} }).get("car.model"); // undefined
+   * // with strict enabled and no default value, a missing path throws:
+   * Notation.create({ car: {} }, { strict: true }).get("car.model"); // throws NotationError
    */
   get(notation: string, defaultValue?: unknown): unknown {
     const result = this.inspectGet(notation);

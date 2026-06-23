@@ -1,0 +1,10 @@
+{
+  "guest": ["id", "name", "profile.bio", "profile.avatar"],
+  "editor": [
+    "*",
+    "!passwordHash",
+    "!account.billing",
+    "!posts[*].secret"
+  ],
+  "admin": ["*", "!passwordHash"]
+}

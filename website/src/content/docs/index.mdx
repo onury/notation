@@ -1,9 +1,9 @@
 ---
-title: Notation
-description: Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.
+title: Notation.js
+description: Read, modify, and filter the contents of JavaScript objects and arrays — with object/bracket notation strings or glob patterns.
 template: splash
 hero:
-  tagline: Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.
+  tagline: Read, modify, and filter the contents of JavaScript objects and arrays — with object/bracket notation strings or glob patterns.
   actions:
     - text: Get Started
       link: /notation/getting-started/
@@ -15,34 +15,52 @@ hero:
       variant: minimal
 ---
 
-{/* Feature cards use the shared `.feature-grid` classes from @onury/docs-kit. */}
+```js
+Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value;
+// » { some: { prop: true } }
+```
+
 <div class="feature-grid">
   <div class="feature">
     <div class="feature-head">
       <span class="feature-icon ti fi-blue">◆</span>
-      <h3>Fast</h3>
+      <h3>Read &amp; build</h3>
     </div>
-    <p>Describe a key capability of Notation here.</p>
+    <p>Get and set deeply-nested values by notation — no <code>&amp;&amp;</code> guard chains, no <code>undefined</code> surprises.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
       <span class="feature-icon ti fi-green">◆</span>
-      <h3>Typed</h3>
+      <h3>Glob filtering</h3>
     </div>
-    <p>Another highlight — replace this placeholder copy.</p>
+    <p>Include or exclude fields with wildcard <code>*</code> and bang <code>!</code> patterns. Order-independent, auto-normalized.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
       <span class="feature-icon ti fi-purple">◆</span>
-      <h3>Tested</h3>
+      <h3>Flatten &amp; expand</h3>
     </div>
-    <p>A third selling point goes here.</p>
+    <p>Round-trip between nested objects and flat, dotted-key maps — handy for DB rows and form data.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
       <span class="feature-icon ti fi-orange">◆</span>
-      <h3>Zero-config</h3>
+      <h3>Move &amp; copy</h3>
     </div>
-    <p>And a fourth. Edit these in <code>src/content/docs/index.mdx</code>.</p>
+    <p>Copy, move, rename, extract, and merge properties within or across objects.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-head">
+      <span class="feature-icon ti fi-red">◆</span>
+      <h3>Bracket &amp; array notation</h3>
+    </div>
+    <p>Address array indices and non-standard keys: <code>x[0]</code>, <code>x["my-key"]</code>, <code>x['*']</code>.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-head">
+      <span class="feature-icon ti fi-yellow">◆</span>
+      <h3>ESM · typed · tested</h3>
+    </div>
+    <p>Pure ESM, ships TypeScript types, 100% test coverage. Runs on Node, Bun, Deno, and the browser.</p>
   </div>
 </div>

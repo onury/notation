@@ -55,21 +55,40 @@ export default defineConfig({
       ],
       sidebar: [
         {
-          "label": "Start Here",
-          "items": [
-            {
-              "label": "Getting Started",
-              "slug": "getting-started"
-            }
+          label: 'Start Here',
+          items: [
+            { label: 'Getting Started', slug: 'getting-started' },
+            { label: "What's New in v3", slug: 'whats-new' }
           ]
         },
         {
-          "label": "Help",
-          "items": [
-            {
-              "label": "Changelog",
-              "slug": "changelog"
-            }
+          label: 'Concepts',
+          items: [
+            { label: 'Notations & Notes', slug: 'concepts/notations' },
+            { label: 'Object, Bracket & Array Syntax', slug: 'concepts/syntax' },
+            { label: 'Reading & Inspecting', slug: 'concepts/reading' },
+            { label: 'Modifying Data', slug: 'concepts/modifying' },
+            { label: 'Flatten & Expand', slug: 'concepts/restructuring' },
+            { label: 'Moving & Copying', slug: 'concepts/moving' },
+            { label: 'Glob Notation', slug: 'concepts/globs' },
+            { label: 'Filtering Data', slug: 'concepts/filtering' },
+            { label: 'Data Integrity', slug: 'concepts/integrity' },
+            { label: 'Mutation & Cloning', slug: 'concepts/mutation' },
+            { label: 'Options, Strict Mode & Errors', slug: 'concepts/options' }
+          ]
+        },
+        {
+          label: 'Guides',
+          items: [
+            { label: 'Best Practices', slug: 'best-practices' },
+            { label: 'Recipes', slug: 'guides/recipes' }
+          ]
+        },
+        {
+          label: 'Help',
+          items: [
+            { label: 'FAQ', slug: 'faq' },
+            { label: 'Changelog', slug: 'changelog' }
           ]
         },
         typeDocSidebarGroup

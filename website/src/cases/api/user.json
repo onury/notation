@@ -1,0 +1,24 @@
+{
+  "id": 42,
+  "name": "Jane Doe",
+  "email": "jane@example.com",
+  "passwordHash": "$2b$10$Q9…",
+  "roles": ["editor"],
+  "profile": {
+    "bio": "Coffee, code, cassettes.",
+    "avatar": "https://cdn.example.com/u/42.png",
+    "social": { "x": "@jane", "github": "jane" }
+  },
+  "account": {
+    "plan": "pro",
+    "since": "2021-03-09",
+    "billing": {
+      "customerId": "cus_8fK2",
+      "card": { "brand": "visa", "last4": "4242" }
+    }
+  },
+  "posts": [
+    { "id": 1, "title": "Hello", "draft": false, "secret": "internal note" },
+    { "id": 2, "title": "Notation tips", "draft": true, "secret": "wip" }
+  ]
+}
