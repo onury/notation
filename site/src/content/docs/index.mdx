@@ -26,45 +26,64 @@ Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value;
 <div class="feature-grid">
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-blue">◆</span>
-      <h3>Read &amp; build</h3>
+      <i class="ti ti-binary-tree-2 feature-icon fi-blue"></i>
+      <h3>Read &amp; Build</h3>
     </div>
     <p>Get and set deeply-nested values by notation — no <code>&amp;&amp;</code> guard chains, no <code>undefined</code> surprises.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-green">◆</span>
-      <h3>Glob filtering</h3>
+      <i class="ti ti-filter feature-icon fi-green"></i>
+      <h3>Glob Filtering</h3>
     </div>
     <p>Include or exclude fields with wildcard <code>*</code> and bang <code>!</code> patterns. Order-independent, auto-normalized.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-purple">◆</span>
-      <h3>Flatten &amp; expand</h3>
+      <i class="ti ti-fold feature-icon fi-purple"></i>
+      <h3>Flatten &amp; Expand</h3>
     </div>
     <p>Round-trip between nested objects and flat, dotted-key maps — handy for DB rows and form data.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-orange">◆</span>
-      <h3>Move &amp; copy</h3>
+      <i class="ti ti-copy feature-icon fi-orange"></i>
+      <h3>Move &amp; Copy</h3>
     </div>
     <p>Copy, move, rename, extract, and merge properties within or across objects.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-red">◆</span>
-      <h3>Bracket &amp; array notation</h3>
+      <i class="ti ti-brackets feature-icon fi-red"></i>
+      <h3>Bracket &amp; Array Notation</h3>
     </div>
     <p>Address array indices and non-standard keys: <code>x[0]</code>, <code>x["my-key"]</code>, <code>x['*']</code>.</p>
   </div>
   <div class="feature">
     <div class="feature-head">
-      <span class="feature-icon ti fi-yellow">◆</span>
-      <h3>ESM · typed · tested</h3>
+      <i class="ti ti-rosette-discount-check feature-icon fi-yellow"></i>
+      <h3>ESM · Typed · Tested</h3>
     </div>
     <p>Pure ESM, ships TypeScript types, 100% test coverage. Runs on Node, Bun, Deno, and the browser.</p>
+  </div>
+</div>
+
+## See Related Projects
+
+<div class="feature-grid">
+  <div class="feature">
+    <div class="feature-head">
+      <span class="feature-icon ti">◆</span>
+      <h3><a href="https://onury.io/configuard/">Configuard</a></h3>
+    </div>
+    <p>Builds a nested, typed configuration object from flat config items, with templating and ABAC filtering. Built on Notation.</p>
+  </div>
+  <div class="feature">
+    <div class="feature-head">
+      <span class="feature-icon ti">◆</span>
+      <h3><a href="https://onury.io/accesscontrol/">AccessControl</a></h3>
+    </div>
+    <p>Role- and attribute-based access control (RBAC/ABAC) for Node.js.</p>
   </div>
 </div>
 
