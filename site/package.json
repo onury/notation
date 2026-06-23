@@ -1,5 +1,5 @@
 {
-  "name": "notation-website",
+  "name": "notation-site",
   "private": true,
   "type": "module",
   "description": "Documentation site for Notation (Astro + Starlight via @onury/docs-kit). Not published.",

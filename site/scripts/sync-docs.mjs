@@ -9,7 +9,7 @@ import { syncDocs } from '@onury/docs-kit/sync';
 const here = dirname(fileURLToPath(import.meta.url));
 
 syncDocs({
-  root: resolve(here, '../..'),       // project root (one level above website/)
+  root: resolve(here, '../..'),       // project root (one level above site/)
   outDir: resolve(here, '../src/content/docs'),
   base: '/notation',
   files: [
