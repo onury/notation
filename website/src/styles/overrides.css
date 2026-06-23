@@ -9,8 +9,7 @@
  * =========================================================================== */
 
 :root {
-  /* --oy-accent: #3b82f6; */            /* main accent (links, primary button, active nav) */
-  /* --oy-accent-high: var(--oy-accent); */ /* high-contrast accent (defaults to --oy-accent) */
+  --oy-accent: #12BE10; /* main accent (links, primary button, active nav) */
 }
 
 /* Need finer control? Override any Starlight token here too, e.g.:

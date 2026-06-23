@@ -36,6 +36,7 @@ export default defineConfig({
   integrations: [
     starlight({
       title: "Notation",
+      logo: { src: './src/assets/notation-logo.svg', replacesTitle: true },
       description: "Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.",
       social: [{ icon: 'github', label: 'GitHub', href: "https://github.com/onury/notation" }],
       customCss: [
