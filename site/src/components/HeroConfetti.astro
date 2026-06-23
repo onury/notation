@@ -1,0 +1,168 @@
+---
+/**
+ * Paper-confetti hero background for the notation home page.
+ *
+ * Injects a full-bleed <canvas> into `.hero` and animates paper pieces — the
+ * `#f2f2f2` logo paper — tumbling down with TRUE depth of field: each piece's
+ * size, brightness and blur scale continuously with its depth (front = big,
+ * light, sharp; back = small, ~30% darker, blurred). The dark stage and the
+ * pale green/violet light blooms behind it live in CSS (hero.css), free.
+ *
+ * Cheap by design: depth + blur are baked once into a small set of pre-rendered
+ * sprites (no per-frame canvas filters), the loop pauses when the hero scrolls
+ * off-screen (IntersectionObserver) or the tab is hidden (Page Visibility), and
+ * `prefers-reduced-motion` renders a single static frame instead of looping.
+ */
+---
+
+<script>
+  (() => {
+    const hero = document.querySelector('.hero');
+    if (!hero || !('getContext' in document.createElement('canvas'))) return;
+
+    // ── tunables ────────────────────────────────────────────────────────────
+    const PAPER = [242, 242, 242]; // #f2f2f2 — the logo paper color
+    const BUCKETS = 8;             // depth tiers (pre-rendered sprite sets)
+    const ASPECTS = [0.5, 0.72, 1.0]; // paper shapes: strip → square
+    const MAX_BLUR = 7;            // back-most blur, px (pronounced DoF)
+    const FRONT = 26, BACK = 7;    // paper size, px, front vs back
+    const DARKEN = 0.3;            // back-most darkening (0..1)
+    const WIND = 0.12;             // gentle horizontal drift
+    const DENSITY = 4500;          // papers ≈ area / DENSITY (clamped)
+
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const lerp = (a, b, t) => a + (b - a) * t;
+    const rnd = (a, b) => a + Math.random() * (b - a);
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'confetti-hero';
+    canvas.setAttribute('aria-hidden', 'true');
+    hero.prepend(canvas);
+    const ctx = canvas.getContext('2d');
+
+    let W = 0, H = 0, dpr = 1, sprites = [], papers = [], raf = 0, running = false, visible = false;
+
+    function roundRect(c, x, y, w, h, r) {
+      if (c.roundRect) { c.beginPath(); c.roundRect(x, y, w, h, r); return; }
+      c.beginPath();
+      c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r);
+      c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r);
+      c.arcTo(x, y, x + w, y, r); c.closePath();
+    }
+
+    // One sprite set per depth bucket × shape, with size/blur/darkening baked in.
+    // Rendered at DPR so front (sharp) papers stay crisp; back ones carry blur.
+    function buildSprites() {
+      sprites = [];
+      for (let i = 0; i < BUCKETS; i++) {
+        const t = BUCKETS === 1 ? 1 : i / (BUCKETS - 1); // 0 = far back, 1 = front
+        const blur = (1 - t) * MAX_BLUR;
+        const dk = (1 - t) * DARKEN;
+        const r = Math.round(PAPER[0] * (1 - dk));
+        const g = Math.round(PAPER[1] * (1 - dk));
+        const b = Math.round(PAPER[2] * (1 - dk));
+        const size = lerp(BACK, FRONT, t);
+        sprites[i] = ASPECTS.map((asp) => {
+          const w = size * asp, h = size;
+          const pad = blur * 2.6 + 2;
+          const cw = Math.ceil(w + pad * 2), ch = Math.ceil(h + pad * 2);
+          const c = document.createElement('canvas');
+          c.width = Math.ceil(cw * dpr); c.height = Math.ceil(ch * dpr);
+          const x = c.getContext('2d');
+          x.scale(dpr, dpr);
+          if (blur > 0.05) x.filter = `blur(${blur}px)`;
+          const grad = x.createLinearGradient(0, pad, 0, pad + h);
+          grad.addColorStop(0, `rgb(${Math.min(255, r + 10)},${Math.min(255, g + 10)},${Math.min(255, b + 10)})`);
+          grad.addColorStop(1, `rgb(${Math.round(r * 0.88)},${Math.round(g * 0.88)},${Math.round(b * 0.88)})`);
+          x.fillStyle = grad;
+          roundRect(x, pad, pad, w, h, Math.min(w, h) * 0.18);
+          x.fill();
+          return { c, cw, ch };
+        });
+      }
+    }
+
+    function makePaper() {
+      const d = Math.pow(Math.random(), 1.4); // weighted toward back (more small/blurred)
+      return {
+        d,
+        bucket: Math.min(BUCKETS - 1, Math.floor(d * BUCKETS)),
+        shape: (Math.random() * ASPECTS.length) | 0,
+        x: Math.random() * W,
+        y: Math.random() * H,
+        vy: lerp(0.35, 1.15, d),       // closer pieces fall faster (parallax)
+        sway: Math.random() * Math.PI * 2,
+        swaySpeed: rnd(0.005, 0.02),
+        swayAmp: lerp(0.15, 0.5, d),
+        rot: Math.random() * Math.PI * 2,
+        rotSpeed: rnd(-0.03, 0.03),
+        flip: Math.random() * Math.PI * 2,
+        flipSpeed: rnd(0.01, 0.05) * (Math.random() < 0.5 ? -1 : 1),
+        jitter: rnd(0.82, 1.18),
+        alpha: lerp(0.5, 1, d),        // far pieces a touch fainter
+      };
+    }
+
+    function respawn(p) { p.x = Math.random() * W; p.y = -FRONT; p.sway = Math.random() * Math.PI * 2; }
+
+    function resize() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      W = canvas.clientWidth || hero.clientWidth;
+      H = canvas.clientHeight || hero.clientHeight;
+      if (!W || !H) return;
+      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      buildSprites();
+      const count = Math.max(120, Math.min(300, Math.round((W * H) / DENSITY)));
+      while (papers.length < count) papers.push(makePaper());
+      papers.length = count;
+      papers.sort((a, b) => a.d - b.d); // draw back-to-front for correct occlusion
+    }
+
+    function drawPaper(p) {
+      const sp = sprites[p.bucket][p.shape];
+      const squash = 0.2 + 0.8 * Math.abs(Math.cos(p.flip)); // 2.5D flutter
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.scale(p.jitter, p.jitter * squash);
+      ctx.drawImage(sp.c, -sp.cw / 2, -sp.ch / 2, sp.cw, sp.ch);
+      ctx.restore();
+    }
+
+    function step() {
+      ctx.clearRect(0, 0, W, H);
+      for (const p of papers) {
+        p.y += p.vy;
+        p.sway += p.swaySpeed;
+        p.x += WIND * p.d + Math.sin(p.sway) * p.swayAmp;
+        p.rot += p.rotSpeed;
+        p.flip += p.flipSpeed;
+        if (p.y - FRONT > H) respawn(p);
+        else if (p.x < -FRONT) p.x = W + FRONT;
+        else if (p.x > W + FRONT) p.x = -FRONT;
+        drawPaper(p);
+      }
+      if (running) raf = requestAnimationFrame(step);
+    }
+
+    function start() { if (!running) { running = true; raf = requestAnimationFrame(step); } }
+    function stop() { running = false; cancelAnimationFrame(raf); }
+
+    function paintStatic() { ctx.clearRect(0, 0, W, H); for (const p of papers) drawPaper(p); }
+
+    let rt = 0;
+    window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { resize(); if (reduce) paintStatic(); }, 150); });
+    window.addEventListener('load', () => { resize(); if (reduce) paintStatic(); });
+
+    resize();
+    if (reduce) { paintStatic(); return; }
+
+    new IntersectionObserver((e) => {
+      visible = e[0].isIntersecting;
+      visible && !document.hidden ? start() : stop();
+    }, { threshold: 0 }).observe(hero);
+    document.addEventListener('visibilitychange', () => { document.hidden ? stop() : (visible && start()); });
+  })();
+</script>
