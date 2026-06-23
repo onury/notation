@@ -39,6 +39,7 @@ export default defineConfig({
       logo: { src: './src/assets/notation-logo.svg', replacesTitle: true },
       description: "Utility for modifying / processing the contents of Javascript objects or arrays via object notation strings or globs.",
       social: [{ icon: 'github', label: 'GitHub', href: "https://github.com/onury/notation" }],
+      components: { Head: '@onury/docs-kit/components/Head.astro' },
       customCss: [
         '@onury/docs-kit/styles/custom.css',
         '@onury/docs-kit/styles/theme.css',
