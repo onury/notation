@@ -321,6 +321,11 @@ that produce identical results — plus environment-defensive guards. These can'
 be killed by definition, so the realistic, healthy target is a high score, not
 100%.
 
+## Related Projects
+
+- [**accesscontrol**](https://github.com/onury/accesscontrol) — Role and attribute based access control (RBAC + ABAC) with conditions, enforced ownership, custom actions and mandatory gates.
+- [**configuard**](https://github.com/onury/configuard) — Build a nested, typed configuration object from a flat list of settings — with `${...}` templating and accessor-based (ABAC) filtering.
+
 ## License
 
 © 2026, Onur Yıldırım. [**MIT**](https://github.com/onury/notation/blob/master/LICENSE) License.
