@@ -324,7 +324,7 @@ be killed by definition, so the realistic, healthy target is a high score, not
 ## Related Projects
 
 - [**accesscontrol**](https://github.com/onury/accesscontrol) — Role and attribute based access control (RBAC + ABAC) with conditions, enforced ownership, custom actions and mandatory gates.
-- [**configuard**](https://github.com/onury/configuard) — Build a nested, typed configuration object from a flat list of settings — with `${...}` templating and accessor-based (ABAC) filtering.
+- [**configuard**](https://github.com/onury/configuard) — Turn flat config rows from a database table into a nested, typed configuration object — with `${...}` templating and accessor-based (ABAC) filtering.
 
 ## License
 
