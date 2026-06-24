@@ -23,7 +23,8 @@ Notation.create({ x: 1 }).set('some.prop', true).filter(['*.prop']).value
 // { some: { prop: true } }
 ```
 
-> _This library is intended for **data objects** with enumerable properties. It does **not** preserve an object's prototype chain, and does not support objects with circular references._
+> [!IMPORTANT]
+> This library is intended for **data objects** with enumerable properties. It does **not** preserve an object's prototype chain, and does not support objects with circular references.
 
 ## Table of Contents
 - [Usage](#usage)
@@ -127,7 +128,8 @@ console.log(NotationGlob.normalize(globs, { restrictive: true }));
 ```
 - In restrictive mode, negated removes every match.
 
-> _**Note**: `Notation#filter()` and `NotationGlob.union()` methods automatically pre-normalize the given glob list(s)._
+> [!NOTE]
+> `Notation#filter()` and `NotationGlob.union()` methods automatically pre-normalize the given glob list(s).
 
 ### Union of two glob notation lists
 
@@ -288,11 +290,12 @@ console.log('newProp' in source2); // ——» false
 console.log(cloned.newProp); // ——» true
 ```
 
-> _Note that `Notation` expects a data object (or array) with enumerable properties. In addition to plain objects and arrays; supported cloneable property/value types are primitives (such as `String`, `Number`, `Boolean`, `Symbol`, `null` and `undefined`) and built-in types (such as `Date` and `RegExp`)._ 
-> 
-> _Enumerable properties with types other than these (such as methods, special objects, custom class instances, etc) will be copied by reference. Non-enumerable properties will not be cloned._
-> 
-> _If you still need full clone support, you can use a library like lodash. e.g. `Notation.create(_.cloneDeep(source))`_
+> [!WARNING]
+> `Notation` expects a data object (or array) with enumerable properties. In addition to plain objects and arrays; supported cloneable property/value types are primitives (such as `String`, `Number`, `Boolean`, `Symbol`, `null` and `undefined`) and built-in types (such as `Date` and `RegExp`).
+>
+> Enumerable properties with types other than these (such as methods, special objects, custom class instances, etc) will be copied by reference. Non-enumerable properties will not be cloned.
+>
+> If you still need full clone support, you can use a library like lodash. e.g. `Notation.create(_.cloneDeep(source))`
 
 ## Documentation
 
