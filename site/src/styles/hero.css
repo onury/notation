@@ -51,6 +51,12 @@
 /* Keep the hero copy legible on the dark stage regardless of theme. */
 .hero .tagline { color: #d9dbe0; text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55); }
 .hero .actions a.minimal { color: #e6e8ec; }
+/* ── Light mode only — the stage is light gray, so hero copy/labels go dark.
+ * (Dark mode is unchanged. The confetti sprite colors are unchanged too.) ─── */
+:root[data-theme='light'] .hero .tagline { color: #000; text-shadow: none; }
+:root[data-theme='light'] .hero .actions a.minimal { color: #000; }
+:root[data-theme='light'] .hero .actions a.primary { color: #000; }
+:root[data-theme='light'] header.header { border-bottom: 1px solid rgba(0, 0, 0, 0.08); }
 /* Contain the full-bleed canvas to the viewport (no horizontal scrollbar). */
 html:not([data-has-sidebar]) :where(main, .content-panel) { overflow-x: clip; }
 

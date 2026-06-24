@@ -99,15 +99,20 @@
     function buildBg() {
       bg.width = Math.round(W * dpr); bg.height = Math.round(H * dpr);
       bgx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      // Light theme uses a light-gray stage; dark theme keeps the dark one.
+      // (The confetti sprites are unchanged either way.)
+      const light = document.documentElement.getAttribute('data-theme') === 'light';
       const base = bgx.createLinearGradient(0, 0, 0, H);
-      base.addColorStop(0, '#101219'); base.addColorStop(0.55, '#0a0b0f'); base.addColorStop(1, '#08090c');
+      if (light) { base.addColorStop(0, '#f3f4f6'); base.addColorStop(0.55, '#eceef1'); base.addColorStop(1, '#e6e8ec'); }
+      else { base.addColorStop(0, '#101219'); base.addColorStop(0.55, '#0a0b0f'); base.addColorStop(1, '#08090c'); }
       bgx.fillStyle = base; bgx.fillRect(0, 0, W, H);
       const reach = Math.max(W, H) * 0.55;
+      const ga = light ? 0.12 : 0.17, va = light ? 0.1 : 0.17;
       const green = bgx.createRadialGradient(W * 0.2, H * 0.4, 0, W * 0.2, H * 0.4, reach);
-      green.addColorStop(0, 'rgba(18, 190, 16, 0.17)'); green.addColorStop(1, 'rgba(18, 190, 16, 0)');
+      green.addColorStop(0, `rgba(18, 190, 16, ${ga})`); green.addColorStop(1, 'rgba(18, 190, 16, 0)');
       bgx.fillStyle = green; bgx.fillRect(0, 0, W, H);
       const violet = bgx.createRadialGradient(W * 0.84, H * 0.72, 0, W * 0.84, H * 0.72, reach);
-      violet.addColorStop(0, 'rgba(139, 92, 246, 0.17)'); violet.addColorStop(1, 'rgba(139, 92, 246, 0)');
+      violet.addColorStop(0, `rgba(139, 92, 246, ${va})`); violet.addColorStop(1, 'rgba(139, 92, 246, 0)');
       bgx.fillStyle = violet; bgx.fillRect(0, 0, W, H);
     }
 
@@ -202,6 +207,9 @@
     window.addEventListener('load', () => { resize(); if (reduce) render(false); });
 
     resize();
+    // Rebuild the stage when the light/dark theme is toggled.
+    new MutationObserver(() => { buildBg(); if (!running) render(false); })
+      .observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     if (reduce) { render(false); return; }
 
     new IntersectionObserver((e) => {
