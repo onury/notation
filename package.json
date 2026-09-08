@@ -59,6 +59,9 @@
     "parse",
     "build"
   ],
+  "overrides": {
+    "qs": "^6.16.0"
+  },
   "devDependencies": {
     "@biomejs/biome": "^2.5.0",
     "@stryker-mutator/core": "^9.6.1",
