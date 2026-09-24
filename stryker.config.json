@@ -3,8 +3,8 @@
   "packageManager": "npm",
   "testRunner": "vitest",
   "reporters": ["html", "json", "clear-text", "progress"],
-  "htmlReporter": { "fileName": "test/stryker/mutation-report.html" },
-  "jsonReporter": { "fileName": "test/stryker/mutation-report.json" },
+  "htmlReporter": { "fileName": "test/mutation/mutation-report.html" },
+  "jsonReporter": { "fileName": "test/mutation/mutation-report.json" },
   "coverageAnalysis": "perTest",
   "mutate": [
     "src/**/*.ts",
