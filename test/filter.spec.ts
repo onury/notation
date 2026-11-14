@@ -428,4 +428,28 @@ describe('Notation#filter()', () => {
     // c[1] will create sparse array which is normal
     expect(filtered).toEqual({ a: [1], c: [undefined, 4], 'd.e': 5 });
   });
+
+  test('#filter() » never mutates or shares the source when the first glob is not a wildcard', () => {
+    const cases: Array<[string[], UnknownObject]> = [
+      [['profile.*', '!profile.secret'], { profile: { name: 'x' } }],
+      [['profile', '!profile.secret'], { profile: { name: 'x' } }],
+      [['*.name', '!profile.secret'], { profile: { name: 'x' } }],
+      [['list', '!list[0]'], { list: [{ b: 2 }] }]
+    ];
+    cases.forEach(([globs, expected]) => {
+      const source = {
+        id: 1,
+        profile: { name: 'x', secret: 's' },
+        list: [{ a: 1 }, { b: 2 }]
+      };
+      const before = utils.cloneDeep(source);
+      const filtered = notate(source).filter(globs).value as UnknownObject;
+      expect(filtered).toEqual(expected);
+      expect(source).toEqual(before);
+      // the result is a copy: changing it never reaches the source
+      Object.values(filtered).forEach((v) => {
+        expect(Object.values(source)).not.toContain(v);
+      });
+    });
+  });
 });

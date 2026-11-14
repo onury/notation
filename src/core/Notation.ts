@@ -844,7 +844,9 @@ export class Notation<
           // directly set the same notation from the original
           const insGet = this.inspectGet(normalized); // Notation.create(original).inspectGet ...
           if (insGet.has) {
-            filtered.set(normalized, insGet.value, 'overwrite');
+            // a copy, never the source's own object: a later negated
+            // glob removes from `filtered` in place.
+            filtered.set(normalized, utils._cloneDeep(insGet.value), 'overwrite');
           }
         }
 
@@ -902,7 +904,7 @@ export class Notation<
             }
             if (levelNotation === originalNotation) {
               // console.info('---> setting (c)', levelNotation, value, '\n     filtered:', JSON.stringify(filtered.value));
-              filtered.set(levelNotation, value, 'overwrite');
+              filtered.set(levelNotation, utils._cloneDeep(value), 'overwrite');
             }
           });
         },
