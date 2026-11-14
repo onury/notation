@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/) and this project adheres to [Semantic Versioning](http://semver.org).
 
+## 3.0.2 (2026-11-14)
+
+### Fixed
+- `filter()` no longer mutates the source object. When the first glob was not a wildcard (e.g. `['profile.*', '!profile.secret']`), matched values were copied by reference and the negated paths were then removed from the source itself. The result is now always a deep copy, as documented. Reported via [accesscontrol#153](https://github.com/onury/accesscontrol/issues/153).
+
 ## 3.0.1 (2026-06-23)
 
 ### Added
